@@ -18,10 +18,10 @@ OnPlayerConnect()
 	setdvar( "player_strafeSpeedScale", 0.8 );
 	setdvar( "player_backSpeedScale", 0.7 );
 	setdvar( "sv_endGameIfISuck", 0 ); // To prevent host migration?
-	// if ( level.script == "zm_transit" )
-	// {
-	// 	setdvar ( "r_fog", 0 );
-	// } 
+	if ( level.script == "zm_transit" )
+	{
+		setdvar ( "r_fog", 0 );
+	} 
 
 	level waittill( "initial_players_connected" );			
 	player iPrintLn( "^5FIRST ROOM FIX V3" );
@@ -39,7 +39,7 @@ OnPlayerSpawned()
 	self endon( "disconnect" );
 
 	self waittill( "spawned_player" );
-	//self thread TimerHud();
+	self thread TimerHud();
 	self thread SetHands();
 }
 
