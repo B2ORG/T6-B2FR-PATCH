@@ -11,16 +11,14 @@ init()
 	
 	setdvar( "player_strafeSpeedScale", 0.8 );
 	setdvar( "player_backSpeedScale", 0.7 );
-	setdvar( "r_fog", 0 );
-	setdvar( "sv_endGameIfISuck", 0 ); // To prevent host migration
 }
 
 OnPlayerConnect()
 {
-	level waittill( "connecting", player );	
+	level waittill( "connecting", player);	
 	player thread OnPlayerSpawned();
 
-	level waittill( "initial_players_connected" );			
+	level waittill( "initial_players_connected" );
 	player iPrintLn( "^5FIRST ROOM FIX V2" );
 }
 
@@ -31,11 +29,6 @@ OnPlayerSpawned()
 
 	self waittill( "spawned_player" );
 	self thread timer_hud();
-
-	if ( level.script == "zm_nuked" && !level.enable_magic )
-    {
-        level thread nuke_mannequins();
-    }
 }
 
 timer_hud()
@@ -64,38 +57,4 @@ timer_hud()
 	{
 		timer_hud setTimerUp(0);
 	}
-}
-
-nuke_mannequins()
-{
-	flag_wait( "initial_blackscreen_passed" );
-	wait 1;
-    destructibles = getentarray( "destructible", "targetname" );
-    foreach ( mannequin in destructibles )
-    {
-        if ( mannequin.origin == ( 1058.2, 387.3, -57 ) )
-        {
-            mannequin delete();
-        }
-        if ( mannequin.origin == ( 609.28, 315.9, -53.89 ) )
-        {
-            mannequin delete();
-        }
-        if ( mannequin.origin == ( 872.48, 461.88, -56.8 ) )
-        {
-            mannequin delete();
-        }
-        if ( mannequin.origin == ( 851.1, 156.6, -51 ) )
-        {
-            mannequin delete();
-        }
-        if ( mannequin.origin == ( 808, 140.5, -51 ) )
-        {
-            mannequin delete();
-        }
-        if ( mannequin.origin == ( 602.53, 281.09, -55 ) )
-        {
-            mannequin delete();
-        }
-    }
 }
