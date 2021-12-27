@@ -20,12 +20,6 @@ OnPlayerConnect()
 	setdvar( "sv_endGameIfISuck", 0 ); // To prevent host migration?
 	setdvar( "sv_allowAimAssist", 0); 
 
-	players = get_players();
-	if ( level.script == "zm_transit" && level.scr_zm_map_start_location != "transit" && players.size == 1)
-	{
-		setdvar ( "r_fog", 0 );
-	} 
-
 	level waittill( "initial_players_connected" );			
 	player iPrintLn( "^5FIRST ROOM FIX V3" );
 
@@ -44,6 +38,12 @@ OnPlayerSpawned()
 	self waittill( "spawned_player" );
 	self thread TimerHud();
 	//self thread SetHands();
+
+	players = get_players(); // get_players function has to be called on spawn, not on connect, otherwise it won't work
+	if ( level.script == "zm_transit" && level.scr_zm_map_start_location != "transit" && players.size == 1)
+	{
+		setdvar ( "r_fog", 0 );
+	} 
 }
 
 TimerHud()
