@@ -43,7 +43,7 @@ OnPlayerSpawned()
 
 	self waittill( "spawned_player" );
 	self thread TimerHud();
-	self thread SetHands();
+	//self thread SetHands();
 }
 
 TimerHud()
