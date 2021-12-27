@@ -18,7 +18,10 @@ OnPlayerConnect()
 	setdvar( "player_strafeSpeedScale", 0.8 );
 	setdvar( "player_backSpeedScale", 0.7 );
 	setdvar( "sv_endGameIfISuck", 0 ); // To prevent host migration?
-	if ( level.script == "zm_transit" && level.scr_zm_map_start_location != "transit" )
+	setdvar( "sv_allowAimAssist", 0); 
+
+	players = get_players();
+	if ( level.script == "zm_transit" && level.scr_zm_map_start_location != "transit" && players.size == 1)
 	{
 		setdvar ( "r_fog", 0 );
 	} 

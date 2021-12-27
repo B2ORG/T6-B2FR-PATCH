@@ -4,7 +4,7 @@ For competitive 0 controversy games i suggest using `First Room Fix V3 Normal`
 
 # First Room Fix
 Fixes:
-- Strafe & Backspeed
+- Strafe, Backspeed & Aim Assist
 
 # First Room Fix V2
 Fixes:
@@ -18,10 +18,10 @@ Fixes:
 - Host migration issue in private matches
 
 Optional Fixes
-- Fog removed from Tranzit maps
-- Ingame timer for solo
+- Fog removed
+- Ingame timer
 - Preset viewmodel (always same hands)
-- Mannequins set for Yellow House Challenge
+- Mannequins set on Nuketown
 Marking: "NOT ENOUGH MANNEQUINS ..."
 
 # Credits
