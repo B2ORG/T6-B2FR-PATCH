@@ -28,6 +28,11 @@ OnPlayerConnect()
 		player iPrintLn( "^3NOT ENOUGH MANNEQUINS ..." );
         level thread NukeMannequins();
     }
+
+	if ( level.script == "zm_transit" && level.scr_zm_map_start_location != "transit")
+	{
+		level thread NoFog();
+	} 
 }
 
 OnPlayerSpawned()
@@ -38,18 +43,20 @@ OnPlayerSpawned()
 	self waittill( "spawned_player" );
 	self thread TimerHud();
 	//self thread SetHands();
+}
 
-	players = get_players(); // get_players function has to be called on spawn, not on connect, otherwise it won't work
-	if ( level.script == "zm_transit" && level.scr_zm_map_start_location != "transit" && players.size == 1)
-	{
-		setdvar ( "r_fog", 0 );
-	} 
+NoFog()
+{
+	players = get_players();
+	if ( players.size == 1 )
+		{
+			setdvar ( "r_fog", 0 );
+		}
+
 }
 
 TimerHud()
 {
-    self endon( "disconnect" );
-
 	timer_hud = newClientHudElem(self);
 	timer_hud.alignx = "right";
 	timer_hud.aligny = "top";
@@ -68,7 +75,7 @@ TimerHud()
 	timer_hud.alpha = 1;
 
 	players = get_players();
-	if (players.size == 1) 
+	if ( players.size == 1 ) 
 	{
 		timer_hud setTimerUp(0);
 	}
