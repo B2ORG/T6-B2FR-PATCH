@@ -28,3 +28,11 @@ Marking: "NOT ENOUGH MANNEQUINS ..."
 JezuzLizard
 5and5
 Txchno
+
+# Receiptiens 
+- Zi0
+Fog, Timer, Mannequins
+- Txchno
+Timer
+- Tek
+Clean
