@@ -41,7 +41,7 @@ OnPlayerSpawned()
 	self endon( "disconnect" );
 
 	self waittill( "spawned_player" );
-	//self thread TimerHud();
+	self thread TimerHud();
 	// self thread SetHands();
 }
 
@@ -74,13 +74,13 @@ TimerHud()
 	flag_wait( "initial_blackscreen_passed" );
 	timer_hud.alpha = 1;
 
-	//timer_hud setTimerUp(0); // If timer is also for coop
+	timer_hud setTimerUp(0); // If timer is also for coop
 
-	players = get_players();
-	if ( players.size == 1 ) 
-	{
-		timer_hud setTimerUp(0);
-	}
+	// players = get_players();
+	// if ( players.size == 1 ) 
+	// {
+	// 	timer_hud setTimerUp(0);
+	// }
 }
 
 NukeMannequins()
