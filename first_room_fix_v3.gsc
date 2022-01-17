@@ -41,16 +41,17 @@ OnPlayerSpawned()
 	self endon( "disconnect" );
 
 	self waittill( "spawned_player" );
-	self thread TimerHud();
+	// self thread TimerHud();
 	// self thread SetHands();
 }
 
 NoFog()
 {
 	players = get_players();
+	setdvar ( "r_fog", 0 ); // All lobby size
 	if ( players.size == 1 )
 		{
-			setdvar ( "r_fog", 0 );
+			// setdvar ( "r_fog", 0 ); // Selected lobby size
 		}
 
 }
@@ -62,7 +63,7 @@ TimerHud()
 	timer_hud.aligny = "top";
 	timer_hud.horzalign = "user_left";
 	timer_hud.vertalign = "user_top";
-	timer_hud.x += 5; // Change - to + if it's aligned to the left
+	timer_hud.x += 5; // += if alligned left, -= if right
 	timer_hud.y += 2;
 	timer_hud.fontscale = 1.4;
 	timer_hud.alpha = 0;
@@ -74,12 +75,12 @@ TimerHud()
 	flag_wait( "initial_blackscreen_passed" );
 	timer_hud.alpha = 1;
 
-	timer_hud setTimerUp(0); // If timer is also for coop
+	// timer_hud setTimerUp(0); // If timer is also for coop
 
 	players = get_players();
 	if ( players.size == 1 ) 
 	{
-		// timer_hud setTimerUp(0);
+		timer_hud setTimerUp(0);
 	}
 }
 
