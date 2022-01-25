@@ -17,9 +17,8 @@ OnPlayerConnect()
 
 	setdvar( "player_strafeSpeedScale", 0.8 );
 	setdvar( "player_backSpeedScale", 0.7 );
-	setdvar( "sv_endGameIfISuck", 0 ); 				// Prevent host migration
-	setdvar( "sv_allowAimAssist", 0 ); 				// Removes target assist
-	setdvar( "sv_patch_zm_weapons", 0 ); 			// Depatch patched recoil
+	setdvar( "sv_endGameIfISuck", 0 ); // To prevent host migration?
+	setdvar( "sv_allowAimAssist", 0 ); 
 
 	level waittill( "initial_players_connected" );			
 	player iPrintLn( "^5FIRST ROOM FIX V3" );
@@ -27,19 +26,17 @@ OnPlayerConnect()
 	if ( level.script == "zm_nuked" )
     {
 		level thread EyeChange();
-
 		if ( !level.enable_magic )
 		{
-			player iPrintLn( "^3NOT ENOUGH MANNEQUINS ..." );
-        	level thread NukeMannequins();
+			// player iPrintLn( "^3NOT ENOUGH MANNEQUINS ..." );
+        	// level thread NukeMannequins();
 		}
     }
 
 	if ( level.script == "zm_transit" && level.scr_zm_map_start_location != "transit" )
 	{
-		level thread NoFog();
+		// level thread NoFog();
 	} 
-
 }
 
 OnPlayerSpawned()
@@ -48,17 +45,17 @@ OnPlayerSpawned()
 	self endon( "disconnect" );
 
 	self waittill( "spawned_player" );
-	self thread TimerHud();
+	// self thread TimerHud();
 	// self thread SetHands();
 }
 
 NoFog()
 {
 	players = get_players();
-	// setdvar ( "r_fog", 0 ); 					// All lobby size
+	setdvar ( "r_fog", 0 ); // All lobby size
 	if ( players.size == 1 )
 		{
-			setdvar ( "r_fog", 0 ); 			// Selected lobby size
+			// setdvar ( "r_fog", 0 ); // Selected lobby size
 		}
 
 }
@@ -66,11 +63,11 @@ NoFog()
 TimerHud()
 {
 	timer_hud = newClientHudElem(self);
-	timer_hud.alignx = "right";
+	timer_hud.alignx = "left";
 	timer_hud.aligny = "top";
-	timer_hud.horzalign = "user_right";
+	timer_hud.horzalign = "user_left";
 	timer_hud.vertalign = "user_top";
-	timer_hud.x -= 5; 							// += if alligned left, -= if right
+	timer_hud.x += 5; // += if alligned left, -= if right
 	timer_hud.y += 2;
 	timer_hud.fontscale = 1.4;
 	timer_hud.alpha = 0;
@@ -82,7 +79,7 @@ TimerHud()
 	flag_wait( "initial_blackscreen_passed" );
 	timer_hud.alpha = 1;
 
-	// timer_hud setTimerUp(0); 				// If timer is also for coop
+	// timer_hud setTimerUp(0); // If timer is also for coop
 
 	players = get_players();
 	if ( players.size == 1 ) 
