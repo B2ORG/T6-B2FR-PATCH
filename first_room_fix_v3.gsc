@@ -26,18 +26,18 @@ OnPlayerConnect()
 
 	if ( level.script == "zm_nuked" )
     {
-		level thread EyeChange();
+		// level thread EyeChange();
 
 		if ( !level.enable_magic )
 		{
-			player iPrintLn( "^3NOT ENOUGH MANNEQUINS ..." );
-        	level thread NukeMannequins();
+			// player iPrintLn( "^3NOT ENOUGH MANNEQUINS ..." );
+        	// level thread NukeMannequins();
 		}
     }
 
 	if ( level.script == "zm_transit" && level.scr_zm_map_start_location != "transit" )
 	{
-		level thread NoFog();
+		// level thread NoFog();
 	} 
 
 }
@@ -48,7 +48,7 @@ OnPlayerSpawned()
 	self endon( "disconnect" );
 
 	self waittill( "spawned_player" );
-	self thread TimerHud();
+	// self thread TimerHud();
 	// self thread SetHands();
 }
 
