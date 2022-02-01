@@ -1,6 +1,6 @@
-All the patches are in the `Compiled` folder.
-Go into `V3 Extras` folder to find all the combinations for V3 patch (normal and full versions are in the main folder)
-For competitive 0 controversy games i suggest using `First Room Fix V3 Normal`
+All the patches are in the `V3 Compiled` folder.
+Go into `V3 Compiled` folder for basic version of the patch as well as all patches compiled for other players.
+For competitive 0 controversy games i suggest using `First Room Fix V3.gsc` from `V3 Compiled`.
 
 # First Room Fix
 Fixes:
@@ -18,11 +18,11 @@ Fixes:
 - Host migration issue in private matches
 
 Optional Fixes
-- Fog removed
+- No fog
 - Ingame timer
 - Preset viewmodel (always same hands)
-- Mannequins set on Nuketown
-Marking: "NOT ENOUGH MANNEQUINS ..."
+- Mannequins set on Nuketown (Marking: "NOT ENOUGH MANNEQUINS ...")
+- Blue Eyes + Richtofen announcer on Nuketown
 
 # Credits
 JezuzLizard
@@ -31,8 +31,14 @@ Txchno
 
 # Receiptiens 
 - Zi0
-Fog, Timer, Mannequins
+Fog, Timer, Mannequins, Blue Eyes
 - Txchno
 Timer
 - Tek
-Clean
+Timer
+- Tone
+Timer
+- Rabley
+Timer
+- Swanky
+Fog, Timer
