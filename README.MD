@@ -16,6 +16,8 @@ Fixes:
 Fixes:
 - Strafe & Backspeed
 - Host migration issue in private matches
+- Target Assist
+- Pre-patch recoil
 
 Optional Fixes
 - No fog
@@ -25,20 +27,20 @@ Optional Fixes
 - Blue Eyes + Richtofen announcer on Nuketown
 
 # Credits
-JezuzLizard
-5and5
-Txchno
+- JezuzLizard
+- 5and5
+- Txchno
 
 # Receiptiens 
-- Zi0
+- Zi0 <br>
 Fog, Timer, Mannequins, Blue Eyes
-- Txchno
+- Txchno <br>
 Timer
-- Tek
+- Tek <br>
 Timer
-- Tone
+- Tone <br>
 Timer
-- Rabley
+- Rabley <br>
 Timer
-- Swanky
+- Swanky <br>
 Fog, Timer
