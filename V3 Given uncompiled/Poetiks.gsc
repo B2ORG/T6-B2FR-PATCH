@@ -42,7 +42,7 @@ OnPlayerConnect()
 
 	if ( level.script == "zm_transit" && level.scr_zm_map_start_location != "transit" )
 	{
-		// level thread NoFog();
+		level thread NoFog();
 	} 
 
 }
@@ -53,17 +53,17 @@ OnPlayerSpawned()
 	self endon( "disconnect" );
 
 	self waittill( "spawned_player" );
-	// self thread TimerHud();
-	// self thread SetHands();
+	self thread TimerHud();
+	self thread SetHands();
 }
 
 NoFog()
 {
 	players = get_players();
-	// setdvar ( "r_fog", 0 ); 					// All lobby size
+	setdvar ( "r_fog", 0 ); 					// All lobby size
 	if ( players.size == 1 )
 		{
-			setdvar ( "r_fog", 0 ); 			// Selected lobby size
+			// setdvar ( "r_fog", 0 ); 			// Selected lobby size
 		}
 
 }
@@ -87,12 +87,12 @@ TimerHud()
 	flag_wait( "initial_blackscreen_passed" );
 	timer_hud.alpha = 1;
 
-	// timer_hud setTimerUp(1); 				// If timer is also for coop
+	timer_hud setTimerUp(1); 				// If timer is also for coop
 
 	players = get_players();
 	if ( players.size == 1 ) 
 	{
-		timer_hud setTimerUp(0);
+		// timer_hud setTimerUp(0);
 	}
 }
 
@@ -132,7 +132,7 @@ NukeMannequins()
 
 SetHands() 
 {
-    // self setviewmodel( "c_zom_suit_viewhands" );
+    self setviewmodel( "c_zom_suit_viewhands" );
 	// self setviewmodel( "c_zom_hazmat_viewhands" );
 
     // self setviewmodel( "c_zom_farmgirl_viewhands" );
@@ -140,7 +140,7 @@ SetHands()
 	//self setviewmodel( "c_zom_reporter_viewhands" );
 	//self setviewmodel( "c_zom_oldman_viewhands" );
 
-    // self setviewmodel( "c_zom_arlington_coat_viewhands" );
+    self setviewmodel( "c_zom_arlington_coat_viewhands" );
 	//self setviewmodel( "c_zom_deluca_longsleeve_viewhands" );
 	//self setviewmodel( "c_zom_handsome_sleeveless_viewhands" );
 	//self setviewmodel( "c_zom_oleary_shortsleeve_viewhands" );
