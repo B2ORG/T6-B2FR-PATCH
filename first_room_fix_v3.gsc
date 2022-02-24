@@ -217,4 +217,3 @@ GetPapWeaponReticle ( weapon ) // Override to get rid of rng reticle
 	self.pack_a_punch_weapon_options[ weapon ] = self calcweaponoptions( camo_index, lens_index, reticle_index, reticle_color_index );
 	return self.pack_a_punch_weapon_options[ weapon ];
 }
-
