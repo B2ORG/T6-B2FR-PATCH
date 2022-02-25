@@ -147,7 +147,7 @@ switch( self.characterindex )
 switch( self.characterindex )
 {
     case 0:
-        self setmodel( "c_zom_player_arlington_fb" );
+        self setmodel( "c_zom_player_oleary_fb" );
 	    self.voice = "american";
 	    self.skeleton = "base";
         self setviewmodel( "c_zom_oleary_shortsleeve_viewhands" );
@@ -177,7 +177,7 @@ switch( self.characterindex )
         self.character_name = "Billy";
         break;
     case 3:
-        self setmodel( "c_zom_player_oleary_fb" );
+        self setmodel( "c_zom_player_arlington_fb" );
 	    self.voice = "american";
 	    self.skeleton = "base";
         self setviewmodel( "c_zom_arlington_coat_viewhands" );

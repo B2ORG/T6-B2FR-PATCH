@@ -44,6 +44,7 @@ OnPlayerConnect()
 		}
 	} 
 
+	level thread PrintNetworkFrame();	// Prints current length of networkframe
 	level thread PrintFix();			// Print First Room Fix msg
 
 	if ( level.players.size < 2 )  		// Change between <2 and <5 | All characters have to be preset if using for coop
@@ -116,6 +117,35 @@ FixNetworkFrame()
 	{
 		wait 0.1; // this was changed to wait 0.05 ...
 	}
+}
+
+PrintNetworkFrame()
+{
+	network_hud = newHudElem();
+	network_hud.alignx = "center";
+	network_hud.aligny = "top";
+	network_hud.horzalign = "user_center";
+	network_hud.vertalign = "user_top";
+	network_hud.x += 0;
+	network_hud.y += 2;
+	network_hud.fontscale = 1.4;
+	network_hud.alpha = 0;
+	network_hud.color = ( 1, 1, 1 );
+	network_hud.hidewheninmenu = 1;
+	network_hud.label = &"Network frame: ";
+
+	flag_wait( "initial_blackscreen_passed" );
+
+	start_time = int(getTime());
+	wait_network_frame();
+	end_time = int(getTime());
+	network_frame_len = float((end_time - start_time) / 1000);
+	
+	network_hud.alpha = 1;
+	network_hud setValue( network_frame_len );
+
+	wait 6;
+	network_hud.alpha = 0;
 }
 
 SetDvars() 
