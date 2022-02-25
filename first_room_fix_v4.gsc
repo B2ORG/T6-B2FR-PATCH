@@ -9,18 +9,19 @@
 #include maps/mp/zm_tomb;
 #include maps/mp/zm_tomb_utility;
 #include maps/mp/zombies/_zm_audio;
+#include maps/mp/zombies/_zm_net;
 
 main()
 {
-	replaceFunc( maps/mp/zombies/_zm_weapons::get_pack_a_punch_weapon_options, ::GetPapWeaponReticle );
+	replaceFunc( maps/mp/animscripts/zm_utility::wait_network_frame, ::FixNetworkFrame );
+	replaceFunc( maps/mp/zombies/_zm_utility::wait_network_frame, ::FixNetworkFrame );
+	replaceFunc( maps/mp/zombies/_zm_net::network_choke_thread, ::FixNetworkThread);
+	replaceFunc( maps/mp/zombies/_zm_audio::attack_vox_network_choke, ::FixAttackVox);
 
 	replaceFunc( maps/mp/zm_tomb_utility::check_solo_status, ::ForceNotSolo );
-
 	replaceFunc( maps/mp/zm_tomb_utility::adjustments_for_solo, ::AdjustByLobbySize );
 
-	replaceFunc( maps/mp/animscripts/zm_utility::wait_network_frame, ::FixNetworkFrame );
-
-	replaceFunc( maps/mp/zombies/_zm_utility::wait_network_frame, ::FixNetworkFrame );
+	// replaceFunc( maps/mp/zombies/_zm_weapons::get_pack_a_punch_weapon_options, ::GetPapWeaponReticle );
 }
 
 init()
@@ -40,7 +41,7 @@ OnPlayerConnect()
 	{
 		if ( level.players.size == 1 )  // Change between ==1 and <5
 		{
-			setdvar ( "r_fog", 0 ); 	// Remove fog
+			// setdvar ( "r_fog", 0 ); 	// Remove fog
 		}
 	} 
 
@@ -49,18 +50,18 @@ OnPlayerConnect()
 
 	if ( level.players.size < 2 )  		// Change between <2 and <5 | All characters have to be preset if using for coop
 	{
-		level thread SetCharacters();
+		// level thread SetCharacters();
 	}
 
 	if ( level.players.size < 5 ) 		// Change between <2 and <5
 	{
 		if ( level.script == "zm_nuked" )
 		{
-			level thread EyeChange();	// Eye color on Nuketown
+			// level thread EyeChange();	// Eye color on Nuketown
 
 			if ( !level.enable_magic )
 			{
-				level thread NukeMannequins();
+				// level thread NukeMannequins();
 			}
 		}
 	}
@@ -84,7 +85,7 @@ OnPlayerSpawned()
 			break;
 		}
 
-		player TimerHud();
+		// player TimerHud();
 
 		if ( hostonly )
 		{
@@ -103,20 +104,26 @@ PrintFix()
 
 FixNetworkFrame()
 {
-	if ( numremoteclients() )
-	{
-		snapshot_ids = getsnapshotindexarray();
-		acked = undefined;
-		while ( !isDefined( acked ) )
-		{
-			level waittill( "snapacknowledged" );
-			acked = snapshotacknowledged( snapshot_ids );
-		}
-	}
-	else
-	{
-		wait 0.1; // this was changed to wait 0.05 ...
-	}
+
+	wait 0.1; 							// IF statement caused fix to not work
+}
+
+FixNetworkThread( id )
+{
+   while ( 1 )
+   {
+     wait 0.1;
+     level.zombie_network_choke_ids_count[ id ] = 0;
+   }
+}
+
+FixAttackVox()
+{
+   while ( 1 )
+   {
+     level._num_attack_vox = 0;
+     wait 0.1;
+   }
 }
 
 PrintNetworkFrame()
@@ -132,7 +139,7 @@ PrintNetworkFrame()
 	network_hud.alpha = 0;
 	network_hud.color = ( 1, 1, 1 );
 	network_hud.hidewheninmenu = 1;
-	network_hud.label = &"Network frame: ";
+	network_hud.label = &"Network frame check: ";
 
 	flag_wait( "initial_blackscreen_passed" );
 
@@ -144,7 +151,7 @@ PrintNetworkFrame()
 	network_hud.alpha = 1;
 	network_hud setValue( network_frame_len );
 
-	wait 6;
+	wait 3;
 	network_hud.alpha = 0;
 }
 
