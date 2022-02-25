@@ -1,18 +1,32 @@
-All the patches are in the `V3 Compiled` folder.
-Go into `V3 Compiled` folder for basic version of the patch as well as all patches compiled for other players.
-For competitive 0 controversy games i suggest using `First Room Fix V3.gsc` from `V3 Compiled`.
+All the patches are in the `V4 Compiled` folder.
+Go into `V4 Compiled` folder for basic version of the patch as well as all patches compiled for other players.
+For competitive 0 controversy games i suggest using `First Room Fix V4.gsc` from `V4 Compiled`.
+At this point in time disregard all version below 4, as they don't fix the tickrate problem. All games on Pluto past January 21st played on any First Room fix below 4 will be considered invalid.
 
-# First Room Fix
-Fixes:
-- Strafe, Backspeed & Aim Assist
-
-# First Room Fix V2
+# First Room Fix V4
 Fixes:
 - Strafe & Backspeed
-- Ingame timer for solo
+- Host migration issue in private matches
+- Target Assist
+- Pre-patch recoil
+- Tickrate
+- No Zombie Blood on Origins first room
+- ???
+
+Features:
+- No Fog (dependent on map and player count)
+- Game timer + round time displayed at the end of each round after 10 (dependent on player count)
+- Preset character(s) (dependent on map and player count)
+- Mannequins on Nuketown preset for Yellow House challenge
+- Blue Eyes & Richtofen announcer on Nuketown
+- Always Red Dot reticle on Origins PaP weapon reward
+
+Feature changes compared to V3:
+- Timer can optionally be toggled to be seen by all players in the game
+- Can actually preset characters in the game as oppose to just changing hands
+- First Room Fix print is not for each player 
 
 # First Room Fix V3
-
 Fixes:
 - Strafe & Backspeed
 - Host migration issue in private matches
@@ -25,6 +39,15 @@ Optional Fixes
 - Preset viewmodel (always same hands)
 - Mannequins set on Nuketown (Marking: "NOT ENOUGH MANNEQUINS ...")
 - Blue Eyes + Richtofen announcer on Nuketown
+
+# First Room Fix V2
+Fixes:
+- Strafe & Backspeed
+- Ingame timer for solo
+
+# First Room Fix
+Fixes:
+- Strafe, Backspeed & Aim Assist
 
 # Credits
 - JezuzLizard
