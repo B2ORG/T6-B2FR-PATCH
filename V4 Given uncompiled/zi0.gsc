@@ -16,7 +16,7 @@ main()
 	replaceFunc( maps/mp/animscripts/zm_utility::wait_network_frame, ::FixNetworkFrame );
 	replaceFunc( maps/mp/zombies/_zm_utility::wait_network_frame, ::FixNetworkFrame );
 
-	// replaceFunc( maps/mp/zombies/_zm_weapons::get_pack_a_punch_weapon_options, ::GetPapWeaponReticle );
+	replaceFunc( maps/mp/zombies/_zm_weapons::get_pack_a_punch_weapon_options, ::GetPapWeaponReticle );
 }
 
 init()
@@ -36,9 +36,9 @@ OnPlayerConnect()
 	
 	if ( level.script == "zm_transit" && level.scr_zm_map_start_location != "transit" )							// Exclude depot from Green Run
 	{
-		if ( level.players.size == 1 )  // Change between ==1 and <5
+		if ( level.players.size < 2 )  // Change between <2 and <5
 		{
-			// setdvar ( "r_fog", 0 ); 	// Remove fog
+			setdvar ( "r_fog", 0 ); 	// Remove fog
 		}
 	} 
 
@@ -54,11 +54,11 @@ OnPlayerConnect()
 	{
 		if ( level.script == "zm_nuked" )
 		{
-			// level thread EyeChange();	// Eye color on Nuketown
+			level thread EyeChange();	// Eye color on Nuketown
 
 			if ( !level.enable_magic )
 			{
-				// level thread NukeMannequins();
+				level thread NukeMannequins();
 			}
 		}
 	}
@@ -348,9 +348,9 @@ SetCharacters()
 {
 	players = get_players();
 	enablesurvival = true;		// Enable to preset characters for survival
-	enablegreenrun = false;		// Enable to preset characters for greenrun
-	enablemob = false;			// Enable to preset characters for mob
-	enableorigins = false;		// Enable to preset characters for oregano
+	enablegreenrun = true;		// Enable to preset characters for greenrun
+	enablemob = true;			// Enable to preset characters for mob
+	enableorigins = true;		// Enable to preset characters for oregano
 
 	if ( is_classic() == 0 )	// Can't be in the same if statement cause it fucks with the else
 	{
@@ -364,11 +364,11 @@ SetCharacters()
 			}
 			
 			// Set white player properties
-			players[0] setmodel( "c_zom_player_cia_fb" );
+			players[0] setmodel( "c_zom_player_cdc_fb" );
 			players[0].voice = "american";
 			players[0].skeleton = "base";
-			players[0] setviewmodel( ciaviewmodel );
-			players[0].characterindex = 0;
+			players[0] setviewmodel( cdcviewmodel );
+			players[0].characterindex = 1;
 
 			if ( level.players.size > 1 )
 			{

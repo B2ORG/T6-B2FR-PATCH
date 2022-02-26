@@ -16,9 +16,6 @@ main()
 	replaceFunc( maps/mp/animscripts/zm_utility::wait_network_frame, ::FixNetworkFrame );
 	replaceFunc( maps/mp/zombies/_zm_utility::wait_network_frame, ::FixNetworkFrame );
 
-	replaceFunc( maps/mp/zm_tomb_utility::check_solo_status, ::ForceNotSolo );
-	replaceFunc( maps/mp/zm_tomb_utility::adjustments_for_solo, ::AdjustByLobbySize );
-
 	// replaceFunc( maps/mp/zombies/_zm_weapons::get_pack_a_punch_weapon_options, ::GetPapWeaponReticle );
 }
 
@@ -30,14 +27,16 @@ init()
 OnPlayerConnect()
 {
 	level waittill( "connecting", player );	
+
 	player thread OnPlayerSpawned();
 
 	level thread SetDvars();			// Anticheat and initial dvars
+	level thread OriginsFix();			// Blood & Doors set to custom games
 	level waittill( "initial_players_connected" );
 	
 	if ( level.script == "zm_transit" && level.scr_zm_map_start_location != "transit" )							// Exclude depot from Green Run
 	{
-		if ( level.players.size == 1 )  // Change between ==1 and <5
+		if ( level.players.size < 2 )  // Change between <2 and <5
 		{
 			// setdvar ( "r_fog", 0 ); 	// Remove fog
 		}
@@ -74,7 +73,7 @@ OnPlayerSpawned()
 
 	flag_wait( "initial_blackscreen_passed" );
 	// 'hostonly' will define whether timer is for everyone or just host in the game. 'soloonly' will define if timer should be used in coop or not
-	hostonly = true; 
+	hostonly = false; 
 	soloonly = false;
 	foreach ( player in level.players )
 	{
@@ -123,9 +122,9 @@ PrintNetworkFrame()
 
 	flag_wait( "initial_blackscreen_passed" );
 
-	start_time = int(getTime());
+	start_time = int( getTime() );
 	wait_network_frame();
-	end_time = int(getTime());
+	end_time = int( getTime() );
 	network_frame_len = float((end_time - start_time) / 1000);
 	
 	network_hud.alpha = 1;
@@ -269,11 +268,11 @@ RoundTimerHud(hud)
 	while ( 1 )
 	{
 		round_timer_hud setTimerUp(0);
-		start_time = int(getTime() / 1000);
+		start_time = int( getTime() / 1000 );
 
 		level waittill( "end_of_round" );
 
-		end_time = int(getTime() / 1000);
+		end_time = int( getTime() / 1000 );
 		time = end_time - start_time;
 
 		if ( level.round_number > 10 )
@@ -349,9 +348,9 @@ SetCharacters()
 {
 	players = get_players();
 	enablesurvival = true;		// Enable to preset characters for survival
-	enablegreenrun = false;		// Enable to preset characters for greenrun
-	enablemob = false;			// Enable to preset characters for mob
-	enableorigins = false;		// Enable to preset characters for oregano
+	enablegreenrun = true;		// Enable to preset characters for greenrun
+	enablemob = true;			// Enable to preset characters for mob
+	enableorigins = true;		// Enable to preset characters for oregano
 
 	if ( is_classic() == 0 )	// Can't be in the same if statement cause it fucks with the else
 	{
@@ -365,11 +364,11 @@ SetCharacters()
 			}
 			
 			// Set white player properties
-			players[0] setmodel( "c_zom_player_cia_fb" );
+			players[0] setmodel( "c_zom_player_cdc_fb" );
 			players[0].voice = "american";
 			players[0].skeleton = "base";
-			players[0] setviewmodel( ciaviewmodel );
-			players[0].characterindex = 0;
+			players[0] setviewmodel( cdcviewmodel );
+			players[0].characterindex = 1;
 
 			if ( level.players.size > 1 )
 			{
@@ -669,36 +668,12 @@ GetPapWeaponReticle ( weapon ) // Override to get rid of rng reticle
 	return self.pack_a_punch_weapon_options[ weapon ];
 }
 
-ForceNotSolo()
+OriginsFix()
 {
+	flag_wait( "start_zombie_round_logic" );
+	wait 0.5;
 	if ( level.script == "zm_tomb")
 	{
 		level.is_forever_solo_game = 0;
 	}
-	else
-	{
-		if ( getnumexpectedplayers() == 1 || !sessionmodeisonlinegame() && !sessionmodeisprivate() )
-		{
-			level.is_forever_solo_game = 1;
-		}
-		else
-		{
-			level.is_forever_solo_game = 0;
-		}
-	}
-	
 }
-
-AdjustByLobbySize()
-{
-	if ( level.players.size == 1 ) // Not perfect, but neither was plutos approach
-	{
-		a_door_buys = getentarray( "zombie_door", "targetname" );
-		array_thread( a_door_buys, ::door_price_reduction_for_solo );
-		a_debris_buys = getentarray( "zombie_debris", "targetname" );
-		array_thread( a_debris_buys, ::door_price_reduction_for_solo );
-		change_weapon_cost( "beretta93r_zm", 750 );
-		change_weapon_cost( "870mcs_zm", 750 );
-	}
-}
-
