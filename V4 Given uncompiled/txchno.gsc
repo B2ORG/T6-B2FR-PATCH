@@ -45,7 +45,7 @@ OnPlayerConnect()
 	level thread PrintNetworkFrame();	// Prints current length of networkframe
 	level thread PrintFix();			// Print First Room Fix msg
 
-	if ( level.players.size < 2 )  		// Change between <2 and <5 | All characters have to be preset if using for coop
+	if ( level.players.size < 5 )  		// Change between <2 and <5 | All characters have to be preset if using for coop
 	{
 		level thread SetCharacters();
 	}
@@ -232,16 +232,22 @@ CreateWarningHud( text, offset )
 TimerHud()
 {
 	timer_hud = newClientHudElem(self);
-	timer_hud.alignx = "right";
+	timer_hud.alignx = "left";					// Change only this for right
 	timer_hud.aligny = "top";
-	timer_hud.horzalign = "user_right";
+	timer_hud.horzalign = "user_left";			// Changes automatically
 	timer_hud.vertalign = "user_top";
-	timer_hud.x -= 5; 				// += if alligned left, -= if right
-	timer_hud.y += 2;
+	timer_hud.x += 7; 							// Changes automatically
+	timer_hud.y += 2;							// Changes automatically
 	timer_hud.fontscale = 1.4;
 	timer_hud.alpha = 1;
 	timer_hud.color = ( 1, 1, 1 );
 	timer_hud.hidewheninmenu = 1;
+	if ( timer_hud.alignx == "right" )
+	{
+		timer_hud.horzalign = "user_right";
+		timer_hud.x -= 7; 
+		timer_hud.y += 12;
+	} 
 
 	self thread RoundTimerHud(timer_hud);
 
