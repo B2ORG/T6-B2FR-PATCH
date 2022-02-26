@@ -64,6 +64,8 @@ Fog, Timer, Blue Eyes, Mannequins, Reticle, Characters
 Timer, Characters
 - Gencrack <br>
 Fog, Characters
+- Txchno <br>
+Timer, Mannequins, Characters
 
 # V3 Receiptiens 
 - Zi0 <br>
