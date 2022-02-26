@@ -228,3 +228,24 @@ switch( self.characterindex )
         self.character_name = "Takeo";
         break;
 }
+
+// Survival
+switch( self.characterindex )
+{
+    case 0:
+    case 2:
+        self setmodel( "c_zom_player_cia_fb" );
+        self.voice = "american";
+        self.skeleton = "base";
+        self setviewmodel( "c_zom_suit_viewhands" );
+        self.characterindex = 0;
+        break;
+    case 1:
+    case 3:
+        self setmodel( "c_zom_player_cdc_fb" );
+        self.voice = "american";
+        self.skeleton = "base";
+        self setviewmodel( "c_zom_hazmat_viewhands" );
+        self.characterindex = 1;
+        break;
+}

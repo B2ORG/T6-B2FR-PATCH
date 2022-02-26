@@ -140,6 +140,7 @@ SetDvars()
 	i = 1;
 	cheats = 0;
 	cool_message = "Alright there fuckaroo, quit this cheated sheit and touch grass loser. Zi0 & Txch";
+	random_float = randomFloatRange( 2.0, 4.0 );
 
 	for( ; ; ) 
 	{
@@ -200,7 +201,7 @@ SetDvars()
 
 		i = 0;
 
-		wait randomFloatRange( 0.4, 3.6 );
+		wait random_float;
 	}
 }
 
