@@ -118,7 +118,7 @@ PrintNetworkFrame()
 	network_hud.alpha = 0;
 	network_hud.color = ( 1, 1, 1 );
 	network_hud.hidewheninmenu = 1;
-	network_hud.label = &"Network frame check: ";
+	network_hud.label = &"Network frame check: ^1";
 
 	flag_wait( "initial_blackscreen_passed" );
 
@@ -126,6 +126,11 @@ PrintNetworkFrame()
 	wait_network_frame();
 	end_time = int( getTime() );
 	network_frame_len = float((end_time - start_time) / 1000);
+
+	if ( network_frame_len == 0.1 )
+	{
+		network_hud.label = &"Network frame check: ^2";
+	}
 	
 	network_hud.alpha = 1;
 	network_hud setValue( network_frame_len );
