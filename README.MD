@@ -66,6 +66,8 @@ Timer, Characters
 Fog, Characters
 - Txchno <br>
 Timer, Mannequins, Characters
+- Flames <br>
+Timer, Blue Eyes, Mannequins, Reticle, Characters
 
 # V3 Receiptiens 
 - Zi0 <br>
