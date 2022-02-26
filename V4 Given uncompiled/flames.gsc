@@ -236,8 +236,8 @@ TimerHud()
 	timer_hud.aligny = "top";
 	timer_hud.horzalign = "user_left";			// Changes automatically
 	timer_hud.vertalign = "user_top";
-	timer_hud.x += 7; 							// Changes automatically
-	timer_hud.y += 2;							// Changes automatically
+	timer_hud.x = 7; 							// Changes automatically
+	timer_hud.y = 2;							// Changes automatically
 	timer_hud.fontscale = 1.4;
 	timer_hud.alpha = 1;
 	timer_hud.color = ( 1, 1, 1 );
@@ -261,8 +261,8 @@ RoundTimerHud(hud)
 	round_timer_hud.aligny = hud.aligny;
 	round_timer_hud.horzalign = hud.horzalign;
 	round_timer_hud.vertalign = hud.vertalign;
-	round_timer_hud.x -= ( 10 + hud.x ); 				
-	round_timer_hud.y += ( 20 + hud.y );
+	round_timer_hud.x = hud.x; 				
+	round_timer_hud.y = ( hud.y + 20 );
 	round_timer_hud.fontscale = 1.4;
 	round_timer_hud.alpha = 0;	// Don't actually want it to display
 	round_timer_hud.color = ( 1, 1, 1 );
