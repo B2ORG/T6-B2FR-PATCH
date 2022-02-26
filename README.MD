@@ -62,6 +62,8 @@ Fixes:
 Fog, Timer, Blue Eyes, Mannequins, Reticle, Characters
 - Tone <br>
 Timer, Characters
+- Gencrack <br>
+Fog, Characters
 
 # V3 Receiptiens 
 - Zi0 <br>
