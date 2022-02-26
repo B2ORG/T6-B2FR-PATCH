@@ -15,8 +15,6 @@ main()
 {
 	replaceFunc( maps/mp/animscripts/zm_utility::wait_network_frame, ::FixNetworkFrame );
 	replaceFunc( maps/mp/zombies/_zm_utility::wait_network_frame, ::FixNetworkFrame );
-	replaceFunc( maps/mp/zombies/_zm_net::network_choke_thread, ::FixNetworkThread);
-	replaceFunc( maps/mp/zombies/_zm_audio::attack_vox_network_choke, ::FixAttackVox);
 
 	replaceFunc( maps/mp/zm_tomb_utility::check_solo_status, ::ForceNotSolo );
 	replaceFunc( maps/mp/zm_tomb_utility::adjustments_for_solo, ::AdjustByLobbySize );
@@ -76,8 +74,8 @@ OnPlayerSpawned()
 
 	flag_wait( "initial_blackscreen_passed" );
 	// 'hostonly' will define whether timer is for everyone or just host in the game. 'soloonly' will define if timer should be used in coop or not
-	hostonly = false; 
-	soloonly = true;
+	hostonly = true; 
+	soloonly = false;
 	foreach ( player in level.players )
 	{
 		if ( soloonly && level.players.size != 1 )
@@ -106,24 +104,6 @@ FixNetworkFrame()
 {
 
 	wait 0.1; 							// IF statement caused fix to not work
-}
-
-FixNetworkThread( id )
-{
-   while ( 1 )
-   {
-     wait 0.1;
-     level.zombie_network_choke_ids_count[ id ] = 0;
-   }
-}
-
-FixAttackVox()
-{
-   while ( 1 )
-   {
-     level._num_attack_vox = 0;
-     wait 0.1;
-   }
 }
 
 PrintNetworkFrame()
@@ -369,9 +349,9 @@ SetCharacters()
 {
 	players = get_players();
 	enablesurvival = true;		// Enable to preset characters for survival
-	enablegreenrun = true;		// Enable to preset characters for greenrun
-	enablemob = true;			// Enable to preset characters for mob
-	enableorigins = true;		// Enable to preset characters for oregano
+	enablegreenrun = false;		// Enable to preset characters for greenrun
+	enablemob = false;			// Enable to preset characters for mob
+	enableorigins = false;		// Enable to preset characters for oregano
 
 	if ( is_classic() == 0 )	// Can't be in the same if statement cause it fucks with the else
 	{
@@ -385,11 +365,11 @@ SetCharacters()
 			}
 			
 			// Set white player properties
-			players[0] setmodel( "c_zom_player_cdc_fb" );
+			players[0] setmodel( "c_zom_player_cia_fb" );
 			players[0].voice = "american";
 			players[0].skeleton = "base";
-			players[0] setviewmodel( cdcviewmodel );
-			players[0].characterindex = 1;
+			players[0] setviewmodel( ciaviewmodel );
+			players[0].characterindex = 0;
 
 			if ( level.players.size > 1 )
 			{

@@ -33,10 +33,8 @@ OnPlayerSpawned()
 	self waittill( "spawned_player" );
 
 	flag_wait( "initial_blackscreen_passed" );
-	foreach ( player in level.players )
-	{
-		player PrintNetworkFrame();
-	}
+	level thread PrintNetworkFrame();
+	level thread PrintSpawn();
 }
 
 PrintFix()
@@ -47,48 +45,51 @@ PrintFix()
 	}
 }
 
-// PrintResult()
-// {
-// 	spawn_hud = newClientHudElem( self );
-// 	spawn_hud.alignx = "left";
-// 	spawn_hud.aligny = "top";
-// 	spawn_hud.horzalign = "user_left";
-// 	spawn_hud.vertalign = "user_top";
-// 	spawn_hud.x += 4;
-// 	spawn_hud.y += 10;
-// 	spawn_hud.fontscale = 1.4;
-// 	spawn_hud.alpha = 0;
-// 	spawn_hud.color = ( 1, 1, 1 );
-// 	spawn_hud.hidewheninmenu = 1;
-// 	spawn_hud.label = &"Network frame: ";
+PrintSpawn()
+{
+	spawn_hud = newhudelem( self );
+	spawn_hud.alignx = "left";
+	spawn_hud.aligny = "top";
+	spawn_hud.horzalign = "user_left";
+	spawn_hud.vertalign = "user_top";
+	spawn_hud.x += 4;
+	spawn_hud.y += 30;
+	spawn_hud.fontscale = 1.4;
+	spawn_hud.color = ( 1, 1, 1 );
+	spawn_hud.hidewheninmenu = 1;
+	spawn_hud.label = &"Spawn rate: ";
 
-//     spawn_hud setValue( -1 );
-//     spawn_hud.alpha = 0.9;
+    spawn_hud setValue( -1 );
+    spawn_hud.alpha = 0.9;
 		
-// 	level waittill ( "start_of_round" );	
-// 	while ( 1 )
-// 	{
-// 		wait 1;
-// 		preset_spawnrate = level.zombie_vars[ "zombie_spawn_delay" ];
-// 		spawn_hud setValue( preset_spawnrate );
+	level waittill ( "start_of_round" );
+	while ( 1 )
+	{
+		while ( get_current_zombie_count() < 3)
+		{
+			if ( get_current_zombie_count() == 1 )
+			{
+				start_time = int( getTime() );
+			}
 
-// 		start_time = int(getTime());
-// 		wait_network_frame();
-// 		end_time = int(getTime());
+			if ( get_current_zombie_count() == 2 )
+			{
+				end_time = int( getTime() );
+			}
+			wait 0.05;
+		}
 
-// 		network_frame_len = float((end_time - start_time) / 1000);
-// 		spawn_rate = ( float(network_frame_len) + float(preset_spawnrate) ) / 1000.0;
-// 		spawn_hud setValue( network_frame_len );
-
-// 		level waittill ( "start_of_round" );
-
-// 		wait 0.1;
-// 	}
-// }
+		get_difference = ( end_time - start_time );
+		convert_secs = ( get_difference / 1000 );
+		spawn_hud setValue( convert_secs );
+		level waittill ( "start_of_round" );
+		wait 0.1;
+	}
+}
 
 PrintNetworkFrame()
 {
-	network_hud = newClientHudElem( self );
+	network_hud = newhudelem( self );
 	network_hud.alignx = "left";
 	network_hud.aligny = "top";
 	network_hud.horzalign = "user_left";
