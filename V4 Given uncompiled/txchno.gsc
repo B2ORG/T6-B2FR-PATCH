@@ -36,7 +36,7 @@ OnPlayerConnect()
 	
 	if ( level.script == "zm_transit" && level.scr_zm_map_start_location != "transit" )							// Exclude depot from Green Run
 	{
-		if ( level.players.size < 2 )  // Change between <2 and <5
+		if ( level.players.size < 2 )  	// Change between <2 and <5
 		{
 			// setdvar ( "r_fog", 0 ); 	// Remove fog
 		}
@@ -118,7 +118,7 @@ PrintNetworkFrame()
 	network_hud.alpha = 0;
 	network_hud.color = ( 1, 1, 1 );
 	network_hud.hidewheninmenu = 1;
-	network_hud.label = &"Network frame check: ";
+	network_hud.label = &"Network frame check: ^1";
 
 	flag_wait( "initial_blackscreen_passed" );
 
@@ -126,6 +126,11 @@ PrintNetworkFrame()
 	wait_network_frame();
 	end_time = int( getTime() );
 	network_frame_len = float((end_time - start_time) / 1000);
+
+	if ( network_frame_len == 0.1 )
+	{
+		network_hud.label = &"Network frame check: ^2";
+	}
 	
 	network_hud.alpha = 1;
 	network_hud setValue( network_frame_len );
@@ -236,8 +241,8 @@ TimerHud()
 	timer_hud.aligny = "top";
 	timer_hud.horzalign = "user_left";			// Changes automatically
 	timer_hud.vertalign = "user_top";
-	timer_hud.x += 7; 							// Changes automatically
-	timer_hud.y += 2;							// Changes automatically
+	timer_hud.x = 7; 							// Changes automatically
+	timer_hud.y = 2;							// Changes automatically
 	timer_hud.fontscale = 1.4;
 	timer_hud.alpha = 1;
 	timer_hud.color = ( 1, 1, 1 );
@@ -261,8 +266,8 @@ RoundTimerHud(hud)
 	round_timer_hud.aligny = hud.aligny;
 	round_timer_hud.horzalign = hud.horzalign;
 	round_timer_hud.vertalign = hud.vertalign;
-	round_timer_hud.x -= ( 10 + hud.x ); 				
-	round_timer_hud.y += ( 20 + hud.y );
+	round_timer_hud.x = hud.x; 				
+	round_timer_hud.y = ( hud.y + 20 );
 	round_timer_hud.fontscale = 1.4;
 	round_timer_hud.alpha = 0;	// Don't actually want it to display
 	round_timer_hud.color = ( 1, 1, 1 );
