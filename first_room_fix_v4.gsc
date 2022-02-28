@@ -73,13 +73,21 @@ OnPlayerSpawned()
 
 	flag_wait( "initial_blackscreen_passed" );
 	// 'hostonly' will define whether timer is for everyone or just host in the game. 'soloonly' will define if timer should be used in coop or not
-	hostonly = false; 
-	soloonly = false;
+	hostonly = false; 			// Change to true for only host to have timer
+	soloonly = false;			// Change to true for timer to be used only in solo
+	nohost = false;				// Change to true for all players but host to have timer
+	i = 1;
 	foreach ( player in level.players )
 	{
 		if ( soloonly && level.players.size != 1 )
 		{
 			break;
+		}
+
+		if ( nohost && level.players.size != 1 )
+		{
+			i++;
+			continue;
 		}
 
 		// player TimerHud();
