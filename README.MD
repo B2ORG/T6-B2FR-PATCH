@@ -68,6 +68,8 @@ Fog, Characters
 Timer, Mannequins, Characters
 - Flames <br>
 Timer, Blue Eyes, Mannequins, Reticle, Characters
+- Tek <br>
+Timer
 
 # V3 Receiptiens 
 - Zi0 <br>
