@@ -11,30 +11,41 @@
 #include maps/mp/zombies/_zm_audio;
 #include maps/mp/zombies/_zm_net;
 
-config()
+main()
 {
+	replaceFunc(maps/mp/animscripts/zm_utility::wait_network_frame, ::FixNetworkFrame);
+	replaceFunc(maps/mp/zombies/_zm_utility::wait_network_frame, ::FixNetworkFrame);
+
+	replaceFunc(maps/mp/zombies/_zm_weapons::get_pack_a_punch_weapon_options, ::GetPapWeaponReticle);
+}
+
+init()
+{
+	level thread OnPlayerConnect();
+
 	level.fix_revision = 11;
 	level.debug = true;
+	level.start_timestamp = 0;
 
 	// Control modules
-	level.cfg_reticle = true;		// Always default red dot
-	level.cfg_fog = true;			// No fog
-	level.cfg_blood = true;			// Zombie blood on from challenge box
-	level.cfg_characters = true;	// Set characters
-	level.cfg_eyes = true;			// Nuketown blue eyes and richrofen announcer
-	level.cfg_mannequins = true;	// Nuketown mannequins for yellow house
-	level.cfg_timer = true;			// Timer
+	level.cfg_reticle = true;				// Always default red dot
+	level.cfg_fog = true;					// No fog
+	// level.cfg_blood = true;					// Zombie blood on from challenge box | r3042 onwards again has custom / solo games
+	level.cfg_characters = true;			// Set characters
+	level.cfg_eyes = true;					// Nuketown blue eyes and richrofen announcer
+	level.cfg_mannequins = true;			// Nuketown mannequins for yellow house
+	level.cfg_timer = false;					// Timer
 
 	// No Fog Config
-	level.fog_coop = false;			// Allow coop
-	level.fog_depot = false;		// Include depot in map list
+	level.fog_coop = false;					// Allow coop
+	level.fog_depot = false;				// Include depot in map list
 	
 	// Characters config
-	level.char_coop = false;		// Allow coop
-	level.char_survival = false;	// Allow character preset for survival
-	level.char_victis = false;		// Allow character preset for green run maps
-	level.char_mob = false;			// Allow character preset for mob
-	level.char_origins = false;		// Allow character preset for origins
+	level.char_coop = false;				// Allow coop
+	level.char_survival = false;			// Allow character preset for survival
+	level.char_victis = false;				// Allow character preset for green run maps
+	level.char_mob = false;					// Allow character preset for mob
+	level.char_origins = false;				// Allow character preset for origins
 
 		// Survival characters (cia / cdc)
 		level.survival1 = "cia";
@@ -54,39 +65,25 @@ config()
 		level.mob3 = "sal";
 		level.mob4 = "billy";
 
-		// Origins characters (dempsey / nikolai / takeo / richrofen)
+		// Origins characters (dempsey / nikolai / takeo / richtofen)
 		level.origins1 = "dempsey";
 		level.origins2 = "nikolai";
 		level.origins3 = "takeo";
-		level.origins4 = "richrofen";
+		level.origins4 = "richtofen";
 
 	// Blue eyes config
-	level.eyes_coop = false;		// Allow coop
+	level.eyes_coop = false;				// Allow coop
 
 	// Mannequins
-	level.mann_coop = false;		// Allow coop
+	level.mann_coop = false;				// Allow coop
 
 	// Timer config
-	level.timer_host = true;		// Allow timer for host player
-	level.timer_offhost = true;	// Allow timer for offhost players
-	level.timer_always_rt = true;	// Enable always displaying round time
+	level.timer_coop = true;				// Allow timer for coop games
+	level.timer_always_rt = true;			// Enable always displaying round time
 
-	level.timer_right = true;		// Position timer on the right
-	level.timer_color = (1, 1, 1);	// Set color for timers
-}
-
-main()
-{
-	replaceFunc(maps/mp/animscripts/zm_utility::wait_network_frame, ::FixNetworkFrame);
-	replaceFunc(maps/mp/zombies/_zm_utility::wait_network_frame, ::FixNetworkFrame);
-
-	replaceFunc(maps/mp/zombies/_zm_weapons::get_pack_a_punch_weapon_options, ::GetPapWeaponReticle);
-}
-
-init()
-{
-	level thread config();
-	level thread OnPlayerConnect();
+	level.timer_right = true;				// Position timer on the right
+	level.timer_color = (1, 1, 1);			// Set color for timer
+	level.round_timer_color = (1, 1, 1);	// Set color for round timer
 }
 
 OnPlayerConnect()
@@ -139,6 +136,9 @@ OnPlayerConnect()
 		}
 	}
 
+	// Initialize global HUD
+	level thread OnGameStart();
+
 	while (1)
 	{
         player thread OnPlayerSpawned();     
@@ -146,14 +146,34 @@ OnPlayerConnect()
 	}
 }
 
+OnGameStart()
+{
+	flag_wait("initial_blackscreen_passed");
+	level.start_timestamp = int(getTime() / 1000);
+
+	// Timer
+	timer_players = HandlePlayerCount(level.timer_coop);
+	if (level.players.size <= timer_players)
+	{
+		if (isdefined(level.cfg_timer) && level.cfg_timer)
+		{		
+			level thread TimerHud();
+		}
+	}
+	level thread RoundTimerHud();
+
+	level waittill("end_game");
+}
+
 OnPlayerSpawned()
 {
     level endon("game_ended");
 	self endon("disconnect");
 
+	my_id = self.clientid;
 	if (level.debug)
 	{
-		self iPrintLn("clientid: " + self.clientid);
+		self iPrintLn("clientid: " + my_id);
 	}
 
 	self.initial_spawn = true;
@@ -165,12 +185,12 @@ OnPlayerSpawned()
 		{
             self.initial_spawn = false;
 
+			// Prints
 			self iPrintLn("^5FIRST ROOM FIX V4");
 			self iPrintLn("^1PATCH VERSION: " + level.fix_revision);
-
 			self thread PrintNetworkFrame(5);
-			self thread RoundTimerHud();
 
+			// Characters
 			if (isdefined(level.cfg_characters) && level.cfg_characters)
 			{
 				if (level.debug)
@@ -185,33 +205,8 @@ OnPlayerSpawned()
 					self thread SetCharacters();
 				}
 			}   
-
-			if (isdefined(level.cfg_timer) && level.cfg_timer)
-			{
-				if (level.debug)
-				{
-					print("cfg_timer init");
-				}
-
-				time_players1 = 1;
-				time_players2 = 2;
-				if (level.timer_host)
-				{
-					time_players1 = 0;
-				}
-				if (level.timer_offhost)
-				{
-					timer_players2 = 9;
-				}
-
-				if ((self.clientid > time_players1) && (self.clientid < time_players2))
-				{
-					self thread TimerHud();
-				}
-			}
 		}
 	}
-	// flag_wait( "initial_blackscreen_passed" );
 }
 
 HandlePlayerCount(coop_bool, arg)
@@ -293,13 +288,13 @@ ConvertTime(seconds)
 	str_minutes = minutes;
 	if(minutes < 10 && hours > 0)
 	{
-		minutes = "0" + minutes; 
+		str_minutes = "0" + minutes; 
 	}
 
 	str_seconds = seconds;
 	if(seconds < 10)
 	{
-		seconds = "0" + seconds; 
+		str_seconds = "0" + seconds; 
 	}
 
 	if (hours == 0)
@@ -333,9 +328,9 @@ PrintNetworkFrame(len)
 	network_hud.alpha = 0;
 	network_hud.color = ( 1, 1, 1 );
 	network_hud.hidewheninmenu = 1;
-	network_hud.label = &"Network frame check: ^1";
+	network_hud.label = &"NETWORK FRAME: ^1";
 
-	flag_wait( "initial_blackscreen_passed" );
+	flag_wait("initial_blackscreen_passed");
 
 	start_time = int(getTime());
 	wait_network_frame();
@@ -458,7 +453,7 @@ CreateWarningHud( text, offset )
 
 TimerHud()
 {
-	timer_hud = newClientHudElem(self);
+	timer_hud = newHudElem();
 	timer_hud.alignx = "left";				
 	timer_hud.aligny = "top";
 	timer_hud.horzalign = "user_left";			
@@ -473,28 +468,28 @@ TimerHud()
 		timer_hud.alignx = "right";
 		timer_hud.horzalign = "user_right";
 		timer_hud.x = -10; 
-		timer_hud.y = 20;
+		timer_hud.y = 25;
 	} 
 
 	if (level.debug)
 	{
-		self iPrintLn("timer_color: " + level.timer_color);
-		self iPrintLn("timer_right: " + level.timer_right);
+		iPrintLn("timer_color: " + level.timer_color);
+		iPrintLn("timer_right: " + level.timer_right);
 	}
 
 	timer_hud setTimerUp(0); 
 	timer_hud.alpha = 1;
 }
 
-RoundTimerHud(hud)
+RoundTimerHud()
 {
 	offset = 0;
-	if (level.cfg.timer)
+	if (level.cfg_timer)
 	{
 		offset = 20;
 	}
 
-	round_timer_hud = newClientHudElem(self);
+	round_timer_hud = newHudElem();
 	round_timer_hud.alignx = "left";
 	round_timer_hud.aligny = "top";
 	round_timer_hud.horzalign = "user_left";	
@@ -503,17 +498,31 @@ RoundTimerHud(hud)
 	round_timer_hud.y = (5 + offset);
 	round_timer_hud.fontscale = 1.5;
 	round_timer_hud.alpha = 0;	
-	round_timer_hud.color = level.timer_color;
+	round_timer_hud.color = level.round_timer_color;
 	round_timer_hud.hidewheninmenu = 1;
 	if (level.timer_right)
 	{
-		timer_hud.alignx = "right";
-		timer_hud.horzalign = "user_right";
-		timer_hud.x = -10; 
-		timer_hud.y = (20 + offset);
+		round_timer_hud.alignx = "right";
+		round_timer_hud.horzalign = "user_right";
+		round_timer_hud.x = -10; 
+		round_timer_hud.y = (25 + offset);
 	}
 
-	self thread SplitsTimerHud(round_timer_hud);
+	if (level.debug)
+	{
+		iPrintLn("rt_color: " + level.round_timer_color);
+		iPrintLn("rt_right: " + level.timer_right);
+	}
+
+	if (isdefined(level.cfg_timer) && !level.cfg_timer)
+	{
+		if (isdefined(level.timer_always_rt) && level.timer_always_rt)
+		{
+			level.timer_always_rt = false;
+		}
+	}		
+
+	level thread SplitsTimerHud(round_timer_hud);
 
 	if (level.timer_always_rt)
 	{
@@ -557,9 +566,9 @@ RoundTimerHud(hud)
 				self iPrintLn(time);
 			}
 
-			if (level.round_number > 10)
+			if (level.round_number >= 10)
 			{
-				round_timer_hud setText(time_converted);
+				round_timer_hud setText(time);
 				round_timer_hud fadeOverTime(0.25);
 				round_timer_hud.alpha = 1;
 				wait 5;
@@ -573,7 +582,7 @@ RoundTimerHud(hud)
 
 SplitsTimerHud(hud)
 {
-	splits_timer_hud = newClientHudElem(self);
+	splits_timer_hud = newHudElem();
 	splits_timer_hud.alignx = hud.alignx;
 	splits_timer_hud.aligny = hud.aligny;
 	splits_timer_hud.horzalign = hud.horzalign;
@@ -587,13 +596,21 @@ SplitsTimerHud(hud)
 
 	while (1)
 	{
-		round = level.round_number;
 		level waittill("end_of_round");
+		wait 8.5;
 
-		if ((round > 10) && (!round % 5))
+		if ((level.round_number > 10) && (!level.round_number % 5))
 		{
-			time = ConvertTime(int(getTime() / 1000));
-			splits_timer_hud setText("" + round + " time: " + time);
+			time = int(getTime() / 1000);
+			timestamp = ConvertTime(time - level.start_timestamp);
+
+			if (level.debug)
+			{
+				iPrintLn("split_time: " + time);
+				iPrintLn("start_timestamp: " + level.start_timestamp);
+			}		
+
+			splits_timer_hud setText("" + level.round_number + " time: " + timestamp);
 			splits_timer_hud fadeOverTime(0.25);
 			splits_timer_hud.alpha = 1;
 			wait 4;
@@ -861,7 +878,7 @@ SetCharacters()
 			self.characterindex = 3;
 			self.character_name = "Takeo";
 		}
-		else if (preset_player == "richrofen")
+		else if (preset_player == "richtofen")
 		{
 			self setmodel("c_zom_tomb_richtofen_fb");
 			self setviewmodel("c_zom_richtofen_viewhands");
