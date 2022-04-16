@@ -84,6 +84,7 @@ init()
 
 	// Mannequins
 	level.mann_coop = false;				// Allow coop
+	level.mann_fr = true;					// Remove also mann for fr
 
 	// Timer config
 	level.timer_coop = true;				// Allow timer for coop games
@@ -135,7 +136,7 @@ OnPlayerConnect()
 	}
 
 	// Mannequins nuketown
-	if ((isdefined(level.cfg_mannequins) && level.cfg_mannequins) && (!level.enable_magic && level.script == "zm_nuked"))
+	if (isdefined(level.cfg_mannequins) && level.cfg_mannequins && level.script == "zm_nuked")
 	{
 		mannequins_players = HandlePlayerCount(level.mann_coop);
 
@@ -201,8 +202,14 @@ OnPlayerSpawned()
             self.initial_spawn = false;
 
 			// Prints
-			self iPrintLn("^5FIRST ROOM FIX V4");
-			self iPrintLn("^1PATCH VERSION: " + level.fix_revision);
+			if (isdefined(level.fix_revision))
+			{
+				self iPrintLn("^5FIRST ROOM FIX V4 (r0" + level.fix_revision + ")");
+			}
+			else
+			{
+				self iPrintLn("^5FIRST ROOM FIX V4");
+			}
 			self thread PrintNetworkFrame(5);
 
 			// Characters
@@ -722,33 +729,39 @@ NukeMannequins()
     destructibles = getentarray("destructible", "targetname");
     foreach ( mannequin in destructibles )
     {
-        if (mannequin.origin == (1058.2, 387.3, -57))
+		if (isdefined(level.enable_magic) && !level.enable_magic)
+		{
+			if (mannequin.origin == (1058.2, 387.3, -57))
+			{
+				mannequin delete();
+			}
+			if (mannequin.origin == (609.28, 315.9, -53.89))
+			{
+				mannequin delete();
+			}
+			if (mannequin.origin == (872.48, 461.88, -56.8))
+			{
+				mannequin delete();
+			}
+			if (mannequin.origin == (851.1, 156.6, -51))
+			{
+				mannequin delete();
+			}
+			if (mannequin.origin == (808, 140.5, -51))
+			{
+				mannequin delete();
+			}
+			if (mannequin.origin == (602.53, 281.09, -55))
+			{
+				mannequin delete();
+			}
+		}
+        if (isdefined(level.mann_fr) && level.mann_fr)
         {
-            mannequin delete();
-        }
-        if (mannequin.origin == (609.28, 315.9, -53.89))
-        {
-            mannequin delete();
-        }
-        if (mannequin.origin == (872.48, 461.88, -56.8))
-        {
-            mannequin delete();
-        }
-        if (mannequin.origin == (851.1, 156.6, -51))
-        {
-            mannequin delete();
-        }
-        if (mannequin.origin == (808, 140.5, -51))
-        {
-            mannequin delete();
-        }
-        if (mannequin.origin == (602.53, 281.09, -55))
-        {
-            mannequin delete();
-        }
-        if (mannequin.origin == (-30, 13.90, -47.04))
-        {
-            mannequin delete();
+			if (mannequin.origin == (-30, 13.9031, -47.0411))
+			{
+           		mannequin delete();
+			}
         }
     }
 }
