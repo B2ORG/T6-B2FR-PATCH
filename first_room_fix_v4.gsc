@@ -22,8 +22,6 @@ main()
 init()
 {
 	flag_init("dvars_set");
-	// flag_init("cheat_detected");
-	flag_init("cheat_printed");
 	flag_init("cheat_printed_backspeed");
 	flag_init("cheat_printed_noprint");
 	flag_init("cheat_printed_cheats");
@@ -439,7 +437,7 @@ DvarDetector()
 		// Backspeed
 		if (getDvar("player_strafeSpeedScale") != "0.8" || getDvar("player_backSpeedScale") != "0.7") 
 		{
-			if (!flag("cheat_printed")) 
+			if (!flag("cheat_printed_backspeed") && !flag("cheat_printed_noprint") && !flag("cheat_printed_cheats")) 
 			{
 				level thread CreateWarningHud(cool_message, 0);
 				flag_set("cheat_printed");
@@ -463,7 +461,7 @@ DvarDetector()
 		|| getDvar("con_gameMsgWindow0FadeInTime") != "0.25" || getDvar("con_gameMsgWindow0FadeOutTime") != "0.5"
 		|| getDvar("con_gameMsgWindow0Filter") != "gamenotify obituary") 
 		{
-			if (!flag("cheat_printed")) 
+			if (!flag("cheat_printed_backspeed") && !flag("cheat_printed_noprint") && !flag("cheat_printed_cheats")) 
 			{
 				level thread CreateWarningHud(cool_message, 0);
 				flag_set("cheat_printed");
@@ -485,7 +483,7 @@ DvarDetector()
 		// Cheats
 		if (getDvar("sv_cheats") != "0") 
 		{
-			if (!flag("cheat_printed")) 
+			if (!flag("cheat_printed_backspeed") && !flag("cheat_printed_noprint") && !flag("cheat_printed_cheats")) 
 			{
 				level thread CreateWarningHud(cool_message, 0);
 				flag_set("cheat_printed");
