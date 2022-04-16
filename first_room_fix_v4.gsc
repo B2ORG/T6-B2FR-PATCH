@@ -31,7 +31,7 @@ init()
 	level thread OnPlayerConnect();
 
 	level.fix_revision = 11;
-	level.debug = true;
+	level.debug = false;
 	level.start_timestamp = 0;
 
 	// Control modules
@@ -49,17 +49,17 @@ init()
 	level.fog_depot = false;				// Include depot in map list
 	
 	// Characters config
-	level.char_coop = false;				// Allow coop
-	level.char_survival = false;			// Allow character preset for survival
-	level.char_victis = false;				// Allow character preset for green run maps
-	level.char_mob = false;					// Allow character preset for mob
-	level.char_origins = false;				// Allow character preset for origins
+	level.char_coop = true;					// Allow coop
+	level.char_survival = true;				// Allow character preset for survival
+	level.char_victis = true;				// Allow character preset for green run maps
+	level.char_mob = true;					// Allow character preset for mob
+	level.char_origins = true;				// Allow character preset for origins
 
 		// Survival characters (cia / cdc)
-		level.survival1 = "cia";
-		level.survival2 = "cia";
-		level.survival3 = "cia";
-		level.survival4 = "cia";
+		level.survival1 = "cdc";
+		level.survival2 = "cdc";
+		level.survival3 = "cdc";
+		level.survival4 = "cdc";
 
 		// Tranzit characters (misty / russman / marlton / stuhlinger)
 		level.victis1 = "misty";
@@ -368,6 +368,7 @@ PrintNetworkFrame(len)
 
 SetDvars()
 {
+	level waittill("initial_players_connected");
 	while (1)
 	{
 		setdvar("player_strafeSpeedScale", 0.8);
@@ -384,6 +385,10 @@ SetDvars()
 		setdvar("sv_patch_zm_weapons", 0);		// Depatch patched recoil
 		setdvar("sv_cheats", 0);
 
+		if (!flag("dvars_set"))
+		{
+			flag_set("dvars_set");
+		}
 		level waittill("reset_dvars");
 	}
 
@@ -392,13 +397,21 @@ SetDvars()
 
 DvarDetector() 
 {
-	cheats = 0;
 	cool_message = "Alright there fuckaroo, quit this cheated sheit and touch grass loser.";
-
-	flag_wait("dvars_set");
 
 	while (1) 
 	{
+		if (isdefined(level.debug) && level.debug)
+		{
+			// print("dvars_set " + flag("dvars_set"));
+			// print("cheat_printed " + flag("cheat_printed"));
+			// print("cheat_printed_backspeed " + flag("cheat_printed_backspeed"));
+			// print("cheat_printed_noprint " + flag("cheat_printed_noprint"));
+			// print("cheat_printed_cheats " + flag("cheat_printed_cheats"));
+		}
+
+		flag_wait("dvars_set");
+		
 		// Backspeed
 		if (getDvar("player_strafeSpeedScale") != "0.8" || getDvar("player_backSpeedScale") != "0.7") 
 		{
@@ -748,19 +761,19 @@ SetCharacters()
 		}
 		
 		// Get properties
-		if (self.clientid == 0)
+		if (self.clientid == 0 || self.clientid == 4)
 		{
 			preset_player = level.survival1;
 		}
-		else if (self.clientid == 1)
+		else if (self.clientid == 1 || self.clientid == 5)
 		{
 			preset_player = level.survival2;
 		}
-		else if (self.clientid == 2)
+		else if (self.clientid == 2 || self.clientid == 6)
 		{
 			preset_player = level.survival3;
 		}	
-		else if (self.clientid == 3)
+		else if (self.clientid == 3 || self.clientid == 7)
 		{
 			preset_player = level.survival4;
 		}		
@@ -784,16 +797,19 @@ SetCharacters()
 		if (level.script == "zm_transit" || level.script == "zm_highrise" || level.script == "zm_buried")	// Cause compiler sucks
 		{
 			// Get properties
-			preset_player = level.victis1;
-			if (self.clientid == 1)
+			if (self.clientid == 0 || self.clientid == 4)
+			{
+				preset_player = level.victis1;
+			}
+			else if (self.clientid == 1 || self.clientid == 5)
 			{
 				preset_player = level.victis2;
 			}
-			else if (self.clientid == 2)
+			else if (self.clientid == 2 || self.clientid == 6)
 			{
 				preset_player = level.victis3;
 			}	
-			else if (self.clientid == 3)
+			else if (self.clientid == 3 || self.clientid == 7)
 			{
 				preset_player = level.victis4;
 			}		
@@ -862,16 +878,19 @@ SetCharacters()
 	else if (isdefined(level.char_mob) && level.char_mob && level.script == "zm_prison")
 	{
 		// Get properties
-		preset_player = level.mob1;
-		if (self.clientid == 1)
+		if (self.clientid == 0 || self.clientid == 4)
+		{
+			preset_player = level.mob1;
+		}
+		else if (self.clientid == 1 || self.clientid == 5)
 		{
 			preset_player = level.mob2;
 		}
-		else if (self.clientid == 2)
+		else if (self.clientid == 2 || self.clientid == 6)
 		{
 			preset_player = level.mob3;
 		}	
-		else if (self.clientid == 3)
+		else if (self.clientid == 3 || self.clientid == 7)
 		{
 			preset_player = level.mob4;
 		}		
@@ -919,16 +938,19 @@ SetCharacters()
 	else if (isdefined(level.char_origins) && level.char_origins && level.script == "zm_tomb")
 	{
 		// Get properties
-		preset_player = level.origins1;
-		if (self.clientid == 1)
+		if (self.clientid == 0 || self.clientid == 4)
+		{
+			preset_player = level.origins1;
+		}
+		else if (self.clientid == 1 || self.clientid == 5)
 		{
 			preset_player = level.origins2;
 		}
-		else if (self.clientid == 2)
+		else if (self.clientid == 2 || self.clientid == 6)
 		{
 			preset_player = level.origins3;
 		}	
-		else if (self.clientid == 3)
+		else if (self.clientid == 3 || self.clientid == 7)
 		{
 			preset_player = level.origins4;
 		}		
