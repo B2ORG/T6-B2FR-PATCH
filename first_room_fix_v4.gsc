@@ -31,7 +31,7 @@ init()
 	level thread OnPlayerConnect();
 
 	level.fix_revision = 11;
-	level.debug = false;
+	level.debug = true;
 	level.start_timestamp = 0;
 
 	// Control modules
@@ -43,6 +43,7 @@ init()
 	level.cfg_mannequins = true;			// Nuketown mannequins for yellow house
 	level.cfg_timer = true;					// Timer
 	level.cfg_sph = true;					// SPH
+	level.cfg_perma = true;					// Give permaperks on spawn
 
 	// No Fog Config
 	level.fog_coop = false;					// Allow coop
@@ -93,6 +94,11 @@ init()
 	level.timer_right = true;				// Position timer on the right
 	level.timer_color = (1, 1, 1);			// Set color for timer
 	level.round_timer_color = (1, 1, 1);	// Set color for round timer
+
+	// Permaperks config
+	level.raygun_perma = true;				// Allow raygun permaperk
+	level.raygun_coop = true;				// Allow raygun permaperk for coop
+	level.raygun_skip_highrise = true;		// Skip die rise for ray function
 }
 
 OnPlayerConnect()
@@ -204,13 +210,13 @@ OnPlayerSpawned()
 			// Prints
 			if (isdefined(level.fix_revision))
 			{
-				self iPrintLn("^5FIRST ROOM FIX V4 (r0" + level.fix_revision + ")");
+				self iPrintLn("^5FIRST ROOM FIX V4 (R " + level.fix_revision + ")");
 			}
 			else
 			{
 				self iPrintLn("^5FIRST ROOM FIX V4");
 			}
-			self thread PrintNetworkFrame(5);
+			self thread PrintNetworkFrame(6);
 
 			// Characters
 			if (isdefined(level.cfg_characters) && level.cfg_characters)
@@ -222,6 +228,17 @@ OnPlayerSpawned()
 					self thread SetCharacters();
 				}
 			}   
+
+			// Permaperks
+			if (isdefined(level.cfg_perma) && level.cfg_perma)
+			{
+				raygun_players = HandlePlayerCount(level.raygun_coop);
+
+				if (level.players.size <= raygun_players)
+				{
+					self thread AwardPermaPerks();
+				}
+			}
 		}
 	}
 }
@@ -341,7 +358,7 @@ PrintNetworkFrame(len)
 	network_hud.vertalign = "user_top";
 	network_hud.x = 0;
 	network_hud.y = 5;
-	network_hud.fontscale = 1.8;
+	network_hud.fontscale = 1.9;
 	network_hud.alpha = 0;
 	network_hud.color = ( 1, 1, 1 );
 	network_hud.hidewheninmenu = 1;
@@ -1090,5 +1107,65 @@ OriginsFix()
 	if (level.script == "zm_tomb")
 	{
 		level.is_forever_solo_game = 0;
+	}
+}
+
+AwardPermaPerks()
+{
+	if (!flag("initial_blackscreen_passed"))
+	{
+		flag_wait("initial_blackscreen_passed");
+	}
+	wait 0.5;
+
+	if (maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active())
+	{
+		// QR, Deadshot, Tombstone & Boards
+		perks_list = array("revive", "multikill_headshots", "perk_lose", "board");
+
+		// Jugg
+		if (level.round_number < 15)
+		{
+			perks_list[perks_list.size] = "jugg";
+		}
+
+		// Flopper
+		if (level.script == "zm_buried")
+		{
+			perks_list[perks_list.size] = "flopper";
+		}
+
+		// RayGun
+		if (isdefined(level.raygun_perma) && level.raygun_perma)
+		{
+			raygun_maps = array("zm_transit", "zm_buried");
+			if (isdefined(level.raygun_skip_highrise) && !level.raygun_skip_highrise)
+			{
+				raygun_maps[raygun_maps.size] = "zm_highrise";
+			}
+
+			if (isinarray(raygun_maps, level.script))
+			{
+				perks_list[perks_list.size] = "nube";
+			}
+		}
+
+		// Set permaperks
+		foreach (perk in perks_list)
+		{
+			name = level.pers_upgrades[perk].stat_names[0];
+			val = level.pers_upgrades[perk].stat_desired_values[0];
+			self set_global_stat(name, val);
+			self.stats_this_frame[name] = 1;	// dunno, but won't work without it
+
+			if (isdefined(level.debug) && level.debug)
+			{
+				state = get_global_stat(name);
+				print("" + name + ": " + val);
+				print("saved: " + state);
+			}
+		}
+		playfx(level._effect["upgrade_aquired"], self.origin);
+		self playsoundtoplayer("evt_player_upgrade", self);
 	}
 }
