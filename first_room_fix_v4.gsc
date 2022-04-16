@@ -411,7 +411,7 @@ DvarDetector()
 		}
 
 		flag_wait("dvars_set");
-		
+
 		// Backspeed
 		if (getDvar("player_strafeSpeedScale") != "0.8" || getDvar("player_backSpeedScale") != "0.7") 
 		{
@@ -743,6 +743,10 @@ NukeMannequins()
             mannequin delete();
         }
         if (mannequin.origin == (602.53, 281.09, -55))
+        {
+            mannequin delete();
+        }
+        if (mannequin.origin == (-30, 13.90, -47.04))
         {
             mannequin delete();
         }
