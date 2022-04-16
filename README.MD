@@ -43,8 +43,9 @@ coming soon
 
 - Always Red Dot reticle on Origins PaP weapon reward
 
-4.11 updates:
-- Removed fix for Zombie Blood on Origins (solo returned to pluto)
+### r3042+
+- Solo / Custom split returned -> Zombie Blood fix disabled
+- Target Assist option added to custom games option, patch disables that on game start
 
 # First Room Fix V3
 Fixes:

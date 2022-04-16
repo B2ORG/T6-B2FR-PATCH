@@ -35,7 +35,7 @@ init()
 	// Control modules
 	level.cfg_reticle = true;				// Always default red dot
 	level.cfg_fog = true;					// No fog
-	// level.cfg_blood = true;					// Zombie blood on from challenge box | r3042 onwards again has custom / solo games
+	// level.cfg_blood = true;				// Zombie blood on from challenge box | r3042 onwards again has custom / solo games
 	level.cfg_characters = true;			// Set characters
 	level.cfg_eyes = true;					// Nuketown blue eyes and richrofen announcer
 	level.cfg_mannequins = true;			// Nuketown mannequins for yellow house
