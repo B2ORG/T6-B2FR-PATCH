@@ -34,7 +34,8 @@ init()
 	level.cfg_characters = true;			// Set characters
 	level.cfg_eyes = true;					// Nuketown blue eyes and richrofen announcer
 	level.cfg_mannequins = true;			// Nuketown mannequins for yellow house
-	level.cfg_timer = false;					// Timer
+	level.cfg_timer = true;					// Timer
+	level.cfg_sph = true;					// SPH
 
 	// No Fog Config
 	level.fog_coop = false;					// Allow coop
@@ -79,7 +80,7 @@ init()
 
 	// Timer config
 	level.timer_coop = true;				// Allow timer for coop games
-	level.timer_always_rt = true;			// Enable always displaying round time
+	level.timer_always_rt = false;			// Enable always displaying round time
 
 	level.timer_right = true;				// Position timer on the right
 	level.timer_color = (1, 1, 1);			// Set color for timer
@@ -162,6 +163,12 @@ OnGameStart()
 	}
 	level thread RoundTimerHud();
 
+	// Print SPH
+	if (isDefined(level.cfg_sph) && level.cfg_sph)
+	{
+		level thread SphHud();
+	}
+
 	level waittill("end_game");
 }
 
@@ -193,11 +200,6 @@ OnPlayerSpawned()
 			// Characters
 			if (isdefined(level.cfg_characters) && level.cfg_characters)
 			{
-				if (level.debug)
-				{
-					print("cfg_characters init");
-				}
-
 				char_players = HandlePlayerCount(level.char_coop);
 
 				if (level.players.size <= char_players)
@@ -344,7 +346,7 @@ PrintNetworkFrame(len)
 
 	if (network_frame_len == 0.1)
 	{
-		network_hud.label = &"Network frame check: ^2";
+		network_hud.label = &"NETWORK FRAME: ^2";
 	}
 	
 	network_hud setValue(network_frame_len);
@@ -617,6 +619,44 @@ SplitsTimerHud(hud)
 
 			splits_timer_hud fadeOverTime(0.25);
 			splits_timer_hud.alpha = 0;
+		}
+	}
+}
+
+SphHud()
+{
+	sph_hud = newHudElem();
+	sph_hud.alignx = "center";
+	sph_hud.aligny = "top";
+	sph_hud.horzalign = "user_center";
+	sph_hud.vertalign = "user_top";
+	sph_hud.x = 0; 				
+	sph_hud.y = 25;
+	sph_hud.fontscale = 1.5;
+	sph_hud.alpha = 0;	
+	sph_hud.color = (1, 1, 1);
+	sph_hud.hidewheninmenu = 1;
+	sph_hud.label = &"SPH: ";
+
+	while (1)
+	{
+		level waittill("start_of_round");
+		if (level.round_number >= 20)
+		{
+			rnd_size = (maps/mp/zombies/_zm_utility::get_round_enemy_array().size + level.zombie_total) / 24;
+			rt_start = int(gettime() / 1000);
+			level waittill("end_of_round");
+			rt_end = int(gettime() / 1000);
+
+			wait 1;
+			sph = (rt_end - rt_start) / rnd_size;
+			sph_hud setValue(sph);
+
+			sph_hud fadeOverTime(0.25);
+			sph_hud.alpha = 1;
+			wait 4;
+			sph_hud fadeOverTime(0.25);
+			sph_hud.alpha = 0;
 		}
 	}
 }
