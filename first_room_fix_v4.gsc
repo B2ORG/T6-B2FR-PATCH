@@ -21,6 +21,13 @@ main()
 
 init()
 {
+	flag_init("dvars_set");
+	// flag_init("cheat_detected");
+	flag_init("cheat_printed");
+	flag_init("cheat_printed_backspeed");
+	flag_init("cheat_printed_noprint");
+	flag_init("cheat_printed_cheats");
+
 	level thread OnPlayerConnect();
 
 	level.fix_revision = 11;
@@ -92,8 +99,9 @@ OnPlayerConnect()
 	level waittill("connecting", player);	
 	// level waittill("initial_players_connected");
 
-	// Anticheat and initial dvars
+	// Initial dvars & anticheat
 	level thread SetDvars();
+	level thread DvarDetector();
 
 	// Blood in challenge crate & doors prices
 	if (isdefined(level.cfg_blood) && level.cfg_blood)
@@ -358,97 +366,130 @@ PrintNetworkFrame(len)
 	network_hud destroy();
 }
 
-SetDvars() 
+SetDvars()
 {
-	// avoid mid game changes to ruleset and msg related dvars
-	i = 1;
+	while (1)
+	{
+		setdvar("player_strafeSpeedScale", 0.8);
+		setdvar("player_backSpeedScale", 0.7);
+	
+		setdvar("con_gameMsgWindow0Filter", "gamenotify obituary");
+		setdvar("con_gameMsgWindow0LineCount", 4);
+		setdvar("con_gameMsgWindow0MsgTime", 5);
+		setdvar("con_gameMsgWindow0FadeInTime", 0.25);
+		setdvar("con_gameMsgWindow0FadeOutTime", 0.5);
+				
+		setdvar("sv_endGameIfISuck", 0); 		// Prevent host migration
+		setdvar("sv_allowAimAssist", 0); 	 	// Removes target assist
+		setdvar("sv_patch_zm_weapons", 0);		// Depatch patched recoil
+		setdvar("sv_cheats", 0);
+
+		level waittill("reset_dvars");
+	}
+
+
+}
+
+DvarDetector() 
+{
 	cheats = 0;
 	cool_message = "Alright there fuckaroo, quit this cheated sheit and touch grass loser.";
-	random_float = randomFloatRange( 2.0, 4.0 );
 
-	for( ; ; ) 
+	flag_wait("dvars_set");
+
+	while (1) 
 	{
-		// check if any of the 
-		if ( i != 1 ) 
+		// Backspeed
+		if (getDvar("player_strafeSpeedScale") != "0.8" || getDvar("player_backSpeedScale") != "0.7") 
 		{
-			if ( getDvar( "player_strafeSpeedScale" ) != "0.8" || getDvar( "player_backSpeedScale" ) != "0.7" ) 
+			if (!flag("cheat_printed")) 
 			{
-				// our cheat warning signature xD 
-				if (cheats == 0) 
-				{
-					level thread CreateWarningHud( cool_message, 0 );
-				}
-				level thread CreateWarningHud( "Movement Speed Modification Attempted.", 30 );
-				
-				cheats = 1;
+				level thread CreateWarningHud(cool_message, 0);
+				flag_set("cheat_printed");
 			}
-			if ( getDvar( "con_gameMsgWindow0LineCount" ) != "4" || getDvar( "con_gameMsgWindow0MsgTime" ) != "5"
-			|| getDvar( "con_gameMsgWindow0FadeInTime" ) != "0.25" || getDvar( "con_gameMsgWindow0FadeOutTime" ) != "0.5"
-			|| getDvar( "con_gameMsgWindow0Filter" ) != "gamenotify obituary" ) 
-			{
-				// our cheat warning signature xD 
-				if (cheats == 0) 
-				{
-					level thread CreateWarningHud( cool_message, 0 );
-				}
-				level thread CreateWarningHud( "No Print Attempted.", 50 );
 
-				cheats = 1;
-			} 
-			if ( getDvar( "sv_patch_zm_weapons" ) != "0" || getDvar( "sv_cheats" ) != "0" ) 
+			if (!flag("cheat_printed_backspeed"))
 			{
-				// our cheat warning signature xD 
-				if (cheats == 0) 
-				{
-					level thread CreateWarningHud( cool_message, 0 );
-				}
-				level thread CreateWarningHud( "sv_cheats Attempted.", 70 );
-
-				cheats = 1;
+				level thread CreateWarningHud("Movement Speed Modification Attempted.", 30);
+				flag_set("cheat_printed_backspeed");
 			}
+			
+			if (isdefined(level.debug) && !level.debug)
+			{
+				level notify("reset_dvars");
+			}
+			// flag_set("cheat_detected");
 		}
 
-		// you can add any possibly exploited dvars to this loop
-		setdvar( "player_strafeSpeedScale", 0.8 );
-		setdvar( "player_backSpeedScale", 0.7 );
+		// Noprint
+		if (getDvar("con_gameMsgWindow0LineCount") != "4" || getDvar("con_gameMsgWindow0MsgTime") != "5"
+		|| getDvar("con_gameMsgWindow0FadeInTime") != "0.25" || getDvar("con_gameMsgWindow0FadeOutTime") != "0.5"
+		|| getDvar("con_gameMsgWindow0Filter") != "gamenotify obituary") 
+		{
+			if (!flag("cheat_printed")) 
+			{
+				level thread CreateWarningHud(cool_message, 0);
+				flag_set("cheat_printed");
+			}
+
+			if (!flag("cheat_printed_noprint"))
+			{
+				level thread CreateWarningHud("No Print Attempted.", 50);
+				flag_set("cheat_printed_noprint");
+			}
+
+			if (isdefined(level.debug) && !level.debug)
+			{
+				level notify("reset_dvars");
+			}
+			// flag_set("cheat_detected");
+		} 
 		
-		setdvar( "con_gameMsgWindow0Filter", "gamenotify obituary" );
-		setdvar( "con_gameMsgWindow0LineCount", 4 );
-		setdvar( "con_gameMsgWindow0MsgTime", 5 );
-		setdvar( "con_gameMsgWindow0FadeInTime", 0.25 );
-		setdvar( "con_gameMsgWindow0FadeOutTime", 0.5 );
-				 
-		setdvar( "sv_endGameIfISuck", 0 ); 		// Prevent host migration
-		setdvar( "sv_allowAimAssist", 0 ); 	 	// Removes target assist
-		setdvar( "sv_patch_zm_weapons", 0 );	// Depatch patched recoil
-		setdvar( "sv_cheats", 0 );
+		// Cheats
+		if (getDvar("sv_cheats") != "0") 
+		{
+			if (!flag("cheat_printed")) 
+			{
+				level thread CreateWarningHud(cool_message, 0);
+				flag_set("cheat_printed");
+			}
+			
+			if (!flag("cheat_printed_cheats"))
+			{
+				level thread CreateWarningHud("sv_cheats Attempted.", 70);
+				flag_set("cheat_printed_cheats");
+			}
 
-		i = 0;
-
-		wait random_float;
+			if (isdefined(level.debug) && !level.debug)
+			{
+				level notify("reset_dvars");
+			}
+			// flag_set("cheat_detected");
+		}
+		wait 0.1;
 	}
 }
 
-CreateWarningHud( text, offset ) 
+CreateWarningHud(text, offset) 
 {
 	warnHud = newHudElem();
 	warnHud.fontscale = 1.5;
 	warnHud.alignx = "left";
-	warnHud.x -= 20;
-	warnHud.y += offset;
-	warnHud.color = ( 0, 0, 0 );
+	warnHud.x = 20;
+	warnHud.y = offset;
+	warnHud.color = (0, 0, 0);
 	warnHud.hidewheninmenu = 0;
 
-	if (offset != 0 ) 
+	if (offset != 0) 
 	{
-		warnHud.label = &"^1Cheat Warning: ";
+		warnHud.label = &"^1";
 	}
 	else 
 	{
 		warnHud.label = &"^5";
 	}
 
-	warnHud setText( text );
+	warnHud setText(text);
 	
 	warnHud showElem();
 }
