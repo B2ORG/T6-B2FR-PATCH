@@ -13,332 +13,98 @@
 
 main()
 {
-	replaceFunc(maps/mp/animscripts/zm_utility::wait_network_frame, ::FixNetworkFrame);
-	replaceFunc(maps/mp/zombies/_zm_utility::wait_network_frame, ::FixNetworkFrame);
+	replaceFunc( maps/mp/animscripts/zm_utility::wait_network_frame, ::FixNetworkFrame );
+	replaceFunc( maps/mp/zombies/_zm_utility::wait_network_frame, ::FixNetworkFrame );
 
-	replaceFunc(maps/mp/zombies/_zm_weapons::get_pack_a_punch_weapon_options, ::GetPapWeaponReticle);
+	// replaceFunc( maps/mp/zombies/_zm_weapons::get_pack_a_punch_weapon_options, ::GetPapWeaponReticle );
 }
 
 init()
 {
-	flag_init("dvars_set");
-	flag_init("cheat_printed_backspeed");
-	flag_init("cheat_printed_noprint");
-	flag_init("cheat_printed_cheats");
-
 	level thread OnPlayerConnect();
-
-	level.fix_revision = 11;
-	level.debug = true;
-	level.start_timestamp = 0;
-
-	// Control modules
-	level.cfg_reticle = true;				// Always default red dot
-	level.cfg_fog = true;					// No fog
-	// level.cfg_blood = true;				// Zombie blood on from challenge box | r3042 onwards again has custom / solo games
-	level.cfg_characters = true;			// Set characters
-	level.cfg_eyes = true;					// Nuketown blue eyes and richrofen announcer
-	level.cfg_mannequins = true;			// Nuketown mannequins for yellow house
-	level.cfg_timer = true;					// Timer
-	level.cfg_sph = true;					// SPH
-	level.cfg_perma = true;					// Give permaperks on spawn
-
-	// No Fog Config
-	level.fog_coop = false;					// Allow coop
-	level.fog_depot = false;				// Include depot in map list
-	
-	// Characters config
-	level.char_coop = true;					// Allow coop
-	level.char_survival = true;				// Allow character preset for survival
-	level.char_victis = true;				// Allow character preset for green run maps
-	level.char_mob = true;					// Allow character preset for mob
-	level.char_origins = true;				// Allow character preset for origins
-
-		// Survival characters (cia / cdc)
-		level.survival1 = "cdc";
-		level.survival2 = "cdc";
-		level.survival3 = "cdc";
-		level.survival4 = "cdc";
-
-		// Tranzit characters (misty / russman / marlton / stuhlinger)
-		level.victis1 = "misty";
-		level.victis2 = "russman";
-		level.victis3 = "marlton";
-		level.victis4 = "stuhlinger";
-
-		// Mob characters (weasel / finn / sal / billy)
-		level.mob1 = "weasel";
-		level.mob2 = "finn";
-		level.mob3 = "sal";
-		level.mob4 = "billy";
-
-		// Origins characters (dempsey / nikolai / takeo / richtofen)
-		level.origins1 = "dempsey";
-		level.origins2 = "nikolai";
-		level.origins3 = "takeo";
-		level.origins4 = "richtofen";
-
-	// Blue eyes config
-	level.eyes_coop = false;				// Allow coop
-
-	// Mannequins
-	level.mann_coop = false;				// Allow coop
-	level.mann_fr = true;					// Remove also mann for fr
-
-	// Timer config
-	level.timer_coop = true;				// Allow timer for coop games
-	level.timer_always_rt = false;			// Enable always displaying round time
-
-	level.timer_right = true;				// Position timer on the right
-	level.timer_color = (1, 1, 1);			// Set color for timer
-	level.round_timer_color = (1, 1, 1);	// Set color for round timer
-
-	// Permaperks config
-	level.raygun_perma = true;				// Allow raygun permaperk
-	level.raygun_coop = true;				// Allow raygun permaperk for coop
-	level.raygun_skip_highrise = true;		// Skip die rise for ray function
 }
 
 OnPlayerConnect()
 {
-	level waittill("connecting", player);	
-	// level waittill("initial_players_connected");
+	level waittill( "connecting", player );	
 
-	// Initial dvars & anticheat
-	level thread SetDvars();
-	level thread DvarDetector();
+	player thread OnPlayerSpawned();
 
-	// Blood in challenge crate & doors prices
-	if (isdefined(level.cfg_blood) && level.cfg_blood)
+	level thread SetDvars();			// Anticheat and initial dvars
+	level thread OriginsFix();			// Blood & Doors set to custom games
+	level waittill( "initial_players_connected" );
+	
+	if ( level.script == "zm_transit" && level.scr_zm_map_start_location != "transit" )							// Exclude depot from Green Run
 	{
-		level thread OriginsFix();
-	}
-
-	// No fog
-	if ((isdefined(level.cfg_fog) && level.cfg_fog) && level.script == "zm_transit")
-	{
-		fog_players = HandlePlayerCount(level.fog_coop);
-
-		// Handle depot
-		fog_map = ReturnCfg(level.fog_depot, "transit", "placeholder");
-
-		if ((level.scr_zm_map_start_location != fog_map) && (level.players.size <= fog_players))
+		if ( level.players.size < 2 )  	// Change between <2 and <5
 		{
-			setdvar ("r_fog", 0);
+			// setdvar ( "r_fog", 0 ); 	// Remove fog
 		}
+	} 
+
+	level thread PrintNetworkFrame();	// Prints current length of networkframe
+	level thread PrintFix();			// Print First Room Fix msg
+
+	if ( level.players.size < 2 )  		// Change between <2 and <5 | All characters have to be preset if using for coop
+	{
+		// level thread SetCharacters();
 	}
 
-	// Blue eyes nuketown
-	if ((isdefined(level.cfg_eyes) && level.cfg_eyes) && level.script == "zm_nuked")
+	if ( level.players.size < 5 ) 		// Change between <2 and <5
 	{
-		eyes_players = HandlePlayerCount(level.eyes_coop);
-
-		if (level.players.size <= eyes_players)
+		if ( level.script == "zm_nuked" )
 		{
-			level thread EyeChange();
+			// level thread EyeChange();	// Eye color on Nuketown
+
+			if ( !level.enable_magic )
+			{
+				// level thread NukeMannequins();
+			}
 		}
 	}
-
-	// Mannequins nuketown
-	if (isdefined(level.cfg_mannequins) && level.cfg_mannequins && level.script == "zm_nuked")
-	{
-		mannequins_players = HandlePlayerCount(level.mann_coop);
-
-		if (level.players.size <= mannequins_players)
-		{
-			level thread NukeMannequins();
-		}
-	}
-
-	// Initialize global HUD
-	level thread OnGameStart();
-
-	while (1)
-	{
-        player thread OnPlayerSpawned();     
-		level waittill("connected", player);	// After thread cause 1st player
-	}
-}
-
-OnGameStart()
-{
-	flag_wait("initial_blackscreen_passed");
-	level.start_timestamp = int(getTime() / 1000);
-
-	// Timer
-	timer_players = HandlePlayerCount(level.timer_coop);
-	if (level.players.size <= timer_players)
-	{
-		if (isdefined(level.cfg_timer) && level.cfg_timer)
-		{		
-			level thread TimerHud();
-		}
-	}
-	level thread RoundTimerHud();
-
-	// Print SPH
-	if (isDefined(level.cfg_sph) && level.cfg_sph)
-	{
-		level thread SphHud();
-	}
-
-	level waittill("end_game");
 }
 
 OnPlayerSpawned()
 {
-    level endon("game_ended");
-	self endon("disconnect");
+    level endon( "game_ended" );
+	self endon( "disconnect" );
 
-	my_id = self.clientid;
-	if (level.debug)
+	self waittill( "spawned_player" );
+
+	flag_wait( "initial_blackscreen_passed" );
+	// 'hostonly' will define whether timer is for everyone or just host in the game. 'soloonly' will define if timer should be used in coop or not
+	hostonly = false; 			// Change to true for only host to have timer
+	soloonly = false;			// Change to true for timer to be used only in solo
+	nohost = false;				// Change to true for all players but host to have timer
+	i = 1;
+	foreach ( player in level.players )
 	{
-		self iPrintLn("clientid: " + my_id);
-	}
-
-	self.initial_spawn = true;
-	for (;;)
-	{
-		self waittill("spawned_player");
-
-		if (self.initial_spawn)
+		if ( soloonly && level.players.size != 1 )
 		{
-            self.initial_spawn = false;
+			break;
+		}
 
-			// Prints
-			if (isdefined(level.fix_revision))
-			{
-				self iPrintLn("^5FIRST ROOM FIX V4 (R " + level.fix_revision + ")");
-			}
-			else
-			{
-				self iPrintLn("^5FIRST ROOM FIX V4");
-			}
-			self thread PrintNetworkFrame(6);
+		if ( nohost && level.players.size != 1 )
+		{
+			i++;
+			continue;
+		}
 
-			// Characters
-			if (isdefined(level.cfg_characters) && level.cfg_characters)
-			{
-				char_players = HandlePlayerCount(level.char_coop);
+		// player TimerHud();
 
-				if (level.players.size <= char_players)
-				{
-					self thread SetCharacters();
-				}
-			}   
-
-			// Permaperks
-			if (isdefined(level.cfg_perma) && level.cfg_perma)
-			{
-				raygun_players = HandlePlayerCount(level.raygun_coop);
-
-				if (level.players.size <= raygun_players)
-				{
-					self thread AwardPermaPerks();
-				}
-			}
+		if ( hostonly )
+		{
+			break;
 		}
 	}
 }
 
-HandlePlayerCount(coop_bool, arg)
+PrintFix()
 {
-	answer = 0;
-
-	if (!isdefined(arg))
+	foreach( player in level.players )	// Code from 5
 	{
-		arg = 0;
+		player iprintln( "^5FIRST ROOM FIX V4" );
 	}
-
-	if (arg > 1 && arg < 8)
-	{
-		if (coop_bool)
-		{
-			answer = arg;
-		}
-	}
-	else if (coop_bool)
-	{
-		answer = 8;
-	}
-	else
-	{
-		answer = 1;
-	}
-
-	if (level.debug)
-	{
-		print("answer: " + answer);
-	}
-
-	return answer;
-}
-
-ReturnCfg(bool, val_true, val_false)
-{
-	if (!isdefined(bool) || !isdefined(val_true) || !isdefined(val_false))
-	{
-		return;
-	}
-
-	if (bool)
-	{
-		return val_true;
-	}
-	else
-	{
-		return val_false;
-	}
-}
-
-ConvertTime(seconds)
-{
-	hours = 0; 
-	minutes = 0; 
-	
-	if( seconds > 59 )
-	{
-		minutes = int(seconds / 60);
-
-		seconds = int(seconds * 1000) % (60 * 1000);
-		seconds = seconds * 0.001; 
-
-		if(minutes > 59)
-		{
-			hours = int(minutes / 60);
-			minutes = int(minutes * 1000) % (60 * 1000);
-			minutes = minutes * 0.001; 		
-		}
-	}
-
-	str_hours = hours;
-	if(hours < 10)
-	{
-		str_hours = "0" + hours; 
-	}
-
-	str_minutes = minutes;
-	if(minutes < 10 && hours > 0)
-	{
-		str_minutes = "0" + minutes; 
-	}
-
-	str_seconds = seconds;
-	if(seconds < 10)
-	{
-		str_seconds = "0" + seconds; 
-	}
-
-	if (hours == 0)
-	{
-		combined = "" + str_minutes  + ":" + str_seconds; 
-	}
-	else
-	{
-		combined = "" + str_hours  + ":" + str_minutes  + ":" + str_seconds; 
-	}
-
-	return combined; 
 }
 
 FixNetworkFrame()
@@ -347,687 +113,518 @@ FixNetworkFrame()
 	wait 0.1; 							// IF statement caused fix to not work
 }
 
-PrintNetworkFrame(len)
+PrintNetworkFrame()
 {
-	network_hud = newClientHudElem(self);
+	network_hud = newHudElem();
 	network_hud.alignx = "center";
 	network_hud.aligny = "top";
 	network_hud.horzalign = "user_center";
 	network_hud.vertalign = "user_top";
-	network_hud.x = 0;
-	network_hud.y = 5;
-	network_hud.fontscale = 1.9;
+	network_hud.x += 0;
+	network_hud.y += 2;
+	network_hud.fontscale = 1.4;
 	network_hud.alpha = 0;
 	network_hud.color = ( 1, 1, 1 );
 	network_hud.hidewheninmenu = 1;
-	network_hud.label = &"NETWORK FRAME: ^1";
+	network_hud.label = &"Network frame check: ^1";
 
-	flag_wait("initial_blackscreen_passed");
+	flag_wait( "initial_blackscreen_passed" );
 
-	start_time = int(getTime());
+	start_time = int( getTime() );
 	wait_network_frame();
-	end_time = int(getTime());
-	network_frame_len = (end_time - start_time) / 1000;
+	end_time = int( getTime() );
+	network_frame_len = float((end_time - start_time) / 1000);
 
-	if (!isdefined(len))
+	if ( network_frame_len == 0.1 )
 	{
-		len = 5;
-	}
-
-	if (network_frame_len == 0.1)
-	{
-		network_hud.label = &"NETWORK FRAME: ^2";
+		network_hud.label = &"Network frame check: ^2";
 	}
 	
-	network_hud setValue(network_frame_len);
-
 	network_hud.alpha = 1;
-	wait len;
+	network_hud setValue( network_frame_len );
+
+	wait 3;
 	network_hud.alpha = 0;
-	wait 0.1;
-	network_hud destroy();
 }
 
-SetDvars()
+SetDvars() 
 {
-	level waittill("initial_players_connected");
-	while (1)
+	// avoid mid game changes to ruleset and msg related dvars
+	i = 1;
+	cheats = 0;
+	cool_message = "Alright there fuckaroo, quit this cheated sheit and touch grass loser. Zi0 & Txch";
+	random_float = randomFloatRange( 2.0, 4.0 );
+
+	for( ; ; ) 
 	{
-		setdvar("player_strafeSpeedScale", 0.8);
-		setdvar("player_backSpeedScale", 0.7);
-	
-		setdvar("con_gameMsgWindow0Filter", "gamenotify obituary");
-		setdvar("con_gameMsgWindow0LineCount", 4);
-		setdvar("con_gameMsgWindow0MsgTime", 5);
-		setdvar("con_gameMsgWindow0FadeInTime", 0.25);
-		setdvar("con_gameMsgWindow0FadeOutTime", 0.5);
+		// check if any of the 
+		if ( i != 1 ) 
+		{
+			if ( getDvar( "player_strafeSpeedScale" ) != "0.8" || getDvar( "player_backSpeedScale" ) != "0.7" ) 
+			{
+				// our cheat warning signature xD 
+				if (cheats == 0) 
+				{
+					level thread CreateWarningHud( cool_message, 0 );
+				}
+				level thread CreateWarningHud( "Movement Speed Modification Attempted.", 30 );
 				
-		setdvar("sv_endGameIfISuck", 0); 		// Prevent host migration
-		setdvar("sv_allowAimAssist", 0); 	 	// Removes target assist
-		setdvar("sv_patch_zm_weapons", 0);		// Depatch patched recoil
-		setdvar("sv_cheats", 0);
+				cheats = 1;
+			}
+			if ( getDvar( "con_gameMsgWindow0LineCount" ) != "4" || getDvar( "con_gameMsgWindow0MsgTime" ) != "5"
+			|| getDvar( "con_gameMsgWindow0FadeInTime" ) != "0.25" || getDvar( "con_gameMsgWindow0FadeOutTime" ) != "0.5"
+			|| getDvar( "con_gameMsgWindow0Filter" ) != "gamenotify obituary" ) 
+			{
+				// our cheat warning signature xD 
+				if (cheats == 0) 
+				{
+					level thread CreateWarningHud( cool_message, 0 );
+				}
+				level thread CreateWarningHud( "No Print Attempted.", 50 );
 
-		if (!flag("dvars_set"))
-		{
-			flag_set("dvars_set");
-		}
-		level waittill("reset_dvars");
-	}
+				cheats = 1;
+			} 
+			if ( getDvar( "sv_patch_zm_weapons" ) != "0" || getDvar( "sv_cheats" ) != "0" ) 
+			{
+				// our cheat warning signature xD 
+				if (cheats == 0) 
+				{
+					level thread CreateWarningHud( cool_message, 0 );
+				}
+				level thread CreateWarningHud( "sv_cheats Attempted.", 70 );
 
-
-}
-
-DvarDetector() 
-{
-	cool_message = "Alright there fuckaroo, quit this cheated sheit and touch grass loser.";
-
-	while (1) 
-	{
-		if (isdefined(level.debug) && level.debug)
-		{
-			// print("dvars_set " + flag("dvars_set"));
-			// print("cheat_printed " + flag("cheat_printed"));
-			// print("cheat_printed_backspeed " + flag("cheat_printed_backspeed"));
-			// print("cheat_printed_noprint " + flag("cheat_printed_noprint"));
-			// print("cheat_printed_cheats " + flag("cheat_printed_cheats"));
+				cheats = 1;
+			}
 		}
 
-		flag_wait("dvars_set");
-
-		// Backspeed
-		if (getDvar("player_strafeSpeedScale") != "0.8" || getDvar("player_backSpeedScale") != "0.7") 
-		{
-			if (!flag("cheat_printed_backspeed") && !flag("cheat_printed_noprint") && !flag("cheat_printed_cheats")) 
-			{
-				level thread CreateWarningHud(cool_message, 0);
-				flag_set("cheat_printed");
-			}
-
-			if (!flag("cheat_printed_backspeed"))
-			{
-				level thread CreateWarningHud("Movement Speed Modification Attempted.", 30);
-				flag_set("cheat_printed_backspeed");
-			}
-			
-			if (isdefined(level.debug) && !level.debug)
-			{
-				level notify("reset_dvars");
-			}
-			// flag_set("cheat_detected");
-		}
-
-		// Noprint
-		if (getDvar("con_gameMsgWindow0LineCount") != "4" || getDvar("con_gameMsgWindow0MsgTime") != "5"
-		|| getDvar("con_gameMsgWindow0FadeInTime") != "0.25" || getDvar("con_gameMsgWindow0FadeOutTime") != "0.5"
-		|| getDvar("con_gameMsgWindow0Filter") != "gamenotify obituary") 
-		{
-			if (!flag("cheat_printed_backspeed") && !flag("cheat_printed_noprint") && !flag("cheat_printed_cheats")) 
-			{
-				level thread CreateWarningHud(cool_message, 0);
-				flag_set("cheat_printed");
-			}
-
-			if (!flag("cheat_printed_noprint"))
-			{
-				level thread CreateWarningHud("No Print Attempted.", 50);
-				flag_set("cheat_printed_noprint");
-			}
-
-			if (isdefined(level.debug) && !level.debug)
-			{
-				level notify("reset_dvars");
-			}
-			// flag_set("cheat_detected");
-		} 
+		// you can add any possibly exploited dvars to this loop
+		setdvar( "player_strafeSpeedScale", 0.8 );
+		setdvar( "player_backSpeedScale", 0.7 );
 		
-		// Cheats
-		if (getDvar("sv_cheats") != "0") 
-		{
-			if (!flag("cheat_printed_backspeed") && !flag("cheat_printed_noprint") && !flag("cheat_printed_cheats")) 
-			{
-				level thread CreateWarningHud(cool_message, 0);
-				flag_set("cheat_printed");
-			}
-			
-			if (!flag("cheat_printed_cheats"))
-			{
-				level thread CreateWarningHud("sv_cheats Attempted.", 70);
-				flag_set("cheat_printed_cheats");
-			}
+		setdvar( "con_gameMsgWindow0Filter", "gamenotify obituary" );
+		setdvar( "con_gameMsgWindow0LineCount", 4 );
+		setdvar( "con_gameMsgWindow0MsgTime", 5 );
+		setdvar( "con_gameMsgWindow0FadeInTime", 0.25 );
+		setdvar( "con_gameMsgWindow0FadeOutTime", 0.5 );
+				 
+		setdvar( "sv_endGameIfISuck", 0 ); 		// Prevent host migration
+		setdvar( "sv_allowAimAssist", 0 ); 	 	// Removes target assist
+		setdvar( "sv_patch_zm_weapons", 0 );	// Depatch patched recoil
+		setdvar( "sv_cheats", 0 );
 
-			if (isdefined(level.debug) && !level.debug)
-			{
-				level notify("reset_dvars");
-			}
-			// flag_set("cheat_detected");
-		}
-		wait 0.1;
+		i = 0;
+
+		wait random_float;
 	}
 }
 
-CreateWarningHud(text, offset) 
+CreateWarningHud( text, offset ) 
 {
 	warnHud = newHudElem();
 	warnHud.fontscale = 1.5;
 	warnHud.alignx = "left";
-	warnHud.x = 20;
-	warnHud.y = offset;
-	warnHud.color = (0, 0, 0);
+	warnHud.x -= 20;
+	warnHud.y += offset;
+	warnHud.color = ( 0, 0, 0 );
 	warnHud.hidewheninmenu = 0;
 
-	if (offset != 0) 
+	if (offset != 0 ) 
 	{
-		warnHud.label = &"^1";
+		warnHud.label = &"^1Cheat Warning: ";
 	}
 	else 
 	{
 		warnHud.label = &"^5";
 	}
 
-	warnHud setText(text);
+	warnHud setText( text );
 	
 	warnHud showElem();
 }
 
 TimerHud()
 {
-	timer_hud = newHudElem();
-	timer_hud.alignx = "left";				
+	timer_hud = newClientHudElem(self);
+	timer_hud.alignx = "left";					// Change only this for right
 	timer_hud.aligny = "top";
-	timer_hud.horzalign = "user_left";			
+	timer_hud.horzalign = "user_left";			// Changes automatically
 	timer_hud.vertalign = "user_top";
-	timer_hud.x = 10; 							
-	timer_hud.y = 5;							
-	timer_hud.fontscale = 1.5;
-	timer_hud.color = level.timer_color;
+	timer_hud.x = 7; 							// Changes automatically
+	timer_hud.y = 2;							// Changes automatically
+	timer_hud.fontscale = 1.4;
+	timer_hud.alpha = 1;
+	timer_hud.color = ( 1, 1, 1 );
 	timer_hud.hidewheninmenu = 1;
-	if (level.timer_right)
+	if ( timer_hud.alignx == "right" )
 	{
-		timer_hud.alignx = "right";
 		timer_hud.horzalign = "user_right";
-		timer_hud.x = -10; 
-		timer_hud.y = 25;
+		timer_hud.x -= 7; 
+		timer_hud.y += 12;
 	} 
 
-	if (level.debug)
-	{
-		iPrintLn("timer_color: " + level.timer_color);
-		iPrintLn("timer_right: " + level.timer_right);
-	}
+	self thread RoundTimerHud(timer_hud);
 
 	timer_hud setTimerUp(0); 
-	timer_hud.alpha = 1;
 }
 
-RoundTimerHud()
+RoundTimerHud(hud)
 {
-	offset = 0;
-	if (level.cfg_timer)
-	{
-		offset = 20;
-	}
-
-	round_timer_hud = newHudElem();
-	round_timer_hud.alignx = "left";
-	round_timer_hud.aligny = "top";
-	round_timer_hud.horzalign = "user_left";	
-	round_timer_hud.vertalign = "user_top";
-	round_timer_hud.x = 10;				
-	round_timer_hud.y = (5 + offset);
-	round_timer_hud.fontscale = 1.5;
-	round_timer_hud.alpha = 0;	
-	round_timer_hud.color = level.round_timer_color;
+	round_timer_hud = newClientHudElem(self);
+	round_timer_hud.alignx = hud.alignx;
+	round_timer_hud.aligny = hud.aligny;
+	round_timer_hud.horzalign = hud.horzalign;
+	round_timer_hud.vertalign = hud.vertalign;
+	round_timer_hud.x = hud.x; 				
+	round_timer_hud.y = ( hud.y + 20 );
+	round_timer_hud.fontscale = 1.4;
+	round_timer_hud.alpha = 0;	// Don't actually want it to display
+	round_timer_hud.color = ( 1, 1, 1 );
 	round_timer_hud.hidewheninmenu = 1;
-	if (level.timer_right)
-	{
-		round_timer_hud.alignx = "right";
-		round_timer_hud.horzalign = "user_right";
-		round_timer_hud.x = -10; 
-		round_timer_hud.y = (25 + offset);
-	}
+	round_timer_hud.label = &"";
 
-	if (level.debug)
-	{
-		iPrintLn("rt_color: " + level.round_timer_color);
-		iPrintLn("rt_right: " + level.timer_right);
-	}
+	// flag_wait( "initial_blackscreen_passed" );
+	level.FADE_TIME = 0.2;
 
-	if (isdefined(level.cfg_timer) && !level.cfg_timer)
+	while ( 1 )
 	{
-		if (isdefined(level.timer_always_rt) && level.timer_always_rt)
+		round_timer_hud setTimerUp(0);
+		start_time = int( getTime() / 1000 );
+
+		level waittill( "end_of_round" );
+
+		end_time = int( getTime() / 1000 );
+		time = end_time - start_time;
+
+		if ( level.round_number > 10 )
 		{
-			level.timer_always_rt = false;
+			self DisplayRoundTime(time, round_timer_hud);
 		}
-	}		
 
-	level thread SplitsTimerHud(round_timer_hud);
-
-	if (level.timer_always_rt)
-	{
-		while(1)
-		{
-			level waittill("start_of_round");
-			start_time = int(getTime() / 1000);
-			round_timer_hud setTimerUp(0);
-			round_timer_hud fadeOverTime(0.25);
-			round_timer_hud.alpha = 1;
-
-			level waittill("end_of_round");
-			end_time = int(getTime() / 1000);
-			time = ConvertTime(end_time - start_time);
-			round_timer_hud setText(time);
-
-			if (level.debug)
-			{
-				self iPrintLn(time);
-			}
-
-			wait 4;
-			round_timer_hud fadeOverTime(0.25);
-			round_timer_hud.alpha = 0;
-		}
-	}
-	else
-	{
-		round_timer_hud.label = &"Round: ";
-		while (1)
-		{
-			level waittill("start_of_round");
-			start_time = int(getTime() / 1000);
-
-			level waittill("end_of_round");
-			end_time = int(getTime() / 1000);
-			time = ConvertTime(end_time - start_time);
-
-			if (level.debug)
-			{
-				self iPrintLn(time);
-			}
-
-			if (level.round_number >= 10)
-			{
-				round_timer_hud setText(time);
-				round_timer_hud fadeOverTime(0.25);
-				round_timer_hud.alpha = 1;
-				wait 5;
-
-				round_timer_hud fadeOverTime(0.25);
-				round_timer_hud.alpha = 0;
-			}
-		}
+		level waittill( "start_of_round" );
 	}
 }
 
-SplitsTimerHud(hud)
+DisplayRoundTime(time, hud)
 {
-	splits_timer_hud = newHudElem();
-	splits_timer_hud.alignx = hud.alignx;
-	splits_timer_hud.aligny = hud.aligny;
-	splits_timer_hud.horzalign = hud.horzalign;
-	splits_timer_hud.vertalign = hud.vertalign;
-	splits_timer_hud.x = hud.x; 				
-	splits_timer_hud.y = (hud.y + 20);
-	splits_timer_hud.fontscale = hud.fontscale;
-	splits_timer_hud.alpha = 0;	
-	splits_timer_hud.color = hud.color;
-	splits_timer_hud.hidewheninmenu = hud.hidewheninmenu;
+	timer_for_hud = time - 0.05;
 
-	while (1)
+	// Since actual round timer is hidden it's prob not needed but imma leave it here regardless
+	hud FadeOverTime(level.FADE_TIME);
+	hud.alpha = 0;
+	wait level.FADE_TIME * 2;
+
+	hud.label = &"Round Time: ";
+	hud FadeOverTime(level.FADE_TIME);
+	hud.alpha = 1;
+
+	for ( i = 0; i < 20; i++ ) // wait 5s
 	{
-		level waittill("end_of_round");
-		wait 8.5;
-
-		if ((level.round_number > 10) && (!level.round_number % 5))
-		{
-			time = int(getTime() / 1000);
-			timestamp = ConvertTime(time - level.start_timestamp);
-
-			if (level.debug)
-			{
-				iPrintLn("split_time: " + time);
-				iPrintLn("start_timestamp: " + level.start_timestamp);
-			}		
-
-			splits_timer_hud setText("" + level.round_number + " time: " + timestamp);
-			splits_timer_hud fadeOverTime(0.25);
-			splits_timer_hud.alpha = 1;
-			wait 4;
-
-			splits_timer_hud fadeOverTime(0.25);
-			splits_timer_hud.alpha = 0;
-		}
+		hud setTimer(timer_for_hud);
+		wait 0.25;
 	}
-}
 
-SphHud()
-{
-	sph_hud = newHudElem();
-	sph_hud.alignx = "center";
-	sph_hud.aligny = "top";
-	sph_hud.horzalign = "user_center";
-	sph_hud.vertalign = "user_top";
-	sph_hud.x = 0; 				
-	sph_hud.y = 25;
-	sph_hud.fontscale = 1.5;
-	sph_hud.alpha = 0;	
-	sph_hud.color = (1, 1, 1);
-	sph_hud.hidewheninmenu = 1;
-	sph_hud.label = &"SPH: ";
+	hud FadeOverTime(level.FADE_TIME);
+	hud.alpha = 0;
 
-	while (1)
-	{
-		level waittill("start_of_round");
-		if (level.round_number >= 20)
-		{
-			rnd_size = (maps/mp/zombies/_zm_utility::get_round_enemy_array().size + level.zombie_total) / 24;
-			rt_start = int(gettime() / 1000);
-			level waittill("end_of_round");
-			rt_end = int(gettime() / 1000);
-
-			wait 1;
-			sph = (rt_end - rt_start) / rnd_size;
-			sph_hud setValue(sph);
-
-			sph_hud fadeOverTime(0.25);
-			sph_hud.alpha = 1;
-			wait 4;
-			sph_hud fadeOverTime(0.25);
-			sph_hud.alpha = 0;
-		}
-	}
+	wait level.FADE_TIME * 2;
+	hud.label = &"";
 }
 
 NukeMannequins()
 {
-	flag_wait("initial_blackscreen_passed");
+	flag_wait( "initial_blackscreen_passed" );
 	wait 1;
-    destructibles = getentarray("destructible", "targetname");
+    destructibles = getentarray( "destructible", "targetname" );
     foreach ( mannequin in destructibles )
     {
-		if (isdefined(level.enable_magic) && !level.enable_magic)
-		{
-			if (mannequin.origin == (1058.2, 387.3, -57))
-			{
-				mannequin delete();
-			}
-			if (mannequin.origin == (609.28, 315.9, -53.89))
-			{
-				mannequin delete();
-			}
-			if (mannequin.origin == (872.48, 461.88, -56.8))
-			{
-				mannequin delete();
-			}
-			if (mannequin.origin == (851.1, 156.6, -51))
-			{
-				mannequin delete();
-			}
-			if (mannequin.origin == (808, 140.5, -51))
-			{
-				mannequin delete();
-			}
-			if (mannequin.origin == (602.53, 281.09, -55))
-			{
-				mannequin delete();
-			}
-		}
-        if (isdefined(level.mann_fr) && level.mann_fr)
+        if ( mannequin.origin == ( 1058.2, 387.3, -57 ) )
         {
-			if (mannequin.origin == (-30, 13.9031, -47.0411))
-			{
-           		mannequin delete();
-			}
+            mannequin delete();
+        }
+        if ( mannequin.origin == ( 609.28, 315.9, -53.89 ) )
+        {
+            mannequin delete();
+        }
+        if ( mannequin.origin == ( 872.48, 461.88, -56.8 ) )
+        {
+            mannequin delete();
+        }
+        if ( mannequin.origin == ( 851.1, 156.6, -51 ) )
+        {
+            mannequin delete();
+        }
+        if ( mannequin.origin == ( 808, 140.5, -51 ) )
+        {
+            mannequin delete();
+        }
+        if ( mannequin.origin == ( 602.53, 281.09, -55 ) )
+        {
+            mannequin delete();
         }
     }
 }
 
 SetCharacters()
 {
-	if (isdefined(level.char_survival) && level.char_survival && !is_classic())
+	players = get_players();
+	enablesurvival = true;		// Enable to preset characters for survival
+	enablegreenrun = false;		// Enable to preset characters for greenrun
+	enablemob = false;			// Enable to preset characters for mob
+	enableorigins = false;		// Enable to preset characters for oregano
+
+	if ( is_classic() == 0 )	// Can't be in the same if statement cause it fucks with the else
 	{
-		ciaviewmodel = "c_zom_suit_viewhands";
-		cdcviewmodel = "c_zom_hazmat_viewhands";
-		if (level.script == "zm_nuked")
+		if ( enablesurvival )
 		{
-			cdcviewmodel = "c_zom_hazmat_viewhands_light";
-		}
-		
-		// Get properties
-		if (self.clientid == 0 || self.clientid == 4)
-		{
-			preset_player = level.survival1;
-		}
-		else if (self.clientid == 1 || self.clientid == 5)
-		{
-			preset_player = level.survival2;
-		}
-		else if (self.clientid == 2 || self.clientid == 6)
-		{
-			preset_player = level.survival3;
-		}	
-		else if (self.clientid == 3 || self.clientid == 7)
-		{
-			preset_player = level.survival4;
-		}		
-		
-		// Set characters
-		if (preset_player == "cdc")
-		{
-			self setmodel("c_zom_player_cdc_fb");
-			self setviewmodel(cdcviewmodel);
-			self.characterindex = 1;		
-		}
-		else if (preset_player == "cia")
-		{
-			self setmodel("c_zom_player_cia_fb");
-			self setviewmodel(ciaviewmodel);
-			self.characterindex = 0;
-		}
-	}
-	else if (isdefined(level.char_victis) && level.char_victis)
-	{
-		if (level.script == "zm_transit" || level.script == "zm_highrise" || level.script == "zm_buried")	// Cause compiler sucks
-		{
-			// Get properties
-			if (self.clientid == 0 || self.clientid == 4)
+			ciaviewmodel = "c_zom_suit_viewhands"; // Preset as well so it's easier to find later
+			cdcviewmodel = "c_zom_hazmat_viewhands"; // Use this if you want CDC
+			if ( level.script == "zm_nuked" )
 			{
-				preset_player = level.victis1;
+				cdcviewmodel = "c_zom_hazmat_viewhands_light";
 			}
-			else if (self.clientid == 1 || self.clientid == 5)
-			{
-				preset_player = level.victis2;
-			}
-			else if (self.clientid == 2 || self.clientid == 6)
-			{
-				preset_player = level.victis3;
-			}	
-			else if (self.clientid == 3 || self.clientid == 7)
-			{
-				preset_player = level.victis4;
-			}		
 			
-			// Set characters
-			if (preset_player == "misty")
+			// Set white player properties
+			players[0] setmodel( "c_zom_player_cia_fb" );
+			players[0].voice = "american";
+			players[0].skeleton = "base";
+			players[0] setviewmodel( ciaviewmodel );
+			players[0].characterindex = 0;
+
+			if ( level.players.size > 1 )
 			{
-				self setmodel("c_zom_player_farmgirl_fb");
-				self setviewmodel("c_zom_farmgirl_viewhands");
-				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "rottweil72_zm";
-				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "870mcs_zm";
-				self set_player_is_female(1);
-				self.characterindex = 2;
-				if (level.script == "zm_highrise")
+				// Set blue player properties
+				players[1] setmodel( "c_zom_player_cia_fb" );
+				players[1].voice = "american";
+				players[1].skeleton = "base";
+				players[1] setviewmodel( ciaviewmodel );
+				players[1].characterindex = 0;
+
+				if ( level.players.size > 2) 
 				{
-					self setmodel("c_zom_player_farmgirl_dlc1_fb");
-					self.whos_who_shader = "c_zom_player_farmgirl_dlc1_fb";
+					// Set yellow player properties
+					players[2] setmodel( "c_zom_player_cia_fb" );
+					players[2].voice = "american";
+					players[2].skeleton = "base";
+					players[2] setviewmodel( ciaviewmodel );
+					players[2].characterindex = 0;
+
+					if ( level.players.size > 3 )
+					{
+						// Set green player properties
+						players[3] setmodel( "c_zom_player_cia_fb" );
+						players[3].voice = "american";
+						players[3].skeleton = "base";
+						players[3] setviewmodel( ciaviewmodel );
+						players[3].characterindex = 0;
+					}
 				}
-			}
-			else if (preset_player == "russman")
-			{
-				self setmodel("c_zom_player_oldman_fb");
-				self setviewmodel("c_zom_oldman_viewhands");
-				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "frag_grenade_zm";
-				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "claymore_zm";
-				self set_player_is_female(0);
-				self.characterindex = 0;
-				if (level.script == "zm_highrise")
-				{
-					self setmodel("c_zom_player_oldman_dlc1_fb");
-					self.whos_who_shader = "c_zom_player_oldman_dlc1_fb";
-				}
-			}
-			else if (preset_player == "marlton")
-			{
-				self setmodel("c_zom_player_engineer_fb");
-				self setviewmodel("c_zom_engineer_viewhands");
-				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "m14_zm";
-				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "m16_zm";
-				self set_player_is_female(0);
-				self.characterindex = 3;
-				if (level.script == "zm_highrise")
-				{
-					self setmodel("c_zom_player_engineer_dlc1_fb");
-					self.whos_who_shader = "c_zom_player_engineer_dlc1_fb";
-				}
-			}
-			else if (preset_player == "stuhlinger")
-			{
-				self setmodel("c_zom_player_reporter_fb");
-				self setviewmodel("c_zom_reporter_viewhands");
-				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "beretta93r_zm";
-				self.talks_in_danger = 1;
-				level.rich_sq_player = self;
-				self set_player_is_female(0);
-				self.characterindex = 1;
-				if (level.script == "zm_highrise")
-				{
-					self setmodel("c_zom_player_reporter_dlc1_fb");
-					self.whos_who_shader = "c_zom_player_reporter_dlc1_fb";
-				}
-			}
+			}	
 		}
 	}
 
-	else if (isdefined(level.char_mob) && level.char_mob && level.script == "zm_prison")
+	else	// Else simplifies if statement for Tranzit
 	{
-		// Get properties
-		if (self.clientid == 0 || self.clientid == 4)
+		if ( level.script == "zm_prison" && enablemob ) 
 		{
-			preset_player = level.mob1;
-		}
-		else if (self.clientid == 1 || self.clientid == 5)
-		{
-			preset_player = level.mob2;
-		}
-		else if (self.clientid == 2 || self.clientid == 6)
-		{
-			preset_player = level.mob3;
-		}	
-		else if (self.clientid == 3 || self.clientid == 7)
-		{
-			preset_player = level.mob4;
-		}		
-		
-		// Set characters
-		if (preset_player == "weasel")
-		{
-			self setmodel("c_zom_player_arlington_fb");
-			self setviewmodel("c_zom_arlington_coat_viewhands");
-			self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "ray_gun_zm";
-			self set_player_is_female(0);
-			self.characterindex = 3;
-			self.character_name = "Arlington";
-			level.has_weasel = 1;
-		}
-		else if (preset_player == "finn")
-		{
-			self setmodel("c_zom_player_oleary_fb");
-			self setviewmodel("c_zom_oleary_shortsleeve_viewhands");
-			self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "judge_zm";
-			self set_player_is_female(0);
-			self.characterindex = 0;
-			self.character_name = "Finn";
-		}
-		else if (preset_player == "sal")
-		{
-			self setmodel("c_zom_player_deluca_fb");
-			self setviewmodel("c_zom_deluca_longsleeve_viewhands");
-			self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "thompson_zm";
-			self set_player_is_female(0);
-			self.characterindex = 1;
-			self.character_name = "Sal";
-		}
-		else if (preset_player == "billy")
-		{
-			self setmodel("c_zom_player_handsome_fb");
-			self setviewmodel("c_zom_handsome_sleeveless_viewhands");
-			self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "blundergat_zm";
-			self set_player_is_female(0);
-			self.characterindex = 2;
-			self.character_name = "Billy";
-		}
-	}
+			// Set white player properties
+			players[0] setmodel( "c_zom_player_arlington_fb" );
+			players[0].voice = "american";
+			players[0].skeleton = "base";
+			players[0] setviewmodel( "c_zom_arlington_coat_viewhands" );
+			level.vox maps/mp/zombies/_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+			players[0].favorite_wall_weapons_list[ self.favorite_wall_weapons_list.size ] = "ray_gun_zm";
+			players[0] set_player_is_female( 0 );
+			players[0].character_name = "Arlington";
+			players[0].characterindex = 3;
 
-	else if (isdefined(level.char_origins) && level.char_origins && level.script == "zm_tomb")
-	{
-		// Get properties
-		if (self.clientid == 0 || self.clientid == 4)
-		{
-			preset_player = level.origins1;
+			if ( level.players.size > 1 )
+			{
+				// Set blue player properties
+				players[1] setmodel( "c_zom_player_deluca_fb" );
+				players[1].voice = "american";
+				players[1].skeleton = "base";
+				players[1] setviewmodel( "c_zom_deluca_longsleeve_viewhands" );
+				level.vox maps/mp/zombies/_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+				players[1].favorite_wall_weapons_list[ self.favorite_wall_weapons_list.size ] = "thompson_zm";
+				players[1] set_player_is_female( 0 );
+				players[1].character_name = "Sal";
+				players[1].characterindex = 1;
+
+				if ( level.layers.size > 2) 
+				{			
+					// Set yellow player properties
+					players[2] setmodel( "c_zom_player_handsome_fb" );
+					players[2].voice = "american";
+					players[2].skeleton = "base";
+					players[2] setviewmodel( "c_zom_handsome_sleeveless_viewhands" );
+					level.vox maps/mp/zombies/_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+					players[2].favorite_wall_weapons_list[ self.favorite_wall_weapons_list.size ] = "blundergat_zm";
+					players[2] set_player_is_female( 0 );
+					players[2].character_name = "Billy";
+					players[2].characterindex = 2;
+
+					if ( level.players.size > 3 )
+					{
+						// Set green player properties
+						players[3] setmodel( "c_zom_player_oleary_fb" );
+						players[3].voice = "american";
+						players[3].skeleton = "base";
+						players[3] setviewmodel( "c_zom_oleary_shortsleeve_viewhands" );
+						level.vox maps/mp/zombies/_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+						players[3].favorite_wall_weapons_list[ self.favorite_wall_weapons_list.size ] = "judge_zm";
+						players[3] set_player_is_female( 0 );
+						players[3].character_name = "Finn";
+						players[3].characterindex = 0;
+					}
+				}
+			}
+			
+			// No reason to assign it for coop as it's already been assigned by original function, only need to handle that for solo
+			if ( level.players.size == 1 && players[0].character_name == "Arlington" && level.script == "zm_prison" )
+			{
+				level.has_weasel = 1;
+			}
 		}
-		else if (self.clientid == 1 || self.clientid == 5)
+
+		if ( enablegreenrun )
 		{
-			preset_player = level.origins2;
+			if ( level.script == "zm_transit" || level.script == "zm_highrise" || level.script == "zm_buried" )
+			{
+				// Set white player properties
+				players[0] setmodel( "c_zom_player_farmgirl_fb" );
+				players[0].voice = "american";
+				players[0].skeleton = "base";
+				players[0] setviewmodel( "c_zom_farmgirl_viewhands" );
+				level.vox maps/mp/zombies/_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+				players[0].favorite_wall_weapons_list[ self.favorite_wall_weapons_list.size ] = "rottweil72_zm";
+				players[0].favorite_wall_weapons_list[ self.favorite_wall_weapons_list.size ] = "870mcs_zm";
+				players[0] set_player_is_female( 1 );
+				players[0].characterindex = 2;
+				if ( level.script == "zm_highrise")
+				{
+					players[0] setmodel( "c_zom_player_farmgirl_dlc1_fb" );
+					players[0].whos_who_shader = "c_zom_player_farmgirl_dlc1_fb";
+				}
+
+				if ( level.players.size > 1 )
+				{
+					// Set blue player properties
+					players[1] setmodel( "c_zom_player_oldman_fb" );
+					players[1].voice = "american";
+					players[1].skeleton = "base";
+					players[1] setviewmodel( "c_zom_oldman_viewhands" );
+					level.vox maps/mp/zombies/_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+					players[1].favorite_wall_weapons_list[ self.favorite_wall_weapons_list.size ] = "frag_grenade_zm";
+					players[1].favorite_wall_weapons_list[ self.favorite_wall_weapons_list.size ] = "claymore_zm";
+					players[1] set_player_is_female( 0 );
+					players[1].characterindex = 0;
+					if ( level.script == "zm_highrise")
+					{
+						players[1] setmodel( "c_zom_player_oldman_dlc1_fb" );
+						players[1].whos_who_shader = "c_zom_player_oldman_dlc1_fb";
+					}
+
+					if ( level.players.size > 2) 
+					{			
+						// Set yellow player properties
+						players[2] setmodel( "c_zom_player_engineer_fb" );
+						players[2].voice = "american";
+						players[2].skeleton = "base";
+						players[2] setviewmodel( "c_zom_engineer_viewhands" );
+						level.vox maps/mp/zombies/_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+						players[2].favorite_wall_weapons_list[ self.favorite_wall_weapons_list.size ] = "m14_zm";
+						players[2].favorite_wall_weapons_list[ self.favorite_wall_weapons_list.size ] = "m16_zm";
+						players[2] set_player_is_female( 0 );
+						players[2].characterindex = 3;
+						if ( level.script == "zm_highrise")
+						{
+							players[2] setmodel( "c_zom_player_engineer_dlc1_fb" );
+							players[2].whos_who_shader = "c_zom_player_engineer_dlc1_fb";
+						}
+
+						if ( level.players.size > 3 )
+						{
+							// Set green player properties
+							players[3] setmodel( "c_zom_player_reporter_fb" );
+							players[3].voice = "american";
+							players[3].skeleton = "base";
+							players[3] setviewmodel( "c_zom_reporter_viewhands" );
+							level.vox maps/mp/zombies/_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+							players[3].favorite_wall_weapons_list[ self.favorite_wall_weapons_list.size ] = "beretta93r_zm";
+							players[3].talks_in_danger = 1;
+							level.rich_sq_player = self;
+							players[3] set_player_is_female( 0 );
+							players[3].characterindex = 1;
+							if ( level.script == "zm_highrise")
+							{
+								players[2] setmodel( "c_zom_player_reporter_dlc1_fb" );
+								players[2].whos_who_shader = "c_zom_player_reporter_dlc1_fb";
+							}
+						}
+					}
+				}
+			}
 		}
-		else if (self.clientid == 2 || self.clientid == 6)
-		{
-			preset_player = level.origins3;
-		}	
-		else if (self.clientid == 3 || self.clientid == 7)
-		{
-			preset_player = level.origins4;
-		}		
 		
-		// Set characters
-		if (preset_player == "dempsey")
+
+		if ( level.script == "zm_tomb" && enableorigins )
 		{
-			self setmodel("c_zom_tomb_dempsey_fb");
-			self setviewmodel("c_zom_dempsey_viewhands");
-			self set_player_is_female(0);
-			self.characterindex = 0;
-			self.character_name = "Dempsey";
-		}
-		else if (preset_player == "nikolai")
-		{
-			self setmodel("c_zom_tomb_nikolai_fb");
-			self setviewmodel("c_zom_nikolai_viewhands");
-			self.voice = "russian";
-			self set_player_is_female(0);
-			self.characterindex = 1;
-			self.character_name = "Nikolai";
-		}
-		else if (preset_player == "takeo")
-		{
-			self setmodel("c_zom_tomb_takeo_fb");
-			self setviewmodel("c_zom_takeo_viewhands");
-			self set_player_is_female(0);
-			self.characterindex = 3;
-			self.character_name = "Takeo";
-		}
-		else if (preset_player == "richtofen")
-		{
-			self setmodel("c_zom_tomb_richtofen_fb");
-			self setviewmodel("c_zom_richtofen_viewhands");
-			self set_player_is_female(0);
-			self.characterindex = 2;
-			self.character_name = "Richtofen";
+			// Set white player properties
+			players[0] setmodel( "c_zom_tomb_takeo_fb" );
+			players[0].voice = "american";
+			players[0].skeleton = "base";
+			players[0] setviewmodel( "c_zom_takeo_viewhands" );
+			level.vox maps/mp/zombies/_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+			players[0] set_player_is_female( 0 );
+			players[0].character_name = "Takeo";
+			players[0].characterindex = 3;
+
+			if ( level.players.size > 1 )
+			{
+				// Set blue player properties
+				players[1] setmodel( "c_zom_tomb_dempsey_fb" );
+				players[1].voice = "american";
+				players[1].skeleton = "base";
+				players[1] setviewmodel( "c_zom_dempsey_viewhands" );
+				level.vox maps/mp/zombies/_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+				players[1] set_player_is_female( 0 );
+				players[1].character_name = "Dempsey";
+				players[1].characterindex = 0;
+
+				if ( level.players.size > 2) 
+				{			
+					// Set yellow player properties
+					players[2] setmodel( "c_zom_tomb_richtofen_fb" );
+					players[2].voice = "american";
+					players[2].skeleton = "base";
+					players[2] setviewmodel( "c_zom_richtofen_viewhands" );
+					level.vox maps/mp/zombies/_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+					players[2] set_player_is_female( 0 );
+					players[2].character_name = "Richtofen";
+					players[2].characterindex = 2;
+
+					if ( level.players.size > 3 )
+					{
+						// Set green player properties
+						players[3] setmodel( "c_zom_tomb_nikolai_fb" );
+						players[3].voice = "russian";
+						players[3].skeleton = "base";
+						players[3] setviewmodel( "c_zom_nikolai_viewhands" );
+						level.vox maps/mp/zombies/_zm_audio::zmbvoxinitspeaker( "player", "vox_plr_", self );
+						players[3] set_player_is_female( 0 );
+						players[3].character_name = "Nikolai";
+						players[3].characterindex = 1;
+					}
+				}
+			}
 		}
 	}
 }
 
 EyeChange()
 {
-	level setclientfield("zombie_eye_change", 1);
-	sndswitchannouncervox("richtofen");
+	level setclientfield( "zombie_eye_change", 1 );
+	sndswitchannouncervox( "richtofen" );
 }
 
 GetPapWeaponReticle ( weapon ) // Override to get rid of rng reticle
@@ -1059,15 +656,8 @@ GetPapWeaponReticle ( weapon ) // Override to get rid of rng reticle
 	reticle_index = randomintrange( 0, 16 );
 	reticle_color_index = randomintrange( 0, 6 );
 	plain_reticle_index = 16;
-	if (level.cfg_reticle)
-	{
-		use_plain = true;  
-	}
-	else
-	{
-		r = randomint( 10 );
-		use_plain = r < 3;
-	}
+	// r = randomint( 10 );
+	use_plain = true;  //r < 3;
 	if ( base == "saritch_upgraded_zm" )
 	{
 		reticle_index = smiley_face_reticle_index;
@@ -1100,70 +690,10 @@ GetPapWeaponReticle ( weapon ) // Override to get rid of rng reticle
 
 OriginsFix()
 {
-	flag_wait("start_zombie_round_logic");
+	flag_wait( "start_zombie_round_logic" );
 	wait 0.5;
-	if (level.script == "zm_tomb")
+	if ( level.script == "zm_tomb")
 	{
 		level.is_forever_solo_game = 0;
-	}
-}
-
-AwardPermaPerks()
-{
-	if (!flag("initial_blackscreen_passed"))
-	{
-		flag_wait("initial_blackscreen_passed");
-	}
-	wait 0.5;
-
-	if (maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active())
-	{
-		// QR, Deadshot, Tombstone & Boards
-		perks_list = array("revive", "multikill_headshots", "perk_lose", "board");
-
-		// Jugg
-		if (level.round_number < 15)
-		{
-			perks_list[perks_list.size] = "jugg";
-		}
-
-		// Flopper
-		if (level.script == "zm_buried")
-		{
-			perks_list[perks_list.size] = "flopper";
-		}
-
-		// RayGun
-		if (isdefined(level.raygun_perma) && level.raygun_perma)
-		{
-			raygun_maps = array("zm_transit", "zm_buried");
-			if (isdefined(level.raygun_skip_highrise) && !level.raygun_skip_highrise)
-			{
-				raygun_maps[raygun_maps.size] = "zm_highrise";
-			}
-
-			if (isinarray(raygun_maps, level.script))
-			{
-				perks_list[perks_list.size] = "nube";
-			}
-		}
-
-		// Set permaperks
-		foreach (perk in perks_list)
-		{
-			name = level.pers_upgrades[perk].stat_names[0];
-			val = level.pers_upgrades[perk].stat_desired_values[0];
-			self set_global_stat(name, val);
-			self.stats_this_frame[name] = 1;	// dunno, but won't work without it
-
-			if (isdefined(level.debug) && level.debug)
-			{
-				state = get_global_stat(name);
-				print("" + name + ": " + val);
-				print("saved: " + state);
-			}
-		}
-		playfx(level._effect["upgrade_aquired"], self.origin);
-		self playsoundtoplayer("evt_player_upgrade", self);
 	}
 }
