@@ -125,9 +125,9 @@ HudPos(hud, y_offset)
 		{
 			last_state = getDvarInt("timer_left");
 			if (getDvarInt("timer_left"))
-				hud setPoint("TOPLEFT", "TOPLEFT", -10, y_offset);
+				hud setPoint("TOPLEFT", "TOPLEFT", -8, y_offset);
 			else
-				hud setPoint("TOPRIGHT", "TOPRIGHT", -10, y_offset);
+				hud setPoint("TOPRIGHT", "TOPRIGHT", -8, y_offset);
 		}
 		wait 0.05;
 	}
@@ -318,14 +318,14 @@ BasicSplitsHud()
     level endon("end_game");
 
 	basegt_hud = createserverfontstring("hudsmall" , 1.5);
-	basegt_hud setPoint("TOPRIGHT", "TOPRIGHT", 0, 0);
+	basegt_hud setPoint("TOPRIGHT", "TOPRIGHT", -8, 0);
 	basegt_hud.color = level.FRFIX_HUD_COLOR;
 	basegt_hud.alpha = 0;
 	basegt_hud.hidewheninmenu = 1;
 	basegt_hud.label = &"GAME: ";
 
 	basert_hud = createserverfontstring("hudsmall" , 1.5);
-	basert_hud setPoint("TOPRIGHT", "TOPRIGHT", 0, 17);
+	basert_hud setPoint("TOPRIGHT", "TOPRIGHT", -8, 17);
 	basert_hud.color = level.FRFIX_HUD_COLOR;
 	basert_hud.alpha = 0;
 	basert_hud.hidewheninmenu = 1;
@@ -387,7 +387,7 @@ TimerHud()
 		return;
 
     timer_hud = createserverfontstring("hudsmall" , 1.5);
-	timer_hud setPoint("TOPRIGHT", "TOPRIGHT", -10, 0);
+	timer_hud setPoint("TOPRIGHT", "TOPRIGHT", -8, 0);
 	timer_hud.color = level.FRFIX_HUD_COLOR;
 	timer_hud.alpha = 0;
 	timer_hud.hidewheninmenu = 1;
@@ -407,7 +407,7 @@ RoundTimerHud()
 		return;
 
 	round_hud = createserverfontstring("hudsmall" , 1.5);
-	round_hud setPoint("TOPRIGHT", "TOPRIGHT", -10, 17);
+	round_hud setPoint("TOPRIGHT", "TOPRIGHT", -8, 17);
 	round_hud.color = level.FRFIX_HUD_COLOR;
 	round_hud.alpha = 0;
 	round_hud.hidewheninmenu = 1;
