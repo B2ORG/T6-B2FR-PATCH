@@ -71,6 +71,7 @@ OnGameStart()
 	level thread ZombiesHud();
 
 	// Game settings
+	SongSafety();
 	level thread NukeMannequins();
 
 	level waittill("end_game");
@@ -685,6 +686,15 @@ OriginsFix()
 
 	if (level.script == "zm_tomb")
 		level.is_forever_solo_game = 0;
+}
+
+SongSafety()
+{
+	if (isDefined(level.SONG_AUTO_TIMER_ACTIVE) && level.SONG_AUTO_TIMER_ACTIVE)
+	{
+		iPrintLn("^1SONG PATCH DETECTED!!!");
+		level notify("end_game");
+	}
 }
 
 // SetCharacters()
