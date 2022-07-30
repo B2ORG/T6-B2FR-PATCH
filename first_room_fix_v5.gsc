@@ -487,7 +487,9 @@ ZombiesHud()
 		{
 			label = "HORDES ON " + level.round_number + ": ";
 			zombies_hud.label = istring(label);
-			zombies_hud setValue((maps/mp/zombies/_zm_utility::get_round_enemy_array().size + level.zombie_total) / 24);
+
+			zombies_value = int(((maps/mp/zombies/_zm_utility::get_round_enemy_array().size + level.zombie_total) / 24) * 100);
+			zombies_hud setValue(zombies_value / 100);
 
 			zombies_hud fadeOverTime(0.25);
 			zombies_hud.alpha = 1;
