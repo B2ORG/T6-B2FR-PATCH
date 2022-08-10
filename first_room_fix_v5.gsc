@@ -685,45 +685,48 @@ AwardPermaPerks()
 	if (!isdefined(level.FRFIX_PERMAPERKS) || !level.FRFIX_PERMAPERKS)
 		return;
 
-	if (!flag("initial_blackscreen_passed"))
-		flag_wait("initial_blackscreen_passed");
-
-	while (!isalive(self))
-		wait 0.05;
-
-	wait 0.5;
-
-	// QR, Deadshot, Tombstone & Boards
-	perks_list = array("revive", "multikill_headshots", "perk_lose", "board");
-
-	// Jugg
-	if (level.round_number < 15)
-		perks_list[perks_list.size] = "jugg";
-
-	// Flopper
-	if (level.script == "zm_buried")
-		perks_list[perks_list.size] = "flopper";
-
-	// RayGun
-	raygun_maps = array("zm_transit", "zm_buried");
-	if (isinarray(raygun_maps, level.script))
-		perks_list[perks_list.size] = "nube";
-
-	// Set permaperks
-	for (i = 0; i < perks_list.size; i++)
+	if (level.script == "zm_transit" || level.script == "zm_highrise" || level.script == "zm_buried")
 	{
-		name = perks_list[i];
+		if (!flag("initial_blackscreen_passed"))
+			flag_wait("initial_blackscreen_passed");
 
-		for (j = 0; j < level.pers_upgrades[name].stat_names.size; j++)
+		while (!isalive(self))
+			wait 0.05;
+
+		wait 0.5;
+
+		// QR, Deadshot, Tombstone & Boards
+		perks_list = array("revive", "multikill_headshots", "perk_lose", "board");
+
+		// Jugg
+		if (level.round_number < 15)
+			perks_list[perks_list.size] = "jugg";
+
+		// Flopper
+		if (level.script == "zm_buried")
+			perks_list[perks_list.size] = "flopper";
+
+		// RayGun
+		raygun_maps = array("zm_transit", "zm_buried");
+		if (isinarray(raygun_maps, level.script))
+			perks_list[perks_list.size] = "nube";
+
+		// Set permaperks
+		for (i = 0; i < perks_list.size; i++)
 		{
-			stat_name = level.pers_upgrades[name].stat_names[j];
-			self set_global_stat(stat_name, level.pers_upgrades[name].stat_desired_values[j]);
-			self.stats_this_frame[stat_name] = 1;
-		}
-	}
+			name = perks_list[i];
 
-	playfx(level._effect["upgrade_aquired"], self.origin);
-	self playsoundtoplayer("evt_player_upgrade", self);
+			for (j = 0; j < level.pers_upgrades[name].stat_names.size; j++)
+			{
+				stat_name = level.pers_upgrades[name].stat_names[j];
+				self set_global_stat(stat_name, level.pers_upgrades[name].stat_desired_values[j]);
+				self.stats_this_frame[stat_name] = 1;
+			}
+		}
+
+		playfx(level._effect["upgrade_aquired"], self.origin);
+		self playsoundtoplayer("evt_player_upgrade", self);
+	}
 }
 
 NoFog()
