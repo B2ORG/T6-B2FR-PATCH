@@ -560,6 +560,9 @@ NukeMannequins()
 	if (!isdefined(level.FRFIX_YELLOWHOUSE) || !level.FRFIX_YELLOWHOUSE)
 		return;
 
+	if (level.script != "zm_nuked")
+		return;
+
 	wait 1;
     destructibles = getentarray("destructible", "targetname");
     foreach ( mannequin in destructibles )
@@ -594,6 +597,9 @@ NukeMannequins()
 EyeChange()
 {
 	if (!isdefined(level.NUKETOWN_EYES) || !level.NUKETOWN_EYES)
+		return;
+
+	if (level.script != "zm_nuked")
 		return;
 
 	level setclientfield("zombie_eye_change", 1);
@@ -725,12 +731,21 @@ NoFog()
 	if (!isdefined(level.FRFIX_NOFOG) || !level.FRFIX_NOFOG)
 		return;
 
+	if (level.script != "zm_transit")
+		return;
+	
+	if (level.scr_zm_map_start_location == "transit")
+		return;
+
 	setDvar("r_fog", 0);
 }
 
 OriginsFix()
 {
 	if (!isdefined(level.FRFIX_ORIGINSFIX) || !level.FRFIX_ORIGINSFIX)
+		return;
+
+	if (level.script != "zm_tomb")
 		return;
 
 	flag_wait("start_zombie_round_logic");
