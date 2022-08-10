@@ -26,6 +26,8 @@ init()
 	flag_init("cheat_printed_noprint");
 	flag_init("cheat_printed_cheats");
 
+	flag_init("game_started");
+
 	// Patch Config
 	level.FRFIX_ACTIVE = true;
 	level.FRFIX_VER = 5.0;
@@ -62,6 +64,7 @@ OnGameStart()
 	flag_wait("initial_blackscreen_passed");
 
 	level.FRFIX_START = int(getTime() / 1000);
+	flag_set("game_started");
 
 	// HUD
 	level thread BasicSplitsHud();
@@ -79,14 +82,35 @@ OnGameStart()
 
 OnPlayerJoined()
 {
-	while (true)
+	for(;;)
 	{
 		level waittill("connected", player);
-
-		player iPrintLn("^5FIRST ROOM FIX V" + level.FRFIX_VER + " " + level.FRFIX_BETA);
-		player thread PrintNetworkFrame(6);
-		player thread AwardPermaPerks();
+		player thread OnPlayerSpawned();
 	}
+}
+
+OnPlayerSpawned()
+{
+    level endon("game_ended");
+    self endon("disconnect");
+
+	self.initial_spawn = true;
+
+	for(;;)
+	{
+		self waittill("spawned_player");
+
+		if (self.initial_spawn)
+		{
+			self.initial_spawn = false;
+
+			self iPrintLn("^5FIRST ROOM FIX V" + level.FRFIX_VER + " " + level.FRFIX_BETA);
+			self thread PrintNetworkFrame(6);
+			self thread AwardPermaPerks();
+			self thread VelocityMeter();
+		}
+	}
+
 }
 
 // Utilities
@@ -172,6 +196,13 @@ ConvertTime(seconds)
 		combined = "" + str_hours  + ":" + str_minutes  + ":" + str_seconds; 
 
 	return combined; 
+}
+
+PlayerThreadBlackscreenWaiter()
+{
+    while (!flag("game_started"))
+        wait 0.05;
+    return;
 }
 
 // Functions
@@ -501,6 +532,27 @@ ZombiesHud()
 			zombies_hud.alpha = 0;
 		}
 	}
+}
+
+VelocityMeter()
+{
+    self endon("disconnect");
+    level endon("end_game");
+
+    PlayerThreadBlackscreenWaiter();
+
+    self.hud_velocity = createfontstring("hudsmall" , 1.1);
+	self.hud_velocity setPoint("TOPRIGHT", "TOPRIGHT", -8, 160);
+	self.hud_velocity.alpha = 1;
+	self.hud_velocity.color = level.FRFIX_HUD_COLOR;
+	self.hud_velocity.hidewheninmenu = 1;
+    self.hud_velocity.label = &"Vel: ";
+
+    while (true)
+    {
+        self.hud_velocity setValue(int(length(self getvelocity() * (1, 1, 0))));
+        wait 0.05;
+    }
 }
 
 NukeMannequins()
