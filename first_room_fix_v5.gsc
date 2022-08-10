@@ -29,8 +29,8 @@ init()
 	// Patch Config
 	level.FRFIX_ACTIVE = true;
 	level.FRFIX_VER = 5.0;
-	level.FRFIX_BETA = "preview";
-	level.FRFIX_DEBUG = true;
+	level.FRFIX_BETA = "";
+	level.FRFIX_DEBUG = false;
 
 	level thread OnGameStart();
 }
