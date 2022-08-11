@@ -328,18 +328,14 @@ FixNetworkFrame()
 
 PrintNetworkFrame(len)
 {
-	network_hud = newClientHudElem(self);
-	network_hud.alignx = "center";
-	network_hud.aligny = "top";
-	network_hud.horzalign = "user_center";
-	network_hud.vertalign = "user_top";
-	network_hud.x = 0;
-	network_hud.y = 5;
-	network_hud.fontscale = 1.9;
-	network_hud.alpha = 0;
-	network_hud.color = ( 1, 1, 1 );
-	network_hud.hidewheninmenu = 1;
-	network_hud.label = &"NETWORK FRAME: ^1";
+    PlayerThreadBlackscreenWaiter();
+
+    self.network_hud = createfontstring("hudsmall" , 1.9);
+	self.network_hud setPoint("CENTER", "TOP", "CENTER", 5);
+	self.network_hud.alpha = 0;
+	self.network_hud.color = (1, 1, 1);
+	self.network_hud.hidewheninmenu = 1;
+    self.network_hud.label = &"NETWORK FRAME: ^1";
 
 	if (!flag("initial_blackscreen_passed"))
 		flag_wait("initial_blackscreen_passed");
@@ -353,15 +349,15 @@ PrintNetworkFrame(len)
 		len = 5;
 
 	if (network_frame_len == 0.1)
-		network_hud.label = &"NETWORK FRAME: ^2";
-	
-	network_hud setValue(network_frame_len);
+		self.network_hud.label = &"NETWORK FRAME: ^2";
 
-	network_hud.alpha = 1;
+	self.network_hud setValue(network_frame_len);
+
+	self.network_hud.alpha = 1;
 	wait len;
-	network_hud.alpha = 0;
+	self.network_hud.alpha = 0;
 	wait 0.1;
-	network_hud destroy();
+	self.network_hud destroy();
 }
 
 BasicSplitsHud()
