@@ -11,6 +11,8 @@ Development thread on my Discord https://discord.gg/fDY4VR6rNE
 - Txchno
 
 # First Room Fix V5
+- Send me a message if you want a version with custom settings
+- Please download dedicated version for Redacted, as normal one will most likely throw an error. Use Redacted version in case you want to inject Ancient Pluto.
 ### Built-in gameplay features:
 - Fix for Strafe & Backspeed scale.
 - Fix for host migration issue in private matches.
@@ -41,8 +43,6 @@ Development thread on my Discord https://discord.gg/fDY4VR6rNE
     - Tombstone
     - Metal boards
     - Raygun (Tranzit & Buried)
-
-**Please message for version with custom features enabled**
 
 ### First Room Fix V4
 
