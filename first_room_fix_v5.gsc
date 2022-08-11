@@ -300,7 +300,7 @@ DvarDetector()
 			level notify("reset_dvars");
 		}
 
-		// Cheats
+		// Gspeed
 		if (getDvar("g_speed") != "190") 
 		{
 			if (!flag("cheat_printed")) 
