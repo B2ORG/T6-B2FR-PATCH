@@ -1,7 +1,7 @@
-Ready to use patches can be found in `Compiled` directory.
-Source code for every given patch can be found in `Raw` directory.
-For competitive 0 controversy games i suggest using `First Room Fix V4.gsc` or `First Room Fix V5.gsc` from `Compiled`.
-At this point in time disregard all versions below 4, as they don't fix the tickrate problem. All games on Pluto past January 21st played on any First Room fix below 4 will be considered invalid. Version 5 is recommended.
+- Ready to use patches can be found in `Compiled` directory.
+- Source code for every given patch can be found in `Raw` directory.
+- For competitive 0 controversy games i suggest using `First Room Fix V4.gsc` or `First Room Fix V5.gsc` from `Compiled`.
+- At this point in time disregard all versions below 4, as they don't fix the tickrate problem. All games on Pluto past January 21st played on any First Room fix below 4 will be considered invalid. Version 5 is recommended.
 
 Development thread on my Discord https://discord.gg/fDY4VR6rNE
 
@@ -44,7 +44,9 @@ Development thread on my Discord https://discord.gg/fDY4VR6rNE
     - Metal boards
     - Raygun (Tranzit & Buried)
 
-### First Room Fix V4
+
+
+# First Room Fix V4
 
 ##### Built in features:
 - Fix for Strafe & Backspeed scale
@@ -67,7 +69,7 @@ Development thread on my Discord https://discord.gg/fDY4VR6rNE
 - Solo / Custom split returned -> Zombie Blood fix disabled
 - Target Assist option added to custom games option, patch disables that on game start
 
-### First Room Fix V3
+# First Room Fix V3
 Fixes:
 - Strafe & Backspeed
 - Host migration issue in private matches
@@ -81,41 +83,11 @@ Optional Fixes
 - Mannequins set on Nuketown (Marking: "NOT ENOUGH MANNEQUINS ...")
 - Blue Eyes + Richtofen announcer on Nuketown
 
-### First Room Fix V2
+# First Room Fix V2
 Fixes:
 - Strafe & Backspeed
 - Ingame timer for solo
 
-### First Room Fix
+# First Room Fix
 Fixes:
 - Strafe, Backspeed & Aim Assist
-
-## V4 Receipients
-- Zi0 <br>
-Fog, Timer, Blue Eyes, Mannequins, Reticle, Characters
-- Tone <br>
-Timer, Characters
-- Gencrack <br>
-Fog, Characters
-- Txchno <br>
-Timer, Mannequins, Characters
-- Flames <br>
-Timer, Blue Eyes, Mannequins, Reticle, Characters
-- Tek <br>
-Timer
-
-## V3 Receiptiens 
-- Zi0 <br>
-Fog, Timer, Mannequins, Blue Eyes
-- Txchno <br>
-Timer
-- Tek <br>
-Timer
-- Tone <br>
-Timer
-- Rabley <br>
-Timer
-- Swanky <br>
-Fog, Timer
-- Poetiks <br>
-Fog, Timer, Hands
