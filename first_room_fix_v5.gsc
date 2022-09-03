@@ -761,10 +761,10 @@ NoFog()
 
 OriginsFix()
 {
+    self endon("disconnect");
+    level endon("end_game");
+	
 	if (!isdefined(level.FRFIX_ORIGINSFIX) || !level.FRFIX_ORIGINSFIX)
-		return;
-
-	if (level.script != "zm_tomb")
 		return;
 
 	flag_wait("start_zombie_round_logic");
@@ -772,6 +772,10 @@ OriginsFix()
 
 	if (level.script == "zm_tomb")
 		level.is_forever_solo_game = 0;
+	// else if (level.script == "zm_prison" && level.players.size == 1)
+	// 	level.is_forever_solo_game = 1;
+
+	return;
 }
 
 SongSafety()
