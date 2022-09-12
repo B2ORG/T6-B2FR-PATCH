@@ -50,6 +50,7 @@ OnGameStart()
 	level.FRFIX_NUKETOWN_EYES = false;
 	level.FRFIX_NOFOG = false;
 	level.FRFIX_ORIGINSFIX = false;
+	level.FRFIX_PRENADES = true;
 
 	level thread OnPlayerJoined();
 
@@ -73,6 +74,7 @@ OnGameStart()
 	level thread RoundTimerHud();
 	level thread SplitsTimerHud();
 	level thread ZombiesHud();
+	level thread SemtexChart();
 
 	// Game settings
 	SongSafety();
@@ -569,6 +571,52 @@ VelocityMeter()
         self.hud_velocity setValue(int(length(self getvelocity() * (1, 1, 0))));
         wait 0.05;
     }
+}
+
+SemtexChart()
+{
+	self endon("disconnect");
+	level endon("end_game");
+
+	// Escape if starting round is bigger than 22 since the display is going to be inaccurate
+	if (!isdefined(level.FRFIX_PRENADES) || !level.FRFIX_PRENADES || level.round_number >= 22)
+		return;
+
+	if (level.scr_zm_map_start_location == "town" && !level.enable_magic)
+	{
+		// Starts on r22 and goes onwards
+		chart = array(1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 17, 19, 22, 24, 28, 29, 34, 39, 42, 46, 52, 57, 61, 69, 78, 86, 96, 103);
+
+		semtex_hud = createserverfontstring("hudsmall" , 1.4);
+		semtex_hud setPoint("CENTER", "BOTTOM", 0, -95);
+		semtex_hud.color = level.FRFIX_HUD_COLOR;
+		semtex_hud.alpha = 0;
+		semtex_hud.hidewheninmenu = 1;
+		semtex_hud.label = &"Prenades this round: ";
+
+		while (level.round_number < 22)
+			level waittill("between_round_over");
+
+		foreach(semtex in chart)
+		{
+			level waittill("start_of_round");
+			wait 0.1;
+
+			label = "PRENADES ON " + level.round_number + ": ";
+			semtex_hud.label = istring(label);
+
+			semtex_hud setValue(semtex);
+
+			semtex_hud fadeOverTime(0.25);
+			semtex_hud.alpha = 1;
+
+			wait 5;
+
+			semtex_hud fadeOverTime(0.25);
+			semtex_hud.alpha = 0;
+		}
+	}
+	return;
 }
 
 NukeMannequins()
