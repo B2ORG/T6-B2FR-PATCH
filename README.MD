@@ -13,6 +13,7 @@ Development thread on my Discord https://discord.gg/fDY4VR6rNE
 # First Room Fix V5
 - Send me a message if you want a version with custom settings
 - Please download dedicated version for Redacted, as normal one will most likely throw an error. Use Redacted version in case you want to inject Ancient Pluto.
+
 ### Built-in gameplay features:
 - Fix for Strafe & Backspeed scale.
 - Fix for host migration issue in private matches.
@@ -21,6 +22,7 @@ Development thread on my Discord https://discord.gg/fDY4VR6rNE
 - Fix for Tickrate.
 - Red dot reticle for scopes.
 - Anticheat (dvars).
+- Debug prints (pluto console).
 
 ### Built-in HUD features:
 - Print network frame at the beginning of the game (tickrate).
@@ -35,6 +37,7 @@ Development thread on my Discord https://discord.gg/fDY4VR6rNE
 - No fog
 - Nuketown blue eyes for the entire game
 - Nuketown mannequins set for yellow house & first room
+- Semtex prenades
 - Give permaperks
     - Jug
     - Flopper
@@ -43,7 +46,11 @@ Development thread on my Discord https://discord.gg/fDY4VR6rNE
     - Tombstone
     - Metal boards
     - Raygun (Tranzit & Buried)
-
+- Timer pause
+    - In coop game change dvar `paused` to `1`, change it back to `0` to resume the timer
+    - Timer will resume automatically if zombies die out
+    - Timers are not 100% accurate (may be up to few seconds off at times), might want to use manual timer preserve full accuracy
+    - You can only pause once a round
 
 
 # First Room Fix V4
