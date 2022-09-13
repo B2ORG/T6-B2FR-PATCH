@@ -22,6 +22,7 @@ main()
 init()
 {
 	flag_init("dvars_set");
+	flag_init("game_paused");
 	flag_init("cheat_printed_backspeed");
 	flag_init("cheat_printed_noprint");
 	flag_init("cheat_printed_cheats");
@@ -69,6 +70,7 @@ OnGameStart()
 	flag_set("game_started");
 
 	// HUD
+	level thread GlobalRoundStart();
 	level thread BasicSplitsHud();
 	level thread TimerHud();
 	level thread RoundTimerHud();
@@ -78,6 +80,7 @@ OnGameStart()
 
 	// Game settings
 	SongSafety();
+	level thread CoopPause();
 	level thread NukeMannequins();
 
 	level waittill("end_game");
@@ -384,10 +387,8 @@ BasicSplitsHud()
 	while (true)
 	{
 		level waittill("start_of_round");
-		round_start = int(getTime() / 1000);
 
 		level waittill("end_of_round");
-		round_end = int(getTime() / 1000);
 
 		if (level.players.size > 1)
 			basegt_hud.label = &"LOBBY: ";
@@ -410,13 +411,16 @@ BasicSplitsHud()
 			break;
 		}
 
-		basegt_hud setTimer(round_end - level.FRFIX_START);
-		basert_hud setTimer(round_end - round_start);
+		gt_freeze = int(getTime() / 1000) - (level.paused_time + level.FRFIX_START);
+		rt_freeze = int(getTime() / 1000) - (level.paused_round + level.round_start);
+
+		basegt_hud setTimer(gt_freeze);
+		basert_hud setTimer(rt_freeze);
 
 		for (ticks = 0; ticks < 100; ticks++)
 		{
-			basegt_hud setTimer(round_end - level.FRFIX_START);
-			basert_hud setTimer(round_end - round_start);
+			basegt_hud setTimer(gt_freeze);
+			basert_hud setTimer(rt_freeze);
 			wait 0.05;
 		}
 		basegt_hud fadeOverTime(0.1);
@@ -428,6 +432,118 @@ BasicSplitsHud()
 	return;
 }
 
+CoopPause()
+{
+	self endon("disconnect");
+	level endon("end_game");
+
+	level.paused_time = 0.00;
+
+	while (level.players.size == 1)
+		level waittill ("start_of_round");
+
+	self thread CoopPauseSwitch();
+	level.last_paused_round = getgametypesetting("startRound");
+	setDvar("paused", 0);
+
+	while(true)
+	{
+		current_zombies = int(maps/mp/zombies/_zm_utility::get_round_enemy_array().size + level.zombie_total);
+
+		current_time = int(getTime() / 1000) - (level.paused_time + level.FRFIX_START);
+		current_round_time = int(getTime() / 1000) - (level.paused_round + level.round_start);
+
+		while(flag("game_paused"))
+		{
+			if (isDefined(level.timer_hud))
+				level.timer_hud setTimer(current_time);
+
+			if (isDefined(level.round_hud))
+				level.round_hud setTimer(current_round_time);
+
+			level.paused_time += 0.05;
+			level.paused_round += 0.05;
+			wait 0.05;
+
+			if (current_zombies != int(maps/mp/zombies/_zm_utility::get_round_enemy_array().size + level.zombie_total))
+				UnpauseGame();
+		}
+
+		wait 0.05;
+	}
+}
+
+CoopPauseSwitch()
+{
+	level waittill("start_of_round");
+
+	while (true)
+	{		
+		while (level.last_paused_round == level.round_number)
+		{
+			level waittill("start_of_round");
+			setDvar("paused", 0);				// To make sure pause doesn't kick in as soon as round starts
+		}
+
+		zombie_count = int(maps/mp/zombies/_zm_utility::get_round_enemy_array().size + level.zombie_total);
+
+		if (zombie_count > 0 && getDvarInt("paused") && !flag("game_paused") && level.players.size > 1)
+			PauseGame();
+		else if ((!getDvarInt("paused") && flag("game_paused")) || (zombie_count <= 0 && flag("game_paused")))
+			UnpauseGame();
+
+		wait 0.05;
+	}
+}
+
+PauseGame()
+{
+	iPrintLn("^2pausing...");
+	flag_set("game_paused");
+	setDvar("paused", 1);
+}
+
+UnpauseGame()
+{
+	iPrintLn("^3unpausing...");
+	flag_clear("game_paused");
+	setDvar("paused", 0);
+	level.last_paused_round = level.round_number;
+
+	reclocked = (int(getTime() / 1000) - (level.paused_time + level.FRFIX_START)) * -1;
+	if (isDefined(level.timer_hud))
+		level.timer_hud setTimerUp(reclocked);
+
+	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+	{
+		print("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_time = " + level.paused_time + " level.FIFIX_START = " + level.FRFIX_START);
+		print("Setting the timer to: " + reclocked + " s");
+	}
+
+	rtreclocked = (int(getTime() / 1000) - (level.paused_round + level.round_start)) * -1;
+	if (isDefined(level.round_hud))
+		level.round_hud setTimerUp(rtreclocked);
+
+	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+	{
+		print("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_round = " + level.paused_round + " level.round_start = " + level.round_start);
+		print("Setting the round timer to: " + rtreclocked + " s");
+	}
+}
+
+GlobalRoundStart()
+{
+	level.round_start = level.FRFIX_START;
+	level.paused_round = 0.00;
+
+	while (true)
+	{
+		level waittill("start_of_round");
+		level.round_start = int(getTime() / 1000);
+		level.paused_round = 0.00;
+	}
+}
+
 TimerHud()
 {
     self endon("disconnect");
@@ -436,16 +552,16 @@ TimerHud()
 	if (!isdefined(level.FRFIX_TIMER_ENABLED) || !level.FRFIX_TIMER_ENABLED)
 		return;
 
-    timer_hud = createserverfontstring("hudsmall" , 1.5);
-	timer_hud setPoint("TOPRIGHT", "TOPRIGHT", -8, 0);
-	timer_hud.color = level.FRFIX_HUD_COLOR;
-	timer_hud.alpha = 0;
-	timer_hud.hidewheninmenu = 1;
+    level.timer_hud = createserverfontstring("hudsmall" , 1.5);
+	level.timer_hud setPoint("TOPRIGHT", "TOPRIGHT", -8, 0);
+	level.timer_hud.color = level.FRFIX_HUD_COLOR;
+	level.timer_hud.alpha = 0;
+	level.timer_hud.hidewheninmenu = 1;
 
-	timer_hud setTimerUp(0);
-	timer_hud.alpha = 1;
+	level.timer_hud setTimerUp(0);
+	level.timer_hud.alpha = 1;
 
-	self thread HudPos(timer_hud);
+	self thread HudPos(level.timer_hud);
 }
 
 RoundTimerHud()
@@ -456,35 +572,35 @@ RoundTimerHud()
 	if (!isdefined(level.FRFIX_ROUND_ENABLED) || !level.FRFIX_ROUND_ENABLED)
 		return;
 
-	round_hud = createserverfontstring("hudsmall" , 1.5);
-	round_hud setPoint("TOPRIGHT", "TOPRIGHT", -8, 17);
-	round_hud.color = level.FRFIX_HUD_COLOR;
-	round_hud.alpha = 0;
-	round_hud.hidewheninmenu = 1;
+	level.round_hud = createserverfontstring("hudsmall" , 1.5);
+	level.round_hud setPoint("TOPRIGHT", "TOPRIGHT", -8, 17);
+	level.round_hud.color = level.FRFIX_HUD_COLOR;
+	level.round_hud.alpha = 0;
+	level.round_hud.hidewheninmenu = 1;
 
-	self thread HudPos(round_hud, 17);
+	self thread HudPos(level.round_hud, 17);
 
 	while (true)
 	{
 		level waittill("start_of_round");
-		round_start = int(getTime() / 1000);
-		round_hud setTimerUp(0);
+		level.round_hud setTimerUp(0);
 
-		round_hud FadeOverTime(0.25);
-		round_hud.alpha = 1;
+		level.round_hud FadeOverTime(0.25);
+		level.round_hud.alpha = 1;
 
 		level waittill("end_of_round");
 		round_end = int(getTime() / 1000);
-		round_time = round_end - round_start;
-		round_hud setTimer(round_time);
+		// round_start is not calculated globally for the benefit of coop pause func
+		round_time = round_end - (level.paused_round + level.round_start);
+		level.round_hud setTimer(round_time);
 
 		for (ticks = 0; ticks < 100; ticks++)
 		{
-			round_hud setTimer(round_time);
+			level.round_hud setTimer(round_time);
 			wait 0.05;
 		}
-		round_hud FadeOverTime(0.25);
-		round_hud.alpha = 0;
+		level.round_hud FadeOverTime(0.25);
+		level.round_hud.alpha = 0;
 	}
 }
 
@@ -504,7 +620,7 @@ SplitsTimerHud()
 		if ((level.round_number > 10) && (!level.round_number % 5))
 		{
 			time = int(getTime() / 1000);
-			timestamp = ConvertTime(time - level.FRFIX_START);
+			timestamp = ConvertTime(time - (level.FRFIX_START + level.paused_time));
 
 			splits_hud setText("" + level.round_number + " TIME: " + timestamp);
 			splits_hud fadeOverTime(0.25);
