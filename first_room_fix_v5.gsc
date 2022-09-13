@@ -1,9 +1,10 @@
 #include maps/mp/gametypes_zm/_hud_util;
 #include maps/mp/zombies/_zm_utility;
-#include common_scripts/utility;
-#include maps/mp/_utility;
 #include maps/mp/zombies/_zm_stats;
 #include maps/mp/zombies/_zm_weapons;
+#include maps/mp/zombies/_zm_powerups;
+#include common_scripts/utility;
+#include maps/mp/_utility;
 #include maps/mp/animscripts/zm_utility;
 #include maps/mp/zm_prison;
 #include maps/mp/zm_tomb;
@@ -17,6 +18,7 @@ main()
 	replaceFunc(maps/mp/zombies/_zm_utility::wait_network_frame, ::FixNetworkFrame);
 
 	replaceFunc(maps/mp/zombies/_zm_weapons::get_pack_a_punch_weapon_options, ::GetPapWeaponReticle);
+	replaceFunc(maps/mp/zombies/_zm_powerups::powerup_drop, ::TrackedPowerupDrop);
 }
 
 init()
@@ -63,6 +65,7 @@ OnGameStart()
 	level thread OriginsFix();
 	level thread NoFog();
 	level thread EyeChange();
+	level thread DebugGamePrints();
 
 	flag_wait("initial_blackscreen_passed");
 
@@ -212,6 +215,30 @@ PlayerThreadBlackscreenWaiter()
 }
 
 // Functions
+
+DebugGamePrints()
+{
+	self endon("disconnect");
+	level endon("end_game");
+
+	self thread PowerupOddsWatcher();
+
+	while (true)
+	{
+		level waittill("start_of_round");
+		print("DEBUG: level.powerup_drop_count = " + level.powerup_drop_count + " | Should be 0");
+		print("DEBUG: size of level.zombie_powerup_array = " + level.zombie_powerup_array.size + " | Should be above 0");
+	}
+}
+
+PowerupOddsWatcher()
+{
+	while (true)
+	{
+		level waittill("powerup_check", chance);
+		print("DEBUG: rand_drop = " + chance);
+	}
+}
 
 SetDvars()
 {
@@ -677,7 +704,7 @@ VelocityMeter()
 
     self.hud_velocity = createfontstring("hudsmall" , 1.1);
 	self.hud_velocity setPoint("CENTER", "CENTER", "CENTER", 185);
-	self.hud_velocity.alpha = 1;
+	self.hud_velocity.alpha = 0.75;
 	self.hud_velocity.color = level.FRFIX_HUD_COLOR;
 	self.hud_velocity.hidewheninmenu = 1;
     self.hud_velocity.label = &"Velocity: ";
@@ -950,6 +977,68 @@ SongSafety()
 		level notify("end_game");
 	}
 }
+
+TrackedPowerupDrop( drop_point )
+{
+    if ( level.powerup_drop_count >= level.zombie_vars["zombie_powerup_drop_max_per_round"] )
+        return;
+
+    if ( !isdefined( level.zombie_include_powerups ) || level.zombie_include_powerups.size == 0 )
+        return;
+
+    rand_drop = randomint( 100 );
+	level notify("powerup_check", rand_drop);
+
+    if ( rand_drop > 2 )
+    {
+        if ( !level.zombie_vars["zombie_drop_item"] )
+            return;
+
+        debug = "score";
+    }
+    else
+        debug = "random";
+
+    playable_area = getentarray( "player_volume", "script_noteworthy" );
+    level.powerup_drop_count++;
+    powerup = maps\mp\zombies\_zm_net::network_safe_spawn( "powerup", 1, "script_model", drop_point + vectorscale( ( 0, 0, 1 ), 40.0 ) );
+    valid_drop = 0;
+
+    for ( i = 0; i < playable_area.size; i++ )
+    {
+        if ( powerup istouching( playable_area[i] ) )
+            valid_drop = 1;
+    }
+
+    if ( valid_drop && level.rare_powerups_active )
+    {
+        pos = ( drop_point[0], drop_point[1], drop_point[2] + 42 );
+
+        if ( check_for_rare_drop_override( pos ) )
+        {
+            level.zombie_vars["zombie_drop_item"] = 0;
+            valid_drop = 0;
+        }
+    }
+
+    if ( !valid_drop )
+    {
+        level.powerup_drop_count--;
+        powerup delete();
+        return;
+    }
+
+    powerup powerup_setup();
+    print_powerup_drop( powerup.powerup_name, debug );
+    powerup thread powerup_timeout();
+    powerup thread powerup_wobble();
+    powerup thread powerup_grab();
+    powerup thread powerup_move();
+    powerup thread powerup_emp();
+    level.zombie_vars["zombie_drop_item"] = 0;
+    level notify( "powerup_dropped", powerup );
+}
+
 
 // SetCharacters()
 // {
