@@ -226,8 +226,8 @@ DebugGamePrints()
 	while (true)
 	{
 		level waittill("start_of_round");
-		print("DEBUG: level.powerup_drop_count = " + level.powerup_drop_count + " | Should be 0");
-		print("DEBUG: size of level.zombie_powerup_array = " + level.zombie_powerup_array.size + " | Should be above 0");
+		print("DEBUG: ROUND: " + level.round_number + " level.powerup_drop_count = " + level.powerup_drop_count + " | Should be 0");
+		print("DEBUG: ROUND: " + level.round_number + " size of level.zombie_powerup_array = " + level.zombie_powerup_array.size + " | Should be above 0");
 	}
 }
 
