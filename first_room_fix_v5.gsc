@@ -793,11 +793,10 @@ NukeMannequins()
 
 			if (mannequin.origin == (602.53, 281.09, -55))
 				mannequin delete();
-
-			// FR bus mannequin
-			if (mannequin.origin == (-30, 13.9031, -47.0411))
-           		mannequin delete();
 		}
+		// FR bus mannequin
+		if (mannequin.origin == (-30, 13.9031, -47.0411))
+			mannequin delete();
     }
 }
 
