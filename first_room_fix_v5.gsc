@@ -702,12 +702,12 @@ VelocityMeter()
 
     PlayerThreadBlackscreenWaiter();
 
-    self.hud_velocity = createfontstring("hudsmall" , 1.1);
-	self.hud_velocity setPoint("CENTER", "CENTER", "CENTER", 185);
+    self.hud_velocity = createfontstring("hudsmall" , 1);
+	self.hud_velocity setPoint("CENTER", "CENTER", "CENTER", 200);
 	self.hud_velocity.alpha = 0.75;
 	self.hud_velocity.color = level.FRFIX_HUD_COLOR;
 	self.hud_velocity.hidewheninmenu = 1;
-    self.hud_velocity.label = &"Velocity: ";
+    // self.hud_velocity.label = &"Velocity: ";
 
     while (true)
     {
