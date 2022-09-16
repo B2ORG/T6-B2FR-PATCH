@@ -1,7 +1,7 @@
-#include maps/mp/gametypes_zm/_hud_util;
-#include maps/mp/zombies/_zm_utility;
 #include common_scripts/utility;
 #include maps/mp/_utility;
+#include maps/mp/gametypes_zm/_hud_util;
+#include maps/mp/zombies/_zm_utility;
 #include maps/mp/zombies/_zm_stats;
 #include maps/mp/zombies/_zm_weapons;
 #include maps/mp/animscripts/zm_utility;
@@ -23,7 +23,7 @@ init()
 
 	// Patch Config
 	level.FRFIX_ACTIVE = true;
-	level.FRFIX_VER = 5.0;
+	level.FRFIX_VER = 5.1;
 	level.FRFIX_BETA = "(REDACTED)";
 	level.FRFIX_DEBUG = false;
 
@@ -40,6 +40,7 @@ OnGameStart()
 	level.FRFIX_HUD_COLOR = (0.9, 0.8, 1);
 	level.FRFIX_YELLOWHOUSE = false;
 	level.FRFIX_NUKETOWN_EYES = false;
+	level.FRFIX_PRENADES = false;
 
 	level thread OnPlayerJoined();
 
@@ -61,6 +62,7 @@ OnGameStart()
 	level thread RoundTimerHud();
 	level thread SplitsTimerHud();
 	level thread ZombiesHud();
+	level thread SemtexChart();
 
 	// Game settings
 	SongSafety();
@@ -288,7 +290,7 @@ DvarDetector()
 			level notify("reset_dvars");
 		}
 
-		// Cheats
+		// Gspeed
 		if (getDvar("g_speed") != "190") 
 		{
 			if (!flag("cheat_printed")) 
@@ -307,11 +309,6 @@ DvarDetector()
 		}
 		wait 0.1;
 	}
-}
-
-FixNetworkFrame()
-{
-	wait 0.1;
 }
 
 PrintNetworkFrame(len)
@@ -545,18 +542,64 @@ VelocityMeter()
 
     PlayerThreadBlackscreenWaiter();
 
-    self.hud_velocity = createfontstring("hudsmall" , 1.1);
-	self.hud_velocity setPoint("CENTER", "CENTER", "CENTER", 185);
-	self.hud_velocity.alpha = 1;
+    self.hud_velocity = createfontstring("hudsmall" , 1);
+	self.hud_velocity setPoint("CENTER", "CENTER", "CENTER", 200);
+	self.hud_velocity.alpha = 0.75;
 	self.hud_velocity.color = level.FRFIX_HUD_COLOR;
 	self.hud_velocity.hidewheninmenu = 1;
-    self.hud_velocity.label = &"Velocity: ";
+    // self.hud_velocity.label = &"Velocity: ";
 
     while (true)
     {
         self.hud_velocity setValue(int(length(self getvelocity() * (1, 1, 0))));
         wait 0.05;
     }
+}
+
+SemtexChart()
+{
+	self endon("disconnect");
+	level endon("end_game");
+
+	// Escape if starting round is bigger than 22 since the display is going to be inaccurate
+	if (!isdefined(level.FRFIX_PRENADES) || !level.FRFIX_PRENADES || level.round_number >= 22)
+		return;
+
+	if (level.scr_zm_map_start_location == "town" && !level.enable_magic)
+	{
+		// Starts on r22 and goes onwards
+		chart = array(1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 17, 19, 22, 24, 28, 29, 34, 39, 42, 46, 52, 57, 61, 69, 78, 86, 96, 103);
+
+		semtex_hud = createserverfontstring("hudsmall" , 1.4);
+		semtex_hud setPoint("CENTER", "BOTTOM", 0, -95);
+		semtex_hud.color = level.FRFIX_HUD_COLOR;
+		semtex_hud.alpha = 0;
+		semtex_hud.hidewheninmenu = 1;
+		semtex_hud.label = &"Prenades this round: ";
+
+		while (level.round_number < 22)
+			level waittill("between_round_over");
+
+		foreach(semtex in chart)
+		{
+			level waittill("start_of_round");
+			wait 0.1;
+
+			label = "PRENADES ON " + level.round_number + ": ";
+			semtex_hud.label = istring(label);
+
+			semtex_hud setValue(semtex);
+
+			semtex_hud fadeOverTime(0.25);
+			semtex_hud.alpha = 1;
+
+			wait 5;
+
+			semtex_hud fadeOverTime(0.25);
+			semtex_hud.alpha = 0;
+		}
+	}
+	return;
 }
 
 NukeMannequins()
@@ -590,13 +633,12 @@ NukeMannequins()
 
 			if (mannequin.origin == (602.53, 281.09, -55))
 				mannequin delete();
-
-			// FR bus mannequin
-			if (mannequin.origin == (-30, 13.9031, -47.0411))
-           		mannequin delete();
+		}
+		// FR bus mannequin
+		if (mannequin.origin == (-30, 13.9031, -47.0411))
+			mannequin delete();
 		}
     }
-}
 
 EyeChange()
 {
@@ -608,129 +650,6 @@ EyeChange()
 
 	level setclientfield("zombie_eye_change", 1);
 	sndswitchannouncervox("richtofen");
-}
-
-GetPapWeaponReticle ( weapon ) // Override to get rid of rng reticle
-{
-	if ( !isDefined( self.pack_a_punch_weapon_options ) )
-	{
-		self.pack_a_punch_weapon_options = [];
-	}
-	if ( !is_weapon_upgraded( weapon ) )
-	{
-		return self calcweaponoptions( 0, 0, 0, 0, 0 );
-	}
-	if ( isDefined( self.pack_a_punch_weapon_options[ weapon ] ) )
-	{
-		return self.pack_a_punch_weapon_options[ weapon ];
-	}
-	smiley_face_reticle_index = 1;
-	base = get_base_name( weapon );
-	camo_index = 39;
-	if ( level.script == "zm_prison" )
-	{
-		camo_index = 40;
-	}
-	else if ( level.script == "zm_tomb" )
-	{
-		camo_index = 45;
-	}
-	lens_index = randomintrange( 0, 6 );
-	reticle_index = randomintrange( 0, 16 );
-	reticle_color_index = randomintrange( 0, 6 );
-	plain_reticle_index = 16;
-	if (level.cfg_reticle)
-	{
-		use_plain = true;  
-	}
-	else
-	{
-		r = randomint( 10 );
-		use_plain = r < 3;
-	}
-	if ( base == "saritch_upgraded_zm" )
-	{
-		reticle_index = smiley_face_reticle_index;
-	}
-	else if ( use_plain )
-	{
-		reticle_index = plain_reticle_index;
-	}
-	scary_eyes_reticle_index = 8;
-	purple_reticle_color_index = 3;
-	if ( reticle_index == scary_eyes_reticle_index )
-	{
-		reticle_color_index = purple_reticle_color_index;
-	}
-	letter_a_reticle_index = 2;
-	pink_reticle_color_index = 6;
-	if ( reticle_index == letter_a_reticle_index )
-	{
-		reticle_color_index = pink_reticle_color_index;
-	}
-	letter_e_reticle_index = 7;
-	green_reticle_color_index = 1;
-	if ( reticle_index == letter_e_reticle_index )
-	{
-		reticle_color_index = green_reticle_color_index;
-	}
-	self.pack_a_punch_weapon_options[ weapon ] = self calcweaponoptions( camo_index, lens_index, reticle_index, reticle_color_index );
-	return self.pack_a_punch_weapon_options[ weapon ];
-}
-
-AwardPermaPerks()
-{
-	if (!maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active())
-		return;
-
-	if (level.round_number > 2)		// 2 if ppl don't use minplayers
-		return;
-
-	if (!isdefined(level.FRFIX_PERMAPERKS) || !level.FRFIX_PERMAPERKS)
-		return;
-
-	if (level.script == "zm_transit" || level.script == "zm_highrise" || level.script == "zm_buried")
-	{
-		if (!flag("initial_blackscreen_passed"))
-			flag_wait("initial_blackscreen_passed");
-
-		while (!isalive(self))
-			wait 0.05;
-
-		wait 0.5;
-
-		// QR, Deadshot, Tombstone & Boards
-		perks_list = array("revive", "multikill_headshots", "perk_lose", "board");
-
-		// Jugg
-		if (level.round_number < 15)
-			perks_list[perks_list.size] = "jugg";
-
-		// Flopper
-		if (level.script == "zm_buried")
-			perks_list[perks_list.size] = "flopper";
-
-		// RayGun
-		raygun_maps = array("zm_transit", "zm_buried");
-		if (isinarray(raygun_maps, level.script))
-			perks_list[perks_list.size] = "nube";
-
-		// Set permaperks
-		for (i = 0; i < perks_list.size; i++)
-		{
-			name = perks_list[i];
-
-			for (j = 0; j < level.pers_upgrades[name].stat_names.size; j++)
-			{
-				stat_name = level.pers_upgrades[name].stat_names[j];
-				self set_global_stat(stat_name, level.pers_upgrades[name].stat_desired_values[j]);
-				self.stats_this_frame[stat_name] = 1;
-			}
-		}
-
-		playfx(level._effect["upgrade_aquired"], self.origin);
-		self playsoundtoplayer("evt_player_upgrade", self);
-	}
 }
 
 SongSafety()
