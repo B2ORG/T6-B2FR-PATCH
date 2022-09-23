@@ -249,18 +249,18 @@ IsTranzit()
 
 GenerateWatermark(text, color, alpha_override)
 {
-	y_offset = 5 + (level.FRFIX_WATERMARKS.size * 10);
+	y_offset = -10 + (level.FRFIX_WATERMARKS.size * 10);
 	if (!isDefined(color))
 		color = level.FRFIX_HUD_COLOR;
 
 	if (!isDefined(alpha_override))
-		alpha_override = 0.5;
+		alpha_override = 0.2;
 
     watermark = createserverfontstring("hudsmall" , 1.2);
-	watermark setPoint("CENTER", "TOP_CENTER", y_offset, 0);
+	watermark setPoint("CENTER", "TOP", 0, y_offset);
 	watermark.color = color;
 	watermark setText(text);
-	watermark.alpha = 1;
+	watermark.alpha = alpha_override;
 	watermark.hidewheninmenu = 0;
 
 	level.FRFIX_WATERMARKS[level.FRFIX_WATERMARKS.size] = watermark;
@@ -1039,7 +1039,7 @@ RoundSafety()
 	if (IsTown() || IsFarm() || IsDepot() || level.script == "zm_nuked")
 		maxround = 10;
 
-	if (isDefined(level.FRFIX_DEBUG) && FRFIX_DEBUG)
+	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
 		print("DEBUG: Starting round detected: " + getgametypesetting("startRound"));
 
 	if (getgametypesetting("startRound") <= maxround)
