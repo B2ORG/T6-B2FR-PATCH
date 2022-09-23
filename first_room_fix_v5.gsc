@@ -67,6 +67,7 @@ OnGameStart()
 	level thread NoFog();
 	level thread EyeChange();
 	level thread DebugGamePrints();
+	level.FRFIX_WATERMARKS = array();
 
 	flag_wait("initial_blackscreen_passed");
 
@@ -245,6 +246,25 @@ IsTranzit()
 }
 
 // Functions
+
+GenerateWatermark(text, color, alpha_override)
+{
+	y_offset = 5 + (level.FRFIX_WATERMARKS.size * 10);
+	if (!isDefined(color))
+		color = level.FRFIX_HUD_COLOR;
+
+	if (!isDefined(alpha_override))
+		alpha_override = 0.5;
+
+    watermark = createserverfontstring("hudsmall" , 1.2);
+	watermark setPoint("CENTER", "TOP_CENTER", y_offset, 0);
+	watermark.color = color;
+	watermark setText(text);
+	watermark.alpha = 1;
+	watermark.hidewheninmenu = 0;
+
+	level.FRFIX_WATERMARKS[level.FRFIX_WATERMARKS.size] = watermark;
+}
 
 DebugGamePrints()
 {
