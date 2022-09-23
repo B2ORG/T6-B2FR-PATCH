@@ -127,26 +127,23 @@ OnPlayerSpawned()
 
 // Utilities
 
-CreateWarningHud(text, offset) 
+GenerateWatermark(text, color, alpha_override)
 {
-	warnHud = newHudElem();
-	warnHud.fontscale = 1.5;
-	warnHud.alignx = "left";
-	warnHud.x = 20;
-	warnHud.y = offset;
-	warnHud.color = (0, 0, 0);
-	warnHud.alpha = 0;
-	warnHud.hidewheninmenu = 0;
+	y_offset = -10 + (level.FRFIX_WATERMARKS.size * 10);
+	if (!isDefined(color))
+		color = level.FRFIX_HUD_COLOR;
 
-	if (offset != 0) 
-		warnHud.label = &"^1";
+	if (!isDefined(alpha_override))
+		alpha_override = 0.2;
 
-	else 
-		warnHud.label = &"^5";
+    watermark = createserverfontstring("hudsmall" , 1.2);
+	watermark setPoint("CENTER", "TOP", 0, y_offset);
+	watermark.color = color;
+	watermark setText(text);
+	watermark.alpha = alpha_override;
+	watermark.hidewheninmenu = 0;
 
-	warnHud setText(text);
-	
-	warnHud.alpha = 1;
+	level.FRFIX_WATERMARKS[level.FRFIX_WATERMARKS.size] = watermark;
 }
 
 HudPos(hud, y_offset)
@@ -247,23 +244,19 @@ IsTranzit()
 
 // Functions
 
-GenerateWatermark(text, color, alpha_override)
+GenerateCheat()
 {
-	y_offset = -10 + (level.FRFIX_WATERMARKS.size * 10);
-	if (!isDefined(color))
-		color = level.FRFIX_HUD_COLOR;
+	// Don't want to generate it twice
+	if (isDefined(level.cheat_hud))
+		return;
 
-	if (!isDefined(alpha_override))
-		alpha_override = 0.2;
-
-    watermark = createserverfontstring("hudsmall" , 1.2);
-	watermark setPoint("CENTER", "TOP", 0, y_offset);
-	watermark.color = color;
-	watermark setText(text);
-	watermark.alpha = alpha_override;
-	watermark.hidewheninmenu = 0;
-
-	level.FRFIX_WATERMARKS[level.FRFIX_WATERMARKS.size] = watermark;
+    level.cheat_hud = createserverfontstring("hudsmall" , 1.2);
+	level.cheat_hud setPoint("LEFT", "TOP", 0, 50);
+	level.cheat_hud.color = (1, 0.5, 0);
+	level.cheat_hud setText("Alright there fuckaroo, quit this cheated sheit and touch grass loser.");
+	level.cheat_hud.alpha = 1;
+	level.cheat_hud.hidewheninmenu = 0;
+	return;
 }
 
 DebugGamePrints()
@@ -320,24 +313,19 @@ SetDvars()
 
 DvarDetector() 
 {
-	cool_message = "Alright there fuckaroo, quit this cheated sheit and touch grass loser.";
-
 	while (true) 
 	{
+		// Waiting on top so it doesn't trigger before initial dvars are set
 		flag_wait("dvars_set");
 
 		// Backspeed
 		if (getDvar("player_strafeSpeedScale") != "0.8" || getDvar("player_backSpeedScale") != "0.7") 
 		{
-			if (!flag("cheat_printed")) 
-			{
-				level thread CreateWarningHud(cool_message, 0);
-				flag_set("cheat_printed");
-			}
+			GenerateCheat();
 
 			if (!flag("cheat_printed_backspeed"))
 			{
-				level thread CreateWarningHud("Movement Speed Modification Attempted.", 30);
+				GenerateWatermark("BACKSPEED", (0.8, 0, 0));
 				flag_set("cheat_printed_backspeed");
 			}
 			
@@ -349,15 +337,11 @@ DvarDetector()
 		|| getDvar("con_gameMsgWindow0FadeInTime") != "0.25" || getDvar("con_gameMsgWindow0FadeOutTime") != "0.5"
 		|| getDvar("con_gameMsgWindow0Filter") != "gamenotify obituary") 
 		{
-			if (!flag("cheat_printed")) 
-			{
-				level thread CreateWarningHud(cool_message, 0);
-				flag_set("cheat_printed");
-			}
+			GenerateCheat();
 
 			if (!flag("cheat_printed_noprint"))
 			{
-				level thread CreateWarningHud("No Print Attempted.", 50);
+				GenerateWatermark("NOPRINT", (0.8, 0, 0));
 				flag_set("cheat_printed_noprint");
 			}
 
@@ -367,15 +351,11 @@ DvarDetector()
 		// Cheats
 		if (getDvar("sv_cheats") != "0") 
 		{
-			if (!flag("cheat_printed")) 
-			{
-				level thread CreateWarningHud(cool_message, 0);
-				flag_set("cheat_printed");
-			}
+			GenerateCheat();
 			
 			if (!flag("cheat_printed_cheats"))
 			{
-				level thread CreateWarningHud("sv_cheats Attempted.", 70);
+				GenerateWatermark("SV_CHEATS", (0.8, 0, 0));
 				flag_set("cheat_printed_cheats");
 			}
 
@@ -385,15 +365,11 @@ DvarDetector()
 		// Gspeed
 		if (getDvar("g_speed") != "190") 
 		{
-			if (!flag("cheat_printed")) 
-			{
-				level thread CreateWarningHud(cool_message, 0);
-				flag_set("cheat_printed");
-			}
+			GenerateCheat();
 			
 			if (!flag("cheat_printed_gspeed"))
 			{
-				level thread CreateWarningHud("g_speed Attempted.", 90);
+				GenerateWatermark("GSPEED", (0.8, 0, 0));
 				flag_set("cheat_printed_gspeed");
 			}
 
@@ -417,7 +393,7 @@ PrintNetworkFrame(len)
 	self.network_hud.alpha = 0;
 	self.network_hud.color = (1, 1, 1);
 	self.network_hud.hidewheninmenu = 1;
-    self.network_hud.label = &"NETWORK FRAME: ^1";
+    self.network_hud.label = &"NETWORK FRAME: ^2";
 
 	if (!flag("initial_blackscreen_passed"))
 		flag_wait("initial_blackscreen_passed");
@@ -430,8 +406,11 @@ PrintNetworkFrame(len)
 	if (!isdefined(len))
 		len = 5;
 
-	if (network_frame_len == 0.1)
-		self.network_hud.label = &"NETWORK FRAME: ^2";
+	if (network_frame_len != 0.1)
+	{
+		self.network_hud.label = &"NETWORK FRAME: ^1";
+		GenerateWatermark("PLUTO SPAWNS", (0.8, 0, 0));
+	}
 
 	self.network_hud setValue(network_frame_len);
 
