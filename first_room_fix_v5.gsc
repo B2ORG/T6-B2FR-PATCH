@@ -244,7 +244,6 @@ IsTranzit()
 	return false;
 }
 
-
 // Functions
 
 DebugGamePrints()
@@ -1016,7 +1015,18 @@ SongSafety()
 
 RoundSafety()
 {
-	ten_allowed = array("") 
+	maxround = 1;
+	if (IsTown() || IsFarm() || IsDepot() || level.script == "zm_nuked")
+		maxround = 10;
+
+	if (isDefined(level.FRFIX_DEBUG) && FRFIX_DEBUG)
+		print("DEBUG: Starting round detected: " + getgametypesetting("startRound"));
+
+	if (getgametypesetting("startRound") <= maxround)
+		return;
+
+	// Generate watermark
+
 }
 
 TrackedPowerupDrop( drop_point )
