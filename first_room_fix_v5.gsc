@@ -84,6 +84,7 @@ OnGameStart()
 
 	// Game settings
 	SongSafety();
+	RoundSafety();
 	level thread CoopPause();
 	level thread NukeMannequins();
 
@@ -214,6 +215,35 @@ PlayerThreadBlackscreenWaiter()
         wait 0.05;
     return;
 }
+
+IsTown()
+{
+	if (level.script == "zm_transit" && level.scr_zm_map_start_location == "town" && level.scr_zm_ui_gametype_group == "zsurvival")
+		return true;
+	return false;
+}
+
+IsFarm()
+{
+	if (level.script == "zm_transit" && level.scr_zm_map_start_location == "farm" && level.scr_zm_ui_gametype_group == "zsurvival")
+		return true;
+	return false;
+}
+
+IsDepot()
+{
+	if (level.script == "zm_transit" && level.scr_zm_map_start_location == "transit" && level.scr_zm_ui_gametype_group == "zsurvival")
+		return true;
+	return false;
+}
+
+IsTranzit()
+{
+	if (level.script == "zm_transit" && level.scr_zm_map_start_location == "transit" && level.scr_zm_ui_gametype_group == "zclassic")
+		return true;
+	return false;
+}
+
 
 // Functions
 
@@ -982,6 +1012,11 @@ SongSafety()
 		iPrintLn("^1SONG PATCH DETECTED!!!");
 		level notify("end_game");
 	}
+}
+
+RoundSafety()
+{
+	ten_allowed = array("") 
 }
 
 TrackedPowerupDrop( drop_point )
