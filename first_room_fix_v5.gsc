@@ -54,6 +54,7 @@ OnGameStart()
 	level.FRFIX_NOFOG = false;
 	level.FRFIX_ORIGINSFIX = false;
 	level.FRFIX_PRENADES = true;
+	level.FRFIX_COOP_PAUSE_ACTIVE = false;		// Disabled for 5.1 need more testing
 
 	level thread OnPlayerJoined();
 
@@ -466,10 +467,15 @@ CoopPause()
 
 	level.paused_time = 0.00;
 
+	if (!isDefined(level.FRFIX_COOP_PAUSE_ACTIVE) || !level.FRFIX_COOP_PAUSE_ACTIVE)
+		return;
+
+	// Wait till next round if it's solo
 	while (level.players.size == 1)
 		level waittill ("start_of_round");
 
 	self thread CoopPauseSwitch();
+	// Don't allow pausing on the 1st round of the game regardless what it is (was causing issues)
 	level.last_paused_round = getgametypesetting("startRound");
 	setDvar("paused", 0);
 
@@ -482,6 +488,7 @@ CoopPause()
 
 		while(flag("game_paused"))
 		{
+			// Lil inaccuracy occurs here
 			if (isDefined(level.timer_hud))
 				level.timer_hud setTimer(current_time);
 
