@@ -1045,8 +1045,8 @@ RoundSafety()
 	if (getgametypesetting("startRound") <= maxround)
 		return;
 
-	// Generate watermark
-
+	GenerateWatermark("STARTING ROUND", (0.8, 0, 0));
+	return;
 }
 
 TrackedPowerupDrop( drop_point )
