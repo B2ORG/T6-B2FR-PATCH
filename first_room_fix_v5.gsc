@@ -63,6 +63,7 @@ OnGameStart()
 	// Initial game settings
 	level thread SetDvars();
 	level thread DvarDetector();
+	level thread FirstBoxHandler();
 	level thread OriginsFix();
 	level thread NoFog();
 	level thread EyeChange();
@@ -1087,6 +1088,102 @@ TrackedPowerupDrop( drop_point )
     powerup thread powerup_emp();
     level.zombie_vars["zombie_drop_item"] = 0;
     level notify( "powerup_dropped", powerup );
+}
+
+FirstBoxHandler()
+{
+    self endon("disconnect");
+    level endon("end_game");
+
+    level.is_first_box = false;
+
+	self thread ScanInBox();
+	self thread CompareKeys();
+
+	while (true)
+	{
+		if (isDefined(level.is_first_box) && level.is_first_box)
+			break;
+
+		wait 0.25;
+	}
+
+	GenerateWatermark("FIRST BOX", (0.8, 0, 0));
+}
+
+ScanInBox()
+{
+    self endon("disconnect");
+    level endon("end_game");
+
+	// Only town needed
+    if (IsTown() || IsFarm() || IsDepot() || IsTranzit())
+        should_be_in_box = 25;
+	// else if (level.script == "zm_nuked")
+    //     should_be_in_box = 26;
+	// else if (level.script == "zm_highrise")
+    //     should_be_in_box = 24;	// Handle midgame changes
+	// else if (level.script == "zm_prison")
+    //     should_be_in_box = 18;	// Handle midgame changes
+    // else if (level.script == "zm_buried")
+    //     should_be_in_box = 22;
+	// else if (level.script == "zm_tomb")
+	// 	should_be_in_box = 23;  // Handle midgame changes
+
+    while (isDefined(should_be_in_box))
+    {
+        in_box = 0;
+        wpn_keys = getarraykeys(level.zombie_weapons);
+
+        for (i=0; i<wpn_keys.size; i++)
+        {
+            if (maps\mp\zombies\_zm_weapons::get_is_in_box(wpn_keys[i]))
+                in_box++;
+        }
+
+		if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+        	print("in_box: " + in_box + " should: " + should_be_in_box);
+
+        if (in_box != should_be_in_box)
+        {
+            // iPrintLn("1stbox_box");
+            level.is_first_box = true;
+            break;
+        }
+
+        wait_network_frame();
+    }
+    return;
+}
+
+CompareKeys()
+{
+    self endon("disconnect");
+    level endon("end_game");
+
+    an_array = array();
+    dupes = 0;
+
+    wait(randomIntRange(2, 22));
+
+    for (i=0; i<10; i++)
+    {
+        rando = maps\mp\zombies\_zm_magicbox::treasure_chest_chooseweightedrandomweapon(level.players[0]);
+        if (isinarray(an_array, rando))
+            dupes += 1;
+        else
+            an_array[an_array.size] = rando;
+        
+        wait_network_frame();
+    }
+
+    if (dupes > 3)
+    {
+        // iPrintLn("1stbox_keys");
+        level.is_first_box = true;
+    }
+
+    return;
 }
 
 
