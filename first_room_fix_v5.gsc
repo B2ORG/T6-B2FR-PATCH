@@ -59,6 +59,7 @@ OnGameStart()
 	level thread OnPlayerJoined();
 
 	level waittill("initial_players_connected");
+	level.FRFIX_WATERMARKS = array();
 
 	// Initial game settings
 	level thread SetDvars();
@@ -68,7 +69,6 @@ OnGameStart()
 	level thread NoFog();
 	level thread EyeChange();
 	level thread DebugGamePrints();
-	level.FRFIX_WATERMARKS = array();
 
 	flag_wait("initial_blackscreen_passed");
 
@@ -130,7 +130,7 @@ OnPlayerSpawned()
 
 GenerateWatermark(text, color, alpha_override)
 {
-	y_offset = -10 + (level.FRFIX_WATERMARKS.size * 10);
+	y_offset = 12 * level.FRFIX_WATERMARKS.size;
 	if (!isDefined(color))
 		color = level.FRFIX_HUD_COLOR;
 
@@ -138,7 +138,7 @@ GenerateWatermark(text, color, alpha_override)
 		alpha_override = 0.2;
 
     watermark = createserverfontstring("hudsmall" , 1.2);
-	watermark setPoint("CENTER", "TOP", 0, y_offset);
+	watermark setPoint("CENTER", "TOP", 0, y_offset - 10);
 	watermark.color = color;
 	watermark setText(text);
 	watermark.alpha = alpha_override;
@@ -252,7 +252,7 @@ GenerateCheat()
 		return;
 
     level.cheat_hud = createserverfontstring("hudsmall" , 1.2);
-	level.cheat_hud setPoint("LEFT", "TOP", 0, 50);
+	level.cheat_hud setPoint("CENTER", "CENTER", 0, -30);
 	level.cheat_hud.color = (1, 0.5, 0);
 	level.cheat_hud setText("Alright there fuckaroo, quit this cheated sheit and touch grass loser.");
 	level.cheat_hud.alpha = 1;
@@ -1099,6 +1099,8 @@ FirstBoxHandler()
 
 	self thread ScanInBox();
 	self thread CompareKeys();
+
+	flag_wait("initial_blackscreen_passed");
 
 	while (true)
 	{
