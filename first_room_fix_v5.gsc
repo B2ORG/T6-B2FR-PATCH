@@ -1162,6 +1162,9 @@ FirstBoxHandler()
     self endon("disconnect");
     level endon("end_game");
 
+	if (!isDefined(level.enable_magic) || !level.enable_magic)
+		return;
+
     level.is_first_box = false;
 
 	self thread ScanInBox();
