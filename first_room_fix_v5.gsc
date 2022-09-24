@@ -122,6 +122,9 @@ OnPlayerSpawned()
 			self thread PrintNetworkFrame(6);
 			self thread AwardPermaPerks();
 			self thread VelocityMeter();
+
+			if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+				self.score = 50000;
 		}
 	}
 
