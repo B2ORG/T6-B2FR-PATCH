@@ -118,7 +118,7 @@ OnPlayerSpawned()
 		{
 			self.initial_spawn = false;
 
-			self iPrintLn("^5FIRST ROOM FIX V" + level.FRFIX_VER + " " + level.FRFIX_BETA);
+			self thread WelcomePrints();
 			self thread PrintNetworkFrame(6);
 			self thread AwardPermaPerks();
 			self thread VelocityMeter();
@@ -248,6 +248,14 @@ IsTranzit()
 }
 
 // Functions
+
+WelcomePrints()
+{
+	wait 0.75;
+	self iPrintLn("^5FIRST ROOM FIX V" + level.FRFIX_VER + " " + level.FRFIX_BETA);
+	wait 0.75;
+	self iPrintLn("Source: github.com/Zi0MIX/First-Room-Fix");
+}
 
 GenerateCheat()
 {
