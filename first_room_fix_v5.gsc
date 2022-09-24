@@ -287,6 +287,7 @@ PowerupOddsWatcher()
 SetDvars()
 {
 	setDvar("timer_left", 0);
+	setDvar("velocity_size", 1.2);
 
 	while (true)
 	{
@@ -737,8 +738,9 @@ VelocityMeter()
     level endon("end_game");
 
     PlayerThreadBlackscreenWaiter();
+	vel_size = 0;
 
-    self.hud_velocity = createfontstring("hudsmall" , 1);
+    self.hud_velocity = createfontstring("hudsmall" , 1.2);
 	self.hud_velocity setPoint("CENTER", "CENTER", "CENTER", 200);
 	self.hud_velocity.alpha = 0.75;
 	self.hud_velocity.color = level.FRFIX_HUD_COLOR;
@@ -747,9 +749,63 @@ VelocityMeter()
 
     while (true)
     {
-        self.hud_velocity setValue(int(length(self getvelocity() * (1, 1, 0))));
+		velocity = int(length(self getvelocity() * (1, 1, 0)));
+		GetVelColorScale(velocity, self.hud_velocity);
+        self.hud_velocity setValue(velocity);
+
+		if (vel_size != getDvarFloat("velocity_size"))
+		{
+			vel_size = getDvarFloat("velocity_size");
+			self.hud_velocity.fontscale = vel_size;
+		}
         wait 0.05;
     }
+}
+
+GetVelColorScale(vel, hud)
+{
+	if ( vel < 330 )
+	{
+		hud.color = ( 0.6, 1, 0.6 );
+		hud.glowcolor = ( 0.4, 0.7, 0.4 );
+	}
+
+	else if ( vel <= 340 )
+	{
+		hud.color = ( 0.8, 1, 0.6 );
+		hud.glowcolor = ( 0.6, 0.7, 0.4 );
+	}
+
+	else if ( vel <= 350 )
+	{
+		hud.color = ( 1, 1, 0.6 );
+		hud.glowcolor = ( 0.7, 0.7, 0.4 );
+	}
+
+	else if ( vel <= 360 )
+	{
+		hud.color = ( 1, 0.8, 0.4 );
+		hud.glowcolor = ( 0.7, 0.6, 0.2 );
+	}
+
+	else if ( vel <= 370 )
+	{
+		hud.color = ( 1, 0.6, 0.2 );
+		hud.glowcolor = ( 0.7, 0.4, 0.1 );
+	}
+
+	else if ( vel <= 380 )
+	{
+		hud.color = ( 1, 0.2, 0 );
+		hud.glowcolor = ( 0.7, 0.1, 0 );
+	}
+	
+	else
+	{
+		hud.color = ( 0.6, 0, 0 );
+		hud.glowcolor = ( 0.3, 0, 0 );
+	}
+	return;
 }
 
 SemtexChart()
