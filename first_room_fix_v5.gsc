@@ -87,6 +87,7 @@ OnGameStart()
 	// Game settings
 	SongSafety();
 	RoundSafety();
+	DifficultySafety();
 	level thread CoopPause();
 	level thread NukeMannequins();
 
@@ -1082,6 +1083,13 @@ RoundSafety()
 		return;
 
 	GenerateWatermark("STARTING ROUND", (0.8, 0, 0));
+	return;
+}
+
+DifficultySafety()
+{
+	if (level.gamedifficulty == 0)
+		GenerateWatermark("EASY MODE", (0.8, 0, 0));
 	return;
 }
 
