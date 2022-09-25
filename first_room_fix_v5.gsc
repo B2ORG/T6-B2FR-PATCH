@@ -54,6 +54,7 @@ OnGameStart()
 	level.FRFIX_NOFOG = false;
 	level.FRFIX_ORIGINSFIX = false;
 	level.FRFIX_PRENADES = true;
+	level.FRFIX_FRIDGE = false;
 	level.FRFIX_COOP_PAUSE_ACTIVE = false;		// Disabled for 5.1 need more testing
 
 	level thread OnPlayerJoined();
@@ -118,6 +119,7 @@ OnPlayerSpawned()
 		{
 			self.initial_spawn = false;
 
+			self thread Fridge("tranzitnp");
 			self thread WelcomePrints();
 			self thread PrintNetworkFrame(6);
 			self thread AwardPermaPerks();
@@ -244,6 +246,52 @@ IsTranzit()
 {
 	if (level.script == "zm_transit" && level.scr_zm_map_start_location == "transit" && level.scr_zm_ui_gametype_group == "zclassic")
 		return true;
+	return false;
+}
+
+IsNuketown()
+{
+	if (level.script == "zm_nuked")
+		return true;
+	return false;
+}
+
+IsDieRise()
+{
+	if (level.script == "zm_highrise")
+		return true;
+	return false;
+}
+
+IsMob()
+{
+	if (level.script == "zm_prison")
+		return true;
+	return false;
+}
+
+IsBuried()
+{
+	if (level.script == "zm_buried")
+		return true;
+	return false;
+}
+
+IsOrigins()
+{
+	if (level.script == "zm_tomb")
+		return true;
+	return false;
+}
+
+DidGameJustStarted()
+{
+	if (!isDefined(level.start_round))
+		return true;
+
+	if ((level.round_number == level.start_round) || (level.round_number == (level.start_round + 1)))
+		return true;
+
 	return false;
 }
 
@@ -1163,6 +1211,40 @@ TrackedPowerupDrop( drop_point )
     powerup thread powerup_emp();
     level.zombie_vars["zombie_drop_item"] = 0;
     level notify( "powerup_dropped", powerup );
+}
+
+Fridge(mode)
+{
+	if (!isDefined(level.FRFIX_FRIDGE) || !level.FRFIX_FRIDGE)
+		return;
+
+	if (!DidGameJustStarted())
+		return;
+
+	if (!IsTranzit() && !IsDieRise() && !IsBuried())
+		return;
+
+	if (!flag("initial_blackscreen_passed"))
+		flag_wait("initial_blackscreen_passed");
+
+	if (isDefined(mode) && mode == "tranzitnp")
+	{
+		if (!IsTranzit())
+			return;
+
+		self clear_stored_weapondata();
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "name", "mp5k_upgraded_zm");
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "clip", 40);
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "stock", 200);
+	}
+	else
+	{
+		self clear_stored_weapondata();
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "name", "an94_upgraded_zm+mms");
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "clip", 50);
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "stock", 600);
+	}
+	return;
 }
 
 FirstBoxHandler()
