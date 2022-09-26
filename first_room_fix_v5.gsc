@@ -130,7 +130,7 @@ OnPlayerSpawned()
 			self thread AwardPermaPerks();
 			self thread VelocityMeter();
 
-			if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+			if (IfDebug())
 				self.score = 50000;
 		}
 	}
@@ -138,6 +138,13 @@ OnPlayerSpawned()
 }
 
 // Utilities
+
+IfDebug()
+{
+	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+		return true;
+	return false;
+}
 
 GenerateWatermark(text, color, alpha_override)
 {
@@ -294,7 +301,7 @@ DidGameJustStarted()
 	if (!isDefined(level.start_round))
 		return true;
 
-	if ((level.round_number == level.start_round) || (level.round_number == (level.start_round + 1)))
+	if (IsRound(level.start_round) || IsRound(level.start_round + 1))
 		return true;
 
 	return false;
@@ -307,7 +314,7 @@ IsRound(rnd)
 	else
 		is_rnd = false;
 	
-	// if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+	// if (IfDebug())
 	// 	print("DEBUG: if " + rnd + " <= " + level.round_number +": " + is_rnd);
 
 	return is_rnd;
@@ -657,7 +664,7 @@ UnpauseGame()
 	if (isDefined(level.timer_hud))
 		level.timer_hud setTimerUp(reclocked);
 
-	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+	if (IfDebug())
 	{
 		print("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_time = " + level.paused_time + " level.FIFIX_START = " + level.FRFIX_START);
 		print("Setting the timer to: " + reclocked + " s");
@@ -667,7 +674,7 @@ UnpauseGame()
 	if (isDefined(level.round_hud))
 		level.round_hud setTimerUp(rtreclocked);
 
-	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+	if (IfDebug())
 	{
 		print("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_round = " + level.paused_round + " level.round_start = " + level.round_start);
 		print("Setting the round timer to: " + rtreclocked + " s");
@@ -733,7 +740,7 @@ RoundTimerHud()
 
 		level waittill("end_of_round");
 		round_end = int(getTime() / 1000);
-		// round_start is not calculated globally for the benefit of coop pause func
+		// round_start is now calculated globally for the benefit of coop pause func
 		round_time = round_end - (level.paused_round + level.round_start);
 		level.round_hud setTimer(round_time);
 
@@ -760,7 +767,7 @@ SplitsTimerHud()
 		level waittill("end_of_round");
 		wait 8.5;	// Perfect round transition
 
-		if ((level.round_number > 10) && (!level.round_number % 5))
+		if (IsRound(15) && (!level.round_number % 5))
 		{
 			time = int(getTime() / 1000);
 			timestamp = ConvertTime(time - (level.FRFIX_START + level.paused_time));
@@ -792,7 +799,7 @@ ZombiesHud()
 	{
 		level waittill("start_of_round");
 		wait 0.1;
-		if (level.round_number >= 20)
+		if (IsRound(20))
 		{
 			label = "HORDES ON " + level.round_number + ": ";
 			zombies_hud.label = istring(label);
@@ -843,6 +850,9 @@ VelocityMeter()
 
 GetVelColorScale(vel, hud)
 {
+	hud.color = ( 0.6, 0, 0 );
+	hud.glowcolor = ( 0.3, 0, 0 );
+
 	if ( vel < 330 )
 	{
 		hud.color = ( 0.6, 1, 0.6 );
@@ -879,11 +889,6 @@ GetVelColorScale(vel, hud)
 		hud.glowcolor = ( 0.7, 0.1, 0 );
 	}
 	
-	else
-	{
-		hud.color = ( 0.6, 0, 0 );
-		hud.glowcolor = ( 0.3, 0, 0 );
-	}
 	return;
 }
 
@@ -893,10 +898,10 @@ SemtexChart()
 	level endon("end_game");
 
 	// Escape if starting round is bigger than 22 since the display is going to be inaccurate
-	if (!isdefined(level.FRFIX_PRENADES) || !level.FRFIX_PRENADES || level.round_number >= 22)
+	if (!isdefined(level.FRFIX_PRENADES) || !level.FRFIX_PRENADES || IsRound(23))
 		return;
 
-	if (level.scr_zm_map_start_location == "town" && !level.enable_magic)
+	if (IsTown() && !level.enable_magic)
 	{
 		// Starts on r22 and goes onwards
 		chart = array(1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 17, 19, 22, 24, 28, 29, 34, 39, 42, 46, 52, 57, 61, 69, 78, 86, 96, 103);
@@ -908,7 +913,7 @@ SemtexChart()
 		semtex_hud.hidewheninmenu = 1;
 		semtex_hud.label = &"Prenades this round: ";
 
-		while (level.round_number < 22)
+		while (!IsRound(22))
 			level waittill("between_round_over");
 
 		foreach(semtex in chart)
@@ -943,7 +948,7 @@ NukeMannequins()
 
 	wait 1;
     destructibles = getentarray("destructible", "targetname");
-    foreach ( mannequin in destructibles )
+    foreach (mannequin in destructibles)
     {
 		if (isdefined(level.enable_magic) && !level.enable_magic)
 		{
@@ -976,7 +981,7 @@ EyeChange()
 	if (!isdefined(level.NUKETOWN_EYES) || !level.NUKETOWN_EYES)
 		return;
 
-	if (level.script != "zm_nuked")
+	if (!IsNuketown())
 		return;
 
 	level setclientfield("zombie_eye_change", 1);
@@ -1056,13 +1061,13 @@ AwardPermaPerks()
 	if (!maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active())
 		return;
 
-	if (level.round_number > 2)		// 2 if ppl don't use minplayers
+	if (IsRound(3))		// 2 if ppl don't use minplayers
 		return;
 
 	if (!isdefined(level.FRFIX_PERMAPERKS) || !level.FRFIX_PERMAPERKS)
 		return;
 
-	if (level.script == "zm_transit" || level.script == "zm_highrise" || level.script == "zm_buried")
+	if (IsTranzit() || IsDieRise() || IsBuried())
 	{
 		if (!flag("initial_blackscreen_passed"))
 			flag_wait("initial_blackscreen_passed");
@@ -1076,14 +1081,15 @@ AwardPermaPerks()
 		perks_list = array("revive", "multikill_headshots", "perk_lose", "board");
 
 		// Jugg
-		if (level.round_number < 15)
+		if (!IsRound(15))
 			perks_list[perks_list.size] = "jugg";
 
 		// Flopper
-		if (level.script == "zm_buried")
+		if (IsBuried())
 			perks_list[perks_list.size] = "flopper";
 
 		// RayGun
+		// Handling with array cause it's still subject to change, easier to add stuff to the array later with code if necessary
 		raygun_maps = array("zm_transit", "zm_buried");
 		if (isinarray(raygun_maps, level.script))
 			perks_list[perks_list.size] = "nube";
@@ -1111,13 +1117,9 @@ NoFog()
 	if (!isdefined(level.FRFIX_NOFOG) || !level.FRFIX_NOFOG)
 		return;
 
-	if (level.script != "zm_transit")
-		return;
-	
-	if (level.scr_zm_map_start_location == "transit")
-		return;
-
-	setDvar("r_fog", 0);
+	// Maybe make it more flexible?
+	if (IsTown() || IsFarm())
+		setDvar("r_fog", 0);
 }
 
 OriginsFix()
@@ -1131,9 +1133,9 @@ OriginsFix()
 	flag_wait("start_zombie_round_logic");
 	wait 0.5;
 
-	if (level.script == "zm_tomb")
+	if (IsOrigins())
 		level.is_forever_solo_game = 0;
-	// else if (level.script == "zm_prison" && level.players.size == 1)
+	// else if (IsMob() && level.players.size == 1)
 	// 	level.is_forever_solo_game = 1;
 
 	return;
@@ -1151,13 +1153,13 @@ SongSafety()
 RoundSafety()
 {
 	maxround = 1;
-	if (IsTown() || IsFarm() || IsDepot() || level.script == "zm_nuked")
+	if (IsTown() || IsFarm() || IsDepot() || IsNuketown())
 		maxround = 10;
 
-	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
-		print("DEBUG: Starting round detected: " + getgametypesetting("startRound"));
+	if (IfDebug())
+		print("DEBUG: Starting round detected: " + level.start_round);
 
-	if (getgametypesetting("startRound") <= maxround)
+	if (level.start_round <= maxround)
 		return;
 
 	GenerateWatermark("STARTING ROUND", (0.8, 0, 0));
@@ -1173,7 +1175,7 @@ DifficultySafety()
 
 DebuggerSafety()
 {
-	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+	if (IfDebug())
 		GenerateWatermark("DEBUGGER", (0, 0.8, 0));
 	return;
 }
@@ -1338,7 +1340,7 @@ ScanInBox()
                 in_box++;
         }
 
-		// if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+		// if (IfDebug())
         // 	print("in_box: " + in_box + " should: " + should_be_in_box);
 
         if (in_box != should_be_in_box)
@@ -1394,7 +1396,8 @@ FirstBox()
 	self thread WatchForFinishFirstBox();
 	self.rigged_hits = 0;
 
-	while (level.round_number <= 10)
+	// First Box module stops after round 10
+	while (!IsRound(11))
 	{
 		while ((getDvar("fbgun") == "select a gun") && (!flag("break_firstbox")))
 			wait 0.05;
@@ -1438,7 +1441,7 @@ RigBox(gun)
 	removed_guns = array();
 
 	flag_set("box_rigged");
-	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+	if (IfDebug())
 		print("DEBUG: FIRST BOX: flag('box_rigged'): " + flag("box_rigged"));
 
 	level.special_weapon_magicbox_check = undefined;
@@ -1449,16 +1452,16 @@ RigBox(gun)
 			removed_guns[removed_guns.size] = weapon;
 			level.zombie_weapons[weapon].is_in_box = 0;
 
-			if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+			if (IfDebug())
 				print("DEBUG: FIRST BOX: setting " + weapon + ".is_in_box to 0");
 		}
 	}
 
 	while ((current_box_hits == level.total_box_hits) || !isDefined(level.total_box_hits))
 	{
-		if (level.round_number > 10)
+		if (IsRound(11))
 		{
-			if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+			if (IfDebug())
 				print("DEBUG: FIRST BOX: breaking out of First Box above round 10");
 			break;
 		}
@@ -1469,7 +1472,7 @@ RigBox(gun)
 
 	level.special_weapon_magicbox_check = saved_check;
 
-	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+	if (IfDebug())
 		print("DEBUG: FIRST BOX: removed_guns.size " + removed_guns.size);
 	if (removed_guns.size > 0)
 	{
@@ -1477,7 +1480,7 @@ RigBox(gun)
 		{
 			level.zombie_weapons[rweapon].is_in_box = 1;
 
-			if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+			if (IfDebug())
 				print("DEBUG: FIRST BOX: setting " + rweapon + ".is_in_box to 1");
 		}
 	}
@@ -1493,7 +1496,7 @@ WatchForFinishFirstBox()
 
 	level notify("break_firstbox");
 	flag_set("break_firstbox");
-	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+	if (IfDebug())
 		print("DEBUG: FIRST BOX: notifying module to break");
 }
 
@@ -1660,7 +1663,7 @@ GetWeaponKey(weapon_str)
 			break;
 	}
 
-	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+	if (IfDebug())
 		print("DEBUG: FIRST BOX: weapon_key: " + key);
 
 	return key;
@@ -1685,7 +1688,7 @@ MagicBoxOpensCounter()
 	else
 		level.total_box_hits++;
 
-	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+	if (IfDebug())
 		print("DEBUG: current box hits: " + level.total_box_hits);
 
     self setzbarrierpiecestate( 2, "opening" );
