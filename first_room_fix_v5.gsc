@@ -1227,6 +1227,7 @@ Fridge(mode)
 	if (!flag("initial_blackscreen_passed"))
 		flag_wait("initial_blackscreen_passed");
 
+	self.account_value = 250000;
 	if (isDefined(mode) && mode == "tranzitnp")
 	{
 		if (!IsTranzit())
