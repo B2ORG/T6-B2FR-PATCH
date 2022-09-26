@@ -1389,6 +1389,9 @@ FirstBox()
 	if (!isDefined(level.FRFIX_FIRSTBOX) || !level.FRFIX_FIRSTBOX)
 		return;
 
+	if (level.start_round > 1 && !IsTown())
+		return;
+
 	if (!flag("initial_blackscreen_passed"))
 		flag_wait("initial_blackscreen_passed");
 
