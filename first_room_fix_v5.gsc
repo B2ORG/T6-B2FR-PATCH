@@ -19,6 +19,7 @@ main()
 
 	replaceFunc(maps/mp/zombies/_zm_weapons::get_pack_a_punch_weapon_options, ::GetPapWeaponReticle);
 	replaceFunc(maps/mp/zombies/_zm_powerups::powerup_drop, ::TrackedPowerupDrop);
+	replaceFunc(maps/mp/zombies/_zm_magicbox::magic_box_opens, ::MagicBoxOpensCounter);
 }
 
 init()
@@ -31,6 +32,8 @@ init()
 	flag_init("cheat_printed_gspeed");
 
 	flag_init("game_started");
+	flag_init("box_rigged");
+	flag_init("break_firstbox");
 
 	// Patch Config
 	level.FRFIX_ACTIVE = true;
@@ -55,6 +58,7 @@ OnGameStart()
 	level.FRFIX_ORIGINSFIX = false;
 	level.FRFIX_PRENADES = true;
 	level.FRFIX_FRIDGE = false;
+	level.FRFIX_FIRSTBOX = false;
 	level.FRFIX_COOP_PAUSE_ACTIVE = false;		// Disabled for 5.1 need more testing
 
 	level thread OnPlayerJoined();
@@ -295,6 +299,19 @@ DidGameJustStarted()
 	return false;
 }
 
+IsRound(rnd)
+{
+	if (rnd <= level.round_number)
+		is_rnd = true;
+	else
+		is_rnd = false;
+	
+	// if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+	// 	print("DEBUG: if " + rnd + " <= " + level.round_number +": " + is_rnd);
+
+	return is_rnd;
+}
+
 // Functions
 
 WelcomePrints()
@@ -348,6 +365,7 @@ SetDvars()
 {
 	setDvar("timer_left", 0);
 	setDvar("velocity_size", 1.2);
+	setDvar("fbgun", "select a gun");
 
 	while (true)
 	{
@@ -1260,6 +1278,8 @@ FirstBoxHandler()
 
 	self thread ScanInBox();
 	self thread CompareKeys();
+	self thread FirstBox();
+	self thread WatchForDomesticFirstBox();
 
 	flag_wait("initial_blackscreen_passed");
 
@@ -1272,6 +1292,12 @@ FirstBoxHandler()
 	}
 
 	GenerateWatermark("FIRST BOX", (0.8, 0, 0));
+}
+
+WatchForDomesticFirstBox()
+{
+	self waittill("frfix_boxmodule");
+	level.is_first_box = true;
 }
 
 ScanInBox()
@@ -1304,12 +1330,11 @@ ScanInBox()
                 in_box++;
         }
 
-		if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
-        	print("in_box: " + in_box + " should: " + should_be_in_box);
+		// if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+        // 	print("in_box: " + in_box + " should: " + should_be_in_box);
 
         if (in_box != should_be_in_box)
         {
-            // iPrintLn("1stbox_box");
             level.is_first_box = true;
             break;
         }
@@ -1349,6 +1374,319 @@ CompareKeys()
     return;
 }
 
+FirstBox()
+{	
+	if (!isDefined(level.FRFIX_FIRSTBOX) || !level.FRFIX_FIRSTBOX)
+		return;
+
+	if (!flag("initial_blackscreen_passed"))
+		flag_wait("initial_blackscreen_passed");
+
+	iPrintLn("First Box module: ^2AVAILABLE");
+	self thread WatchForFinishFirstBox();
+	self.rigged_hits = 0;
+
+	while (level.round_number <= 10)
+	{
+		while ((getDvar("fbgun") == "select a gun") && (!flag("break_firstbox")))
+			wait 0.05;
+
+		// To avoid a iprint about wrong weapon key
+		if (flag("break_firstbox"))
+			break;
+
+		fbgun = getDvar("fbgun");
+		self thread RigBox(fbgun);
+
+		wait 0.05;
+		while ((flag("box_rigged")) && (!flag("break_firstbox")))
+			wait 0.05;
+
+		setDvar("fbgun", "select a gun");
+	}
+
+	iPrintLn("First Box module: ^1DISABLED");
+	if (self.rigged_hits)
+		iPrintLn("First box used: ^3" + self.rigged_hits + " ^7times");
+	return;
+}
+
+RigBox(gun)
+{
+	weapon_key = GetWeaponKey(gun);
+	if (weapon_key == "")
+	{
+		iPrintLn("Wrong weapon key: ^1" + gun);
+		return;
+	}
+
+	// weapon_name = level.zombie_weapons[weapon_key].name;
+	iPrintLn("Setting box weapon to: ^3" +  WeaponDisplayWrapper(weapon_key));
+	self notify("frfix_boxmodule");
+	self.rigged_hits++;
+
+	saved_check = level.special_weapon_magicbox_check;
+	current_box_hits = level.total_box_hits;
+	removed_guns = array();
+
+	flag_set("box_rigged");
+	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+		print("DEBUG: FIRST BOX: flag('box_rigged'): " + flag("box_rigged"));
+
+	level.special_weapon_magicbox_check = undefined;
+	foreach(weapon in getarraykeys(level.zombie_weapons))
+	{
+		if ((weapon != weapon_key) && level.zombie_weapons[weapon].is_in_box == 1)
+		{
+			removed_guns[removed_guns.size] = weapon;
+			level.zombie_weapons[weapon].is_in_box = 0;
+
+			if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+				print("DEBUG: FIRST BOX: setting " + weapon + ".is_in_box to 0");
+		}
+	}
+
+	while ((current_box_hits == level.total_box_hits) || !isDefined(level.total_box_hits))
+	{
+		if (level.round_number > 10)
+		{
+			if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+				print("DEBUG: FIRST BOX: breaking out of First Box above round 10");
+			break;
+		}
+		wait 0.05;
+	}
+	
+	wait 5;
+
+	level.special_weapon_magicbox_check = saved_check;
+
+	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+		print("DEBUG: FIRST BOX: removed_guns.size " + removed_guns.size);
+	if (removed_guns.size > 0)
+	{
+		foreach(rweapon in removed_guns)
+		{
+			level.zombie_weapons[rweapon].is_in_box = 1;
+
+			if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+				print("DEBUG: FIRST BOX: setting " + rweapon + ".is_in_box to 1");
+		}
+	}
+
+	flag_clear("box_rigged");
+	return;
+}
+
+WatchForFinishFirstBox()
+{
+	while (!IsRound(11))
+		wait 0.1;
+
+	level notify("break_firstbox");
+	flag_set("break_firstbox");
+	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+		print("DEBUG: FIRST BOX: notifying module to break");
+}
+
+GetWeaponKey(weapon_str)
+{
+	key = "";
+
+	switch(weapon_str)
+	{
+		case "mk1":
+			key = "ray_gun_zm";
+			break;
+		case "mk2":
+			key = "raygun_mark2_zm";
+			break;
+		case "monk":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried() || IsOrigins())
+				key = "cymbal_monkey_zm";
+			break;
+		case "emp":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit())
+				key = "emp_grenade_zm";
+			break;
+		case "time":
+			if (IsBuried())
+				key = "time_bomb_zm";
+			break;
+		case "sliq":
+			if (IsDieRise())
+				key = "slipgun_zm";
+			break;
+		case "blunder":
+			if (IsMob())
+				key = "blundergat_zm";
+			break;
+		case "paralyzer":
+			if (IsBuried())
+				key = "slowgun_zm";
+			break;
+
+		case "ak47":
+			if (IsMob())
+				key = "ak47_zm";
+			break;
+		case "barret":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsMob() || IsBuried())
+				key = "barretm82_zm";
+			break;
+		case "b23":
+			if (IsOrigins())
+				key = "beretta93r_extclip_zm";
+			break;
+		case "dsr":
+			key = "dsr50_zm";
+			break;
+		case "evo":
+			if (IsOrigins())
+				key = "evoskorpion_zm";
+			break;
+		case "57":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried())
+				key = "fiveseven_zm";
+			break;
+		case "257":
+			key = "fivesevendw_zm";
+			break;
+		case "fal":
+			key = "fnfal_zm";
+			break;
+		case "galil":
+			key = "galil_zm";
+			break;
+		case "mtar":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsMob() || IsBuried())
+				key = "tar21_zm";
+			break;
+		case "hamr":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried() || IsOrigins())
+				key = "hamr_zm";
+			break;
+		case "m27":
+			if (IsNuketown())
+				key = "hk416_zm";
+			break;
+		case "exe":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsMob() || IsBuried())
+				key = "judge_zm";
+			break;
+		case "kap":
+			key = "kard_zm";
+			break;
+		case "bk":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried())
+				key = "knife_ballistic_zm";
+			break;
+		case "ksg":
+			if (IsOrigins())
+				key = "ksg_zm";
+			break;
+		case "wm":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried() || IsOrigins())
+				key = "m32_zm";
+			break;
+		case "mg":
+		case "lsat":
+			if (IsOrigins())
+				key = "mg08_zm";
+			else if (IsNuketown() || IsMob())
+				key = "lsat_zm";
+			break;
+		case "dm":
+			if (IsMob())
+				key = "minigun_alcatraz_zm";
+		case "mp40":
+			if (IsOrigins())
+				key = "mp40_stalker_zm";
+			break;
+		case "pdw":
+			if (IsMob() || IsOrigins())
+				key = "pdw57_zm";
+			break;
+		case "pyt":
+		case "rnma":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsOrigins())
+				key = "python_zm";
+			else if (IsBuried())
+				key = "rnma_zm";
+			break;
+		case "type":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsOrigins())
+				key = "type95_zm";
+			break;
+		case "rpd":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise())
+				key = "rpd_zm";
+			break;
+		case "s12":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsMob() || IsBuried())
+				key = "saiga12_zm";
+			break;
+		case "scar":
+			if (IsOrigins())
+				key = "scar_zm";
+			break;
+		case "m1216":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried() || IsOrigins())
+				key = "srm1216_zm";
+			break;
+		case "tommy":
+			if (IsMob())
+				key = "thompson_zm";
+			break;
+		case "chic":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsOrigins())
+				key = "qcw05_zm";
+			break;
+		case "rpg":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsMob() || IsBuried())
+				key = "usrpg_zm";
+			break;
+		case "m8":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise())
+				key = "xm8_zm";
+			break;
+	}
+
+	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+		print("DEBUG: FIRST BOX: weapon_key: " + key);
+
+	return key;
+}
+
+WeaponDisplayWrapper(weapon_key)
+{
+	if (weapon_key == "emp_grenade_zm")
+		return "Emp Grenade";
+	if (weapon_key == "cymbal_monkey_zm")
+		return "Cymbal Monkey";
+	
+	return get_weapon_display_name(weapon_key);
+}
+
+MagicBoxOpensCounter()
+{
+	level notify("chest_opened");
+
+	if (!isDefined(level.total_box_hits))
+		level.total_box_hits = 1;
+	else
+		level.total_box_hits++;
+
+	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+		print("DEBUG: current box hits: " + level.total_box_hits);
+
+    self setzbarrierpiecestate( 2, "opening" );
+
+    while ( self getzbarrierpiecestate( 2 ) == "opening" )
+        wait 0.1;
+
+    self notify( "opened" );
+}
 
 // SetCharacters()
 // {
