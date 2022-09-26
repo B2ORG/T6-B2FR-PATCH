@@ -93,6 +93,7 @@ OnGameStart()
 	SongSafety();
 	RoundSafety();
 	DifficultySafety();
+	DebuggerSafety();
 	level thread CoopPause();
 	level thread NukeMannequins();
 
@@ -1167,6 +1168,13 @@ DifficultySafety()
 {
 	if (level.gamedifficulty == 0)
 		GenerateWatermark("EASY MODE", (0.8, 0, 0));
+	return;
+}
+
+DebuggerSafety()
+{
+	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+		GenerateWatermark("DEBUGGER", (0, 0.8, 0));
 	return;
 }
 
