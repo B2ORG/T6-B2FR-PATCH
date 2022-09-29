@@ -799,7 +799,7 @@ ZombiesHud()
 	{
 		level waittill("start_of_round");
 		wait 0.1;
-		if (IsRound(20) && (isDefined(flag("dog_round")) && !flag("dog_round")))
+		if (isDefined(flag("dog_round")) && !flag("dog_round") && IsRound(20))
 		{
 			label = "HORDES ON " + level.round_number + ": ";
 			zombies_hud.label = istring(label);
@@ -943,7 +943,7 @@ NukeMannequins()
 	if (!isdefined(level.FRFIX_YELLOWHOUSE) || !level.FRFIX_YELLOWHOUSE)
 		return;
 
-	if (level.script != "zm_nuked")
+	if (!IsNuketown())
 		return;
 
 	wait 1;
