@@ -799,7 +799,7 @@ ZombiesHud()
 	{
 		level waittill("start_of_round");
 		wait 0.1;
-		if (IsRound(20))
+		if (IsRound(20) && (isDefined(flag("dog_round")) && !flag("dog_round")))
 		{
 			label = "HORDES ON " + level.round_number + ": ";
 			zombies_hud.label = istring(label);
