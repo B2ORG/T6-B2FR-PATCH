@@ -1,7 +1,8 @@
 - Ready to use patches can be found in `Compiled` directory.
 - Source code for every given patch can be found in `Raw` directory.
-- For competitive 0 controversy games i suggest using `First Room Fix V4.gsc` or `First Room Fix V5.gsc` from `Compiled`.
+- For competitive 0 controversy games i suggest using `First Room Fix V4.gsc` or `First Room Fix V5.gsc` from Releases.
 - At this point in time disregard all versions below 4, as they don't fix the tickrate problem. All games on Pluto past January 21st played on any First Room fix below 4 will be considered invalid. Version 5 is recommended.
+- Use Redacted version for other launchers, it has restricted functionality due to more restrictions with custom scripts.
 
 Development thread on my Discord https://discord.gg/fDY4VR6rNE
 
