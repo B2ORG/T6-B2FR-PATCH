@@ -21,13 +21,14 @@ Development thread on my Discord https://discord.gg/fDY4VR6rNE
 - Fix for pre-patch recoil.
 - Fix for Tickrate.
 - Red dot reticle for scopes.
-- Anticheat (dvars).
+- Anticheat (dvars & gameplay).
 - Debug prints (pluto console).
 
 ### Built-in HUD features:
 - Print network frame at the beginning of the game (tickrate).
 - Game and round time display after each round.
 - Velocity meter.
+    * Use `velocity_size` dvar to change the size of the Velocity meter (1.0 - 5.0)
 
 ### Optional features:
 - Static timer / static round timer
@@ -38,6 +39,7 @@ Development thread on my Discord https://discord.gg/fDY4VR6rNE
 - Nuketown blue eyes for the entire game
 - Nuketown mannequins set for yellow house & first room
 - Semtex prenades
+- Set weapon in the fridge & full bank
 - Give permaperks
     - Jug
     - Flopper
@@ -46,12 +48,35 @@ Development thread on my Discord https://discord.gg/fDY4VR6rNE
     - Tombstone
     - Metal boards
     - Raygun (Tranzit & Buried)
-- Timer pause
-    - In coop game change dvar `paused` to `1`, change it back to `0` to resume the timer
-    - Timer will resume automatically if zombies die out
-    - Timers are not 100% accurate (may be up to few seconds off at times), might want to use manual timer preserve full accuracy
-    - You can only pause once a round
-
+- First Box module
+    * First box module will be active until round 11
+    * Not setting the dvar will result in box behaving normally
+    * If weapon is set the game will show First Box warning
+    * Select next box weapon using `fbgun` dvar
+        + `mk1` - RayGun
+        + `mk2` - RayGun Mark II
+        + `monk` - Monkey Bomb
+        + `emp` - EMP Grenades
+        + `barret` - M82 Barret
+        + `dsr` - DSR50
+        + `57` - FiveSeven
+        + `257` - Five Seven X2
+        + `fal` - FN FAL
+        + `galil` - Galil
+        + `mtar` - MTAR
+        + `hamr` - HAMR
+        + `exe` - Excecutioner
+        + `kap` - KAP40
+        + `bk` - Ballistic Knife
+        + `wm` - War Machine
+        + `pyt` - Python
+        + `type` - Type95
+        + `rpd` - RPD
+        + `s12` - Saiga 12
+        + `m1216` - M1216
+        + `chic` - Chicom CQB
+        + `rpg` - RPG
+        + `M8A1` - M8A1
 
 # First Room Fix V4
 
