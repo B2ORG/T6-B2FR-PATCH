@@ -375,6 +375,9 @@ SetDvars()
 	setDvar("velocity_size", 1.2);
 	setDvar("fbgun", "select a gun");
 
+	if (IsMob())
+		level.custom_velocity_behaviour = ::HideInAfterlife;
+
 	while (true)
 	{
 		setdvar("player_strafeSpeedScale", 0.8);
@@ -835,6 +838,9 @@ VelocityMeter()
 
     while (true)
     {
+		if (isDefined(level.custom_velocity_behaviour))
+			[[level.custom_velocity_behaviour]](self.hud_velocity);
+
 		velocity = int(length(self getvelocity() * (1, 1, 0)));
 		GetVelColorScale(velocity, self.hud_velocity);
         self.hud_velocity setValue(velocity);
@@ -1703,6 +1709,14 @@ MagicBoxOpensCounter()
         wait 0.1;
 
     self notify( "opened" );
+}
+
+HideInAfterlife(hud)
+{
+	if (self.afterlife)
+		hud.alpha = 0;
+	else
+		hud.alpha = 1;
 }
 
 // SetCharacters()
