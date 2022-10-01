@@ -275,9 +275,6 @@ IsRound(rnd)
 	else
 		is_rnd = false;
 	
-	// if (IfDebug())
-	// 	print("DEBUG: if " + rnd + " <= " + level.round_number +": " + is_rnd);
-
 	return is_rnd;
 }
 
@@ -311,12 +308,14 @@ PowerupOddsWatcher()
 	while (true)
 	{
 		level waittill("powerup_check", chance);
-		print("DEBUG: rand_drop = " + chance);
 	}
 }
 
 SetDvars()
 {
+	if (IsMob())
+		level.custom_velocity_behaviour = ::HideInAfterlife;
+
 	while (true)
 	{
 		setdvar("player_strafeSpeedScale", 0.8);
@@ -598,21 +597,9 @@ UnpauseGame()
 	if (isDefined(level.timer_hud))
 		level.timer_hud setTimerUp(reclocked);
 
-	if (IfDebug())
-	{
-		print("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_time = " + level.paused_time + " level.FIFIX_START = " + level.FRFIX_START);
-		print("Setting the timer to: " + reclocked + " s");
-	}
-
 	rtreclocked = (int(getTime() / 1000) - (level.paused_round + level.round_start)) * -1;
 	if (isDefined(level.round_hud))
 		level.round_hud setTimerUp(rtreclocked);
-
-	if (IfDebug())
-	{
-		print("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_round = " + level.paused_round + " level.round_start = " + level.round_start);
-		print("Setting the round timer to: " + rtreclocked + " s");
-	}
 }
 
 GlobalRoundStart()
@@ -765,6 +752,9 @@ VelocityMeter()
 
     while (true)
     {
+		if (isDefined(level.custom_velocity_behaviour))
+			[[level.custom_velocity_behaviour]](self.hud_velocity);
+
 		velocity = int(length(self getvelocity() * (1, 1, 0)));
 		GetVelColorScale(velocity, self.hud_velocity);
         self.hud_velocity setValue(velocity);
@@ -984,9 +974,6 @@ RoundSafety()
 	if (IsTown() || IsFarm() || IsDepot() || IsNuketown())
 		maxround = 10;
 
-	if (IfDebug())
-		print("DEBUG: Starting round detected: " + level.start_round);
-
 	if (level.start_round <= maxround)
 		return;
 
@@ -1051,12 +1038,11 @@ FirstBoxHandler()
 	if (!isDefined(level.enable_magic) || !level.enable_magic)
 		return;
 
+	flag_wait("initial_blackscreen_passed");
+
     level.is_first_box = false;
 
 	self thread ScanInBox();
-	self thread CompareKeys();
-
-	flag_wait("initial_blackscreen_passed");
 
 	while (true)
 	{
@@ -1077,68 +1063,50 @@ ScanInBox()
 	// Only town needed
     if (IsTown() || IsFarm() || IsDepot() || IsTranzit())
         should_be_in_box = 25;
-	// else if (level.script == "zm_nuked")
-    //     should_be_in_box = 26;
-	// else if (level.script == "zm_highrise")
-    //     should_be_in_box = 24;	// Handle midgame changes
-	// else if (level.script == "zm_prison")
-    //     should_be_in_box = 18;	// Handle midgame changes
-    // else if (level.script == "zm_buried")
-    //     should_be_in_box = 22;
-	// else if (level.script == "zm_tomb")
-	// 	should_be_in_box = 23;  // Handle midgame changes
+	else if (IsNuketown())
+        should_be_in_box = 26;
+	else if (IsDieRise())
+        should_be_in_box = 24;
+	else if (IsMob())
+        should_be_in_box = 16;
+    else if (IsBuried())
+        should_be_in_box = 22;
+	else if (IsOrigins())
+		should_be_in_box = 23;
+
+	offset = 0;
+	if (IsDieRise() || IsOrigins())
+		offset = 1;
 
     while (isDefined(should_be_in_box))
     {
-        in_box = 0;
-        wpn_keys = getarraykeys(level.zombie_weapons);
+        wait_network_frame();
 
-        for (i=0; i<wpn_keys.size; i++)
+        in_box = 0;
+
+		foreach (weapon in getarraykeys(level.zombie_weapons))
         {
-            if (maps\mp\zombies\_zm_weapons::get_is_in_box(wpn_keys[i]))
+            if (maps\mp\zombies\_zm_weapons::get_is_in_box(weapon))
                 in_box++;
         }
 
-		// if (IfDebug())
-        // 	print("in_box: " + in_box + " should: " + should_be_in_box);
+        if (in_box == should_be_in_box)
+			continue;
 
-        if (in_box != should_be_in_box)
-        {
-            level.is_first_box = true;
-            break;
-        }
+		else if ((offset > 0) && (in_box == (should_be_in_box + offset)))
+			continue;
 
-        wait_network_frame();
-    }
+		level.is_first_box = true;
+		break;
+
+	}
     return;
 }
 
-CompareKeys()
+HideInAfterlife(hud)
 {
-    self endon("disconnect");
-    level endon("end_game");
-
-    an_array = array();
-    dupes = 0;
-
-    wait(randomIntRange(2, 22));
-
-    for (i=0; i<10; i++)
-    {
-        rando = maps\mp\zombies\_zm_magicbox::treasure_chest_chooseweightedrandomweapon(level.players[0]);
-        if (isinarray(an_array, rando))
-            dupes += 1;
-        else
-            an_array[an_array.size] = rando;
-        
-        wait_network_frame();
-    }
-
-    if (dupes > 3)
-    {
-        // iPrintLn("1stbox_keys");
-        level.is_first_box = true;
-    }
-
-    return;
+	if (self.afterlife)
+		hud.alpha = 0;
+	else
+		hud.alpha = 1;
 }
