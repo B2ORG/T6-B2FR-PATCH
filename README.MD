@@ -1,10 +1,24 @@
 - Ready to use patches can be found in `Compiled` directory.
 - Source code for every given patch can be found in `Raw` directory.
-- For competitive 0 controversy games i suggest using `First Room Fix V4.gsc` or `First Room Fix V5.gsc` from Releases.
-- At this point in time disregard all versions below 4, as they don't fix the tickrate problem. All games on Pluto past January 21st played on any First Room fix below 4 will be considered invalid. Version 5 is recommended.
-- Use Redacted version for other launchers, it has restricted functionality due to more restrictions with custom scripts.
+- Development thread on my Discord https://discord.gg/fDY4VR6rNE
 
-Development thread on my Discord https://discord.gg/fDY4VR6rNE
+# Versions
+#### Redacted
+- Use V4 or V5 Redacted specific versions (/Compiled/V4 | /Compiled/V5)
+#### Ancient Pluto
+- I'm yet to test if any of the versions work with it, your best bet are going to be Redacted versions
+#### Plutonium R2905
+- Solo
+    * Any V4 or any V5
+- Coop
+    * V3 or V5.2 onwards
+#### Plutonium R3000+
+- Solo
+    * Any version
+- Coop
+    * V3 or V5.2 onwards
+#### Notes
+- By any version i mean the stable ones, they were releases when stuff wasn't working, so please make sure to use stable patches
 
 # Credits
 - JezuzLizard

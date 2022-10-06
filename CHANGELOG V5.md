@@ -10,3 +10,6 @@
 - Added fridge and bank autofill
 - Added color coding to velocity meter (from mw2 patch)
 - Added a dvar for changing size of velocity meter
+
+### Version 5.2
+- Fixed Tickrate fix (check README)
