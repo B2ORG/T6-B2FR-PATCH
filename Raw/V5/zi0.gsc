@@ -37,7 +37,7 @@ init()
 
 	// Patch Config
 	level.FRFIX_ACTIVE = true;
-	level.FRFIX_VER = 5.1;
+	level.FRFIX_VER = 5.2;
 	level.FRFIX_BETA = "";
 	level.FRFIX_DEBUG = false;
 
@@ -375,6 +375,9 @@ SetDvars()
 	setDvar("velocity_size", 1.2);
 	setDvar("fbgun", "select a gun");
 
+	if (IsMob())
+		level.custom_velocity_behaviour = ::HideInAfterlife;
+
 	while (true)
 	{
 		setdvar("player_strafeSpeedScale", 0.8);
@@ -469,7 +472,10 @@ DvarDetector()
 
 FixNetworkFrame()
 {
-	wait 0.1;
+	if (!isDefined(level.players) || level.players.size == 1)
+		wait 0.1;
+	else
+		wait 0.05;
 }
 
 PrintNetworkFrame(len)
@@ -494,7 +500,12 @@ PrintNetworkFrame(len)
 	if (!isdefined(len))
 		len = 5;
 
-	if (network_frame_len != 0.1)
+	if ((level.players.size == 1) && (network_frame_len != 0.1))
+	{
+		self.network_hud.label = &"NETWORK FRAME: ^1";
+		GenerateWatermark("PLUTO SPAWNS", (0.8, 0, 0));
+	}
+	else if ((level.players.size > 1) && (network_frame_len != 0.05))
 	{
 		self.network_hud.label = &"NETWORK FRAME: ^1";
 		GenerateWatermark("PLUTO SPAWNS", (0.8, 0, 0));
@@ -835,6 +846,9 @@ VelocityMeter()
 
     while (true)
     {
+		if (isDefined(level.custom_velocity_behaviour))
+			[[level.custom_velocity_behaviour]](self.hud_velocity);
+
 		velocity = int(length(self getvelocity() * (1, 1, 0)));
 		GetVelColorScale(velocity, self.hud_velocity);
         self.hud_velocity setValue(velocity);
@@ -1284,14 +1298,16 @@ FirstBoxHandler()
 	if (!isDefined(level.enable_magic) || !level.enable_magic)
 		return;
 
+	flag_wait("initial_blackscreen_passed");
+
     level.is_first_box = false;
 
+	if (IfDebug())
+		self thread PrintInitialBoxSize();
+
 	self thread ScanInBox();
-	self thread CompareKeys();
 	self thread FirstBox();
 	self thread WatchForDomesticFirstBox();
-
-	flag_wait("initial_blackscreen_passed");
 
 	while (true)
 	{
@@ -1306,8 +1322,23 @@ FirstBoxHandler()
 
 WatchForDomesticFirstBox()
 {
+    self endon("disconnect");
+    level endon("end_game");
+
 	self waittill("frfix_boxmodule");
 	level.is_first_box = true;
+}
+
+PrintInitialBoxSize()
+{
+	in_box = 0;
+
+	foreach (weapon in getArrayKeys(level.zombie_weapons))
+	{
+		if (maps\mp\zombies\_zm_weapons::get_is_in_box(weapon))
+			in_box++;
+	}
+	print("INFO: Size of initial box weapon list: " + in_box);
 }
 
 ScanInBox()
@@ -1318,74 +1349,54 @@ ScanInBox()
 	// Only town needed
     if (IsTown() || IsFarm() || IsDepot() || IsTranzit())
         should_be_in_box = 25;
-	// else if (level.script == "zm_nuked")
-    //     should_be_in_box = 26;
-	// else if (level.script == "zm_highrise")
-    //     should_be_in_box = 24;	// Handle midgame changes
-	// else if (level.script == "zm_prison")
-    //     should_be_in_box = 18;	// Handle midgame changes
-    // else if (level.script == "zm_buried")
-    //     should_be_in_box = 22;
-	// else if (level.script == "zm_tomb")
-	// 	should_be_in_box = 23;  // Handle midgame changes
+	else if (IsNuketown())
+        should_be_in_box = 26;
+	else if (IsDieRise())
+        should_be_in_box = 24;
+	else if (IsMob())
+        should_be_in_box = 16;
+    else if (IsBuried())
+        should_be_in_box = 22;
+	else if (IsOrigins())
+		should_be_in_box = 23;
+
+	offset = 0;
+	if (IsDieRise() || IsOrigins())
+		offset = 1;
 
     while (isDefined(should_be_in_box))
     {
-        in_box = 0;
-        wpn_keys = getarraykeys(level.zombie_weapons);
+        wait 0.05;
 
-        for (i=0; i<wpn_keys.size; i++)
+        in_box = 0;
+
+		foreach (weapon in getarraykeys(level.zombie_weapons))
         {
-            if (maps\mp\zombies\_zm_weapons::get_is_in_box(wpn_keys[i]))
+            if (maps\mp\zombies\_zm_weapons::get_is_in_box(weapon))
                 in_box++;
         }
 
 		// if (IfDebug())
         // 	print("in_box: " + in_box + " should: " + should_be_in_box);
 
-        if (in_box != should_be_in_box)
-        {
-            level.is_first_box = true;
-            break;
-        }
+        if (in_box == should_be_in_box)
+			continue;
 
-        wait_network_frame();
+		else if ((offset > 0) && (in_box == (should_be_in_box + offset)))
+			continue;
+
+		level.is_first_box = true;
+		break;
+
     }
-    return;
-}
-
-CompareKeys()
-{
-    self endon("disconnect");
-    level endon("end_game");
-
-    an_array = array();
-    dupes = 0;
-
-    wait(randomIntRange(2, 22));
-
-    for (i=0; i<10; i++)
-    {
-        rando = maps\mp\zombies\_zm_magicbox::treasure_chest_chooseweightedrandomweapon(level.players[0]);
-        if (isinarray(an_array, rando))
-            dupes += 1;
-        else
-            an_array[an_array.size] = rando;
-        
-        wait_network_frame();
-    }
-
-    if (dupes > 3)
-    {
-        // iPrintLn("1stbox_keys");
-        level.is_first_box = true;
-    }
-
     return;
 }
 
 FirstBox()
 {	
+    self endon("disconnect");
+    level endon("end_game");
+
 	if (!isDefined(level.FRFIX_FIRSTBOX) || !level.FRFIX_FIRSTBOX)
 		return;
 
@@ -1427,6 +1438,9 @@ FirstBox()
 
 RigBox(gun)
 {
+    self endon("disconnect");
+    level endon("end_game");
+
 	weapon_key = GetWeaponKey(gun);
 	if (weapon_key == "")
 	{
@@ -1494,6 +1508,9 @@ RigBox(gun)
 
 WatchForFinishFirstBox()
 {
+    self endon("disconnect");
+    level endon("end_game");
+
 	while (!IsRound(11))
 		wait 0.1;
 
@@ -1700,6 +1717,14 @@ MagicBoxOpensCounter()
         wait 0.1;
 
     self notify( "opened" );
+}
+
+HideInAfterlife(hud)
+{
+	if (self.afterlife)
+		hud.alpha = 0;
+	else
+		hud.alpha = 1;
 }
 
 // SetCharacters()

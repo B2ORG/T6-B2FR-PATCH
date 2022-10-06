@@ -1,4 +1,5 @@
 #include maps/mp/gametypes_zm/_hud_util;
+#include maps/mp/zombies/_zm;
 #include maps/mp/zombies/_zm_utility;
 #include common_scripts/utility;
 #include maps/mp/_utility;
@@ -17,37 +18,32 @@ init()
 
 OnPlayerConnect()
 {
-	level waittill( "connecting", player );	
-	player thread OnPlayerSpawned();
-
 	level waittill( "initial_players_connected" );
 	
-	level thread PrintFix();			
-}
-
-OnPlayerSpawned()
-{
-    level endon( "game_ended" );
-	self endon( "disconnect" );
-
-	self waittill( "spawned_player" );
-
-	flag_wait( "initial_blackscreen_passed" );
 	level thread PrintNetworkFrame();
 	level thread PrintSpawn();
+
+	level waittill("initial_blackscreen_passed");	
+
+	iPrintLn("Spawn Debugger");
 }
 
-PrintFix()
-{
-	foreach( player in level.players )
-	{
-		player iprintln( "PRINT NETWORK FRAME" );
-	}
-}
+// PrintPrint()
+// {
+// 	while (true)
+// 	{
+// 		level waittill("start_of_round");
+
+// 		print(int(getTime()));
+// 		wait level.zombie_vars["zombie_spawn_delay"];
+// 		wait_network_frame();
+// 		print(int(getTime()));
+// 	}
+// }
 
 PrintSpawn()
 {
-	spawn_hud = newhudelem( self );
+	spawn_hud = newhudelem();
 	spawn_hud.alignx = "left";
 	spawn_hud.aligny = "top";
 	spawn_hud.horzalign = "user_left";
@@ -89,7 +85,7 @@ PrintSpawn()
 
 PrintNetworkFrame()
 {
-	network_hud = newhudelem( self );
+	network_hud = newhudelem();
 	network_hud.alignx = "left";
 	network_hud.aligny = "top";
 	network_hud.horzalign = "user_left";

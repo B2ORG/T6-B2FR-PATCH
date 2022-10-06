@@ -1,9 +1,10 @@
 #include maps/mp/gametypes_zm/_hud_util;
 #include maps/mp/zombies/_zm_utility;
-#include common_scripts/utility;
-#include maps/mp/_utility;
 #include maps/mp/zombies/_zm_stats;
 #include maps/mp/zombies/_zm_weapons;
+#include maps/mp/zombies/_zm_powerups;
+#include common_scripts/utility;
+#include maps/mp/_utility;
 #include maps/mp/animscripts/zm_utility;
 #include maps/mp/zm_prison;
 #include maps/mp/zm_tomb;
@@ -17,21 +18,26 @@ main()
 	replaceFunc(maps/mp/zombies/_zm_utility::wait_network_frame, ::FixNetworkFrame);
 
 	replaceFunc(maps/mp/zombies/_zm_weapons::get_pack_a_punch_weapon_options, ::GetPapWeaponReticle);
+	replaceFunc(maps/mp/zombies/_zm_powerups::powerup_drop, ::TrackedPowerupDrop);
+	replaceFunc(maps/mp/zombies/_zm_magicbox::magic_box_opens, ::MagicBoxOpensCounter);
 }
 
 init()
 {
 	flag_init("dvars_set");
+	flag_init("game_paused");
 	flag_init("cheat_printed_backspeed");
 	flag_init("cheat_printed_noprint");
 	flag_init("cheat_printed_cheats");
 	flag_init("cheat_printed_gspeed");
 
 	flag_init("game_started");
+	flag_init("box_rigged");
+	flag_init("break_firstbox");
 
 	// Patch Config
 	level.FRFIX_ACTIVE = true;
-	level.FRFIX_VER = 5.0;
+	level.FRFIX_VER = 5.2;
 	level.FRFIX_BETA = "";
 	level.FRFIX_DEBUG = false;
 
@@ -50,17 +56,24 @@ OnGameStart()
 	level.FRFIX_NUKETOWN_EYES = true;
 	level.FRFIX_NOFOG = false;
 	level.FRFIX_ORIGINSFIX = true;
+	level.FRFIX_PRENADES = true;
+	level.FRFIX_FRIDGE = false;
+	level.FRFIX_FIRSTBOX = false;
+	level.FRFIX_COOP_PAUSE_ACTIVE = false;		// Disabled for 5.1 need more testing
 
 	level thread OnPlayerJoined();
 
 	level waittill("initial_players_connected");
+	level.FRFIX_WATERMARKS = array();
 
 	// Initial game settings
 	level thread SetDvars();
 	level thread DvarDetector();
+	level thread FirstBoxHandler();
 	level thread OriginsFix();
 	level thread NoFog();
 	level thread EyeChange();
+	level thread DebugGamePrints();
 
 	flag_wait("initial_blackscreen_passed");
 
@@ -68,14 +81,20 @@ OnGameStart()
 	flag_set("game_started");
 
 	// HUD
+	level thread GlobalRoundStart();
 	level thread BasicSplitsHud();
 	level thread TimerHud();
 	level thread RoundTimerHud();
 	level thread SplitsTimerHud();
 	level thread ZombiesHud();
+	level thread SemtexChart();
 
 	// Game settings
 	SongSafety();
+	RoundSafety();
+	DifficultySafety();
+	DebuggerSafety();
+	level thread CoopPause();
 	level thread NukeMannequins();
 
 	level waittill("end_game");
@@ -105,10 +124,14 @@ OnPlayerSpawned()
 		{
 			self.initial_spawn = false;
 
-			self iPrintLn("^5FIRST ROOM FIX V" + level.FRFIX_VER + " " + level.FRFIX_BETA);
+			self thread Fridge("tranzitnp");
+			self thread WelcomePrints();
 			self thread PrintNetworkFrame(6);
 			self thread AwardPermaPerks();
 			self thread VelocityMeter();
+
+			if (IfDebug())
+				self.score = 50000;
 		}
 	}
 
@@ -116,26 +139,30 @@ OnPlayerSpawned()
 
 // Utilities
 
-CreateWarningHud(text, offset) 
+IfDebug()
 {
-	warnHud = newHudElem();
-	warnHud.fontscale = 1.5;
-	warnHud.alignx = "left";
-	warnHud.x = 20;
-	warnHud.y = offset;
-	warnHud.color = (0, 0, 0);
-	warnHud.alpha = 0;
-	warnHud.hidewheninmenu = 0;
+	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+		return true;
+	return false;
+}
 
-	if (offset != 0) 
-		warnHud.label = &"^1";
+GenerateWatermark(text, color, alpha_override)
+{
+	y_offset = 12 * level.FRFIX_WATERMARKS.size;
+	if (!isDefined(color))
+		color = level.FRFIX_HUD_COLOR;
 
-	else 
-		warnHud.label = &"^5";
+	if (!isDefined(alpha_override))
+		alpha_override = 0.2;
 
-	warnHud setText(text);
-	
-	warnHud.alpha = 1;
+    watermark = createserverfontstring("hudsmall" , 1.2);
+	watermark setPoint("CENTER", "TOP", 0, y_offset - 10);
+	watermark.color = color;
+	watermark setText(text);
+	watermark.alpha = alpha_override;
+	watermark.hidewheninmenu = 0;
+
+	level.FRFIX_WATERMARKS[level.FRFIX_WATERMARKS.size] = watermark;
 }
 
 HudPos(hud, y_offset)
@@ -206,11 +233,150 @@ PlayerThreadBlackscreenWaiter()
     return;
 }
 
+IsTown()
+{
+	if (level.script == "zm_transit" && level.scr_zm_map_start_location == "town" && level.scr_zm_ui_gametype_group == "zsurvival")
+		return true;
+	return false;
+}
+
+IsFarm()
+{
+	if (level.script == "zm_transit" && level.scr_zm_map_start_location == "farm" && level.scr_zm_ui_gametype_group == "zsurvival")
+		return true;
+	return false;
+}
+
+IsDepot()
+{
+	if (level.script == "zm_transit" && level.scr_zm_map_start_location == "transit" && level.scr_zm_ui_gametype_group == "zsurvival")
+		return true;
+	return false;
+}
+
+IsTranzit()
+{
+	if (level.script == "zm_transit" && level.scr_zm_map_start_location == "transit" && level.scr_zm_ui_gametype_group == "zclassic")
+		return true;
+	return false;
+}
+
+IsNuketown()
+{
+	if (level.script == "zm_nuked")
+		return true;
+	return false;
+}
+
+IsDieRise()
+{
+	if (level.script == "zm_highrise")
+		return true;
+	return false;
+}
+
+IsMob()
+{
+	if (level.script == "zm_prison")
+		return true;
+	return false;
+}
+
+IsBuried()
+{
+	if (level.script == "zm_buried")
+		return true;
+	return false;
+}
+
+IsOrigins()
+{
+	if (level.script == "zm_tomb")
+		return true;
+	return false;
+}
+
+DidGameJustStarted()
+{
+	if (!isDefined(level.start_round))
+		return true;
+
+	if (IsRound(level.start_round) || IsRound(level.start_round + 1))
+		return true;
+
+	return false;
+}
+
+IsRound(rnd)
+{
+	if (rnd <= level.round_number)
+		is_rnd = true;
+	else
+		is_rnd = false;
+	
+	// if (IfDebug())
+	// 	print("DEBUG: if " + rnd + " <= " + level.round_number +": " + is_rnd);
+
+	return is_rnd;
+}
+
 // Functions
+
+WelcomePrints()
+{
+	wait 0.75;
+	self iPrintLn("^5FIRST ROOM FIX V" + level.FRFIX_VER + " " + level.FRFIX_BETA);
+	wait 0.75;
+	self iPrintLn("Source: github.com/Zi0MIX/First-Room-Fix");
+}
+
+GenerateCheat()
+{
+	// Don't want to generate it twice
+	if (isDefined(level.cheat_hud))
+		return;
+
+    level.cheat_hud = createserverfontstring("hudsmall" , 1.2);
+	level.cheat_hud setPoint("CENTER", "CENTER", 0, -30);
+	level.cheat_hud.color = (1, 0.5, 0);
+	level.cheat_hud setText("Alright there fuckaroo, quit this cheated sheit and touch grass loser.");
+	level.cheat_hud.alpha = 1;
+	level.cheat_hud.hidewheninmenu = 0;
+	return;
+}
+
+DebugGamePrints()
+{
+	self endon("disconnect");
+	level endon("end_game");
+
+	self thread PowerupOddsWatcher();
+
+	while (true)
+	{
+		level waittill("start_of_round");
+		print("DEBUG: ROUND: " + level.round_number + " level.powerup_drop_count = " + level.powerup_drop_count + " | Should be 0");
+		print("DEBUG: ROUND: " + level.round_number + " size of level.zombie_powerup_array = " + level.zombie_powerup_array.size + " | Should be above 0");
+	}
+}
+
+PowerupOddsWatcher()
+{
+	while (true)
+	{
+		level waittill("powerup_check", chance);
+		print("DEBUG: rand_drop = " + chance);
+	}
+}
 
 SetDvars()
 {
 	setDvar("timer_left", 0);
+	setDvar("velocity_size", 1.2);
+	setDvar("fbgun", "select a gun");
+
+	if (IsMob())
+		level.custom_velocity_behaviour = ::HideInAfterlife;
 
 	while (true)
 	{
@@ -238,24 +404,19 @@ SetDvars()
 
 DvarDetector() 
 {
-	cool_message = "Alright there fuckaroo, quit this cheated sheit and touch grass loser.";
-
 	while (true) 
 	{
+		// Waiting on top so it doesn't trigger before initial dvars are set
 		flag_wait("dvars_set");
 
 		// Backspeed
 		if (getDvar("player_strafeSpeedScale") != "0.8" || getDvar("player_backSpeedScale") != "0.7") 
 		{
-			if (!flag("cheat_printed")) 
-			{
-				level thread CreateWarningHud(cool_message, 0);
-				flag_set("cheat_printed");
-			}
+			GenerateCheat();
 
 			if (!flag("cheat_printed_backspeed"))
 			{
-				level thread CreateWarningHud("Movement Speed Modification Attempted.", 30);
+				GenerateWatermark("BACKSPEED", (0.8, 0, 0));
 				flag_set("cheat_printed_backspeed");
 			}
 			
@@ -267,15 +428,11 @@ DvarDetector()
 		|| getDvar("con_gameMsgWindow0FadeInTime") != "0.25" || getDvar("con_gameMsgWindow0FadeOutTime") != "0.5"
 		|| getDvar("con_gameMsgWindow0Filter") != "gamenotify obituary") 
 		{
-			if (!flag("cheat_printed")) 
-			{
-				level thread CreateWarningHud(cool_message, 0);
-				flag_set("cheat_printed");
-			}
+			GenerateCheat();
 
 			if (!flag("cheat_printed_noprint"))
 			{
-				level thread CreateWarningHud("No Print Attempted.", 50);
+				GenerateWatermark("NOPRINT", (0.8, 0, 0));
 				flag_set("cheat_printed_noprint");
 			}
 
@@ -285,33 +442,25 @@ DvarDetector()
 		// Cheats
 		if (getDvar("sv_cheats") != "0") 
 		{
-			if (!flag("cheat_printed")) 
-			{
-				level thread CreateWarningHud(cool_message, 0);
-				flag_set("cheat_printed");
-			}
+			GenerateCheat();
 			
 			if (!flag("cheat_printed_cheats"))
 			{
-				level thread CreateWarningHud("sv_cheats Attempted.", 70);
+				GenerateWatermark("SV_CHEATS", (0.8, 0, 0));
 				flag_set("cheat_printed_cheats");
 			}
 
 			level notify("reset_dvars");
 		}
 
-		// Cheats
+		// Gspeed
 		if (getDvar("g_speed") != "190") 
 		{
-			if (!flag("cheat_printed")) 
-			{
-				level thread CreateWarningHud(cool_message, 0);
-				flag_set("cheat_printed");
-			}
+			GenerateCheat();
 			
 			if (!flag("cheat_printed_gspeed"))
 			{
-				level thread CreateWarningHud("g_speed Attempted.", 90);
+				GenerateWatermark("GSPEED", (0.8, 0, 0));
 				flag_set("cheat_printed_gspeed");
 			}
 
@@ -323,7 +472,10 @@ DvarDetector()
 
 FixNetworkFrame()
 {
-	wait 0.1;
+	if (!isDefined(level.players) || level.players.size == 1)
+		wait 0.1;
+	else
+		wait 0.05;
 }
 
 PrintNetworkFrame(len)
@@ -335,7 +487,7 @@ PrintNetworkFrame(len)
 	self.network_hud.alpha = 0;
 	self.network_hud.color = (1, 1, 1);
 	self.network_hud.hidewheninmenu = 1;
-    self.network_hud.label = &"NETWORK FRAME: ^1";
+    self.network_hud.label = &"NETWORK FRAME: ^2";
 
 	if (!flag("initial_blackscreen_passed"))
 		flag_wait("initial_blackscreen_passed");
@@ -348,8 +500,16 @@ PrintNetworkFrame(len)
 	if (!isdefined(len))
 		len = 5;
 
-	if (network_frame_len == 0.1)
-		self.network_hud.label = &"NETWORK FRAME: ^2";
+	if ((level.players.size == 1) && (network_frame_len != 0.1))
+	{
+		self.network_hud.label = &"NETWORK FRAME: ^1";
+		GenerateWatermark("PLUTO SPAWNS", (0.8, 0, 0));
+	}
+	else if ((level.players.size > 1) && (network_frame_len != 0.05))
+	{
+		self.network_hud.label = &"NETWORK FRAME: ^1";
+		GenerateWatermark("PLUTO SPAWNS", (0.8, 0, 0));
+	}
 
 	self.network_hud setValue(network_frame_len);
 
@@ -382,10 +542,8 @@ BasicSplitsHud()
 	while (true)
 	{
 		level waittill("start_of_round");
-		round_start = int(getTime() / 1000);
 
 		level waittill("end_of_round");
-		round_end = int(getTime() / 1000);
 
 		if (level.players.size > 1)
 			basegt_hud.label = &"LOBBY: ";
@@ -408,13 +566,16 @@ BasicSplitsHud()
 			break;
 		}
 
-		basegt_hud setTimer(round_end - level.FRFIX_START);
-		basert_hud setTimer(round_end - round_start);
+		gt_freeze = int(getTime() / 1000) - (level.paused_time + level.FRFIX_START);
+		rt_freeze = int(getTime() / 1000) - (level.paused_round + level.round_start);
+
+		basegt_hud setTimer(gt_freeze);
+		basert_hud setTimer(rt_freeze);
 
 		for (ticks = 0; ticks < 100; ticks++)
 		{
-			basegt_hud setTimer(round_end - level.FRFIX_START);
-			basert_hud setTimer(round_end - round_start);
+			basegt_hud setTimer(gt_freeze);
+			basert_hud setTimer(rt_freeze);
 			wait 0.05;
 		}
 		basegt_hud fadeOverTime(0.1);
@@ -426,6 +587,124 @@ BasicSplitsHud()
 	return;
 }
 
+CoopPause()
+{
+	self endon("disconnect");
+	level endon("end_game");
+
+	level.paused_time = 0.00;
+
+	if (!isDefined(level.FRFIX_COOP_PAUSE_ACTIVE) || !level.FRFIX_COOP_PAUSE_ACTIVE)
+		return;
+
+	// Wait till next round if it's solo
+	while (level.players.size == 1)
+		level waittill ("start_of_round");
+
+	self thread CoopPauseSwitch();
+	// Don't allow pausing on the 1st round of the game regardless what it is (was causing issues)
+	level.last_paused_round = getgametypesetting("startRound");
+	setDvar("paused", 0);
+
+	while(true)
+	{
+		current_zombies = int(maps/mp/zombies/_zm_utility::get_round_enemy_array().size + level.zombie_total);
+
+		current_time = int(getTime() / 1000) - (level.paused_time + level.FRFIX_START);
+		current_round_time = int(getTime() / 1000) - (level.paused_round + level.round_start);
+
+		while(flag("game_paused"))
+		{
+			// Lil inaccuracy occurs here
+			if (isDefined(level.timer_hud))
+				level.timer_hud setTimer(current_time);
+
+			if (isDefined(level.round_hud))
+				level.round_hud setTimer(current_round_time);
+
+			level.paused_time += 0.05;
+			level.paused_round += 0.05;
+			wait 0.05;
+
+			if (current_zombies != int(maps/mp/zombies/_zm_utility::get_round_enemy_array().size + level.zombie_total))
+				UnpauseGame();
+		}
+
+		wait 0.05;
+	}
+}
+
+CoopPauseSwitch()
+{
+	level waittill("start_of_round");
+
+	while (true)
+	{		
+		while (level.last_paused_round == level.round_number)
+		{
+			level waittill("start_of_round");
+			setDvar("paused", 0);				// To make sure pause doesn't kick in as soon as round starts
+		}
+
+		zombie_count = int(maps/mp/zombies/_zm_utility::get_round_enemy_array().size + level.zombie_total);
+
+		if (zombie_count > 0 && getDvarInt("paused") && !flag("game_paused") && level.players.size > 1)
+			PauseGame();
+		else if ((!getDvarInt("paused") && flag("game_paused")) || (zombie_count <= 0 && flag("game_paused")))
+			UnpauseGame();
+
+		wait 0.05;
+	}
+}
+
+PauseGame()
+{
+	iPrintLn("^2pausing...");
+	flag_set("game_paused");
+	setDvar("paused", 1);
+}
+
+UnpauseGame()
+{
+	iPrintLn("^3unpausing...");
+	flag_clear("game_paused");
+	setDvar("paused", 0);
+	level.last_paused_round = level.round_number;
+
+	reclocked = (int(getTime() / 1000) - (level.paused_time + level.FRFIX_START)) * -1;
+	if (isDefined(level.timer_hud))
+		level.timer_hud setTimerUp(reclocked);
+
+	if (IfDebug())
+	{
+		print("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_time = " + level.paused_time + " level.FIFIX_START = " + level.FRFIX_START);
+		print("Setting the timer to: " + reclocked + " s");
+	}
+
+	rtreclocked = (int(getTime() / 1000) - (level.paused_round + level.round_start)) * -1;
+	if (isDefined(level.round_hud))
+		level.round_hud setTimerUp(rtreclocked);
+
+	if (IfDebug())
+	{
+		print("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_round = " + level.paused_round + " level.round_start = " + level.round_start);
+		print("Setting the round timer to: " + rtreclocked + " s");
+	}
+}
+
+GlobalRoundStart()
+{
+	level.round_start = level.FRFIX_START;
+	level.paused_round = 0.00;
+
+	while (true)
+	{
+		level waittill("start_of_round");
+		level.round_start = int(getTime() / 1000);
+		level.paused_round = 0.00;
+	}
+}
+
 TimerHud()
 {
     self endon("disconnect");
@@ -434,16 +713,16 @@ TimerHud()
 	if (!isdefined(level.FRFIX_TIMER_ENABLED) || !level.FRFIX_TIMER_ENABLED)
 		return;
 
-    timer_hud = createserverfontstring("hudsmall" , 1.5);
-	timer_hud setPoint("TOPRIGHT", "TOPRIGHT", -8, 0);
-	timer_hud.color = level.FRFIX_HUD_COLOR;
-	timer_hud.alpha = 0;
-	timer_hud.hidewheninmenu = 1;
+    level.timer_hud = createserverfontstring("hudsmall" , 1.5);
+	level.timer_hud setPoint("TOPRIGHT", "TOPRIGHT", -8, 0);
+	level.timer_hud.color = level.FRFIX_HUD_COLOR;
+	level.timer_hud.alpha = 0;
+	level.timer_hud.hidewheninmenu = 1;
 
-	timer_hud setTimerUp(0);
-	timer_hud.alpha = 1;
+	level.timer_hud setTimerUp(0);
+	level.timer_hud.alpha = 1;
 
-	self thread HudPos(timer_hud);
+	self thread HudPos(level.timer_hud);
 }
 
 RoundTimerHud()
@@ -454,35 +733,35 @@ RoundTimerHud()
 	if (!isdefined(level.FRFIX_ROUND_ENABLED) || !level.FRFIX_ROUND_ENABLED)
 		return;
 
-	round_hud = createserverfontstring("hudsmall" , 1.5);
-	round_hud setPoint("TOPRIGHT", "TOPRIGHT", -8, 17);
-	round_hud.color = level.FRFIX_HUD_COLOR;
-	round_hud.alpha = 0;
-	round_hud.hidewheninmenu = 1;
+	level.round_hud = createserverfontstring("hudsmall" , 1.5);
+	level.round_hud setPoint("TOPRIGHT", "TOPRIGHT", -8, 17);
+	level.round_hud.color = level.FRFIX_HUD_COLOR;
+	level.round_hud.alpha = 0;
+	level.round_hud.hidewheninmenu = 1;
 
-	self thread HudPos(round_hud, 17);
+	self thread HudPos(level.round_hud, 17);
 
 	while (true)
 	{
 		level waittill("start_of_round");
-		round_start = int(getTime() / 1000);
-		round_hud setTimerUp(0);
+		level.round_hud setTimerUp(0);
 
-		round_hud FadeOverTime(0.25);
-		round_hud.alpha = 1;
+		level.round_hud FadeOverTime(0.25);
+		level.round_hud.alpha = 1;
 
 		level waittill("end_of_round");
 		round_end = int(getTime() / 1000);
-		round_time = round_end - round_start;
-		round_hud setTimer(round_time);
+		// round_start is now calculated globally for the benefit of coop pause func
+		round_time = round_end - (level.paused_round + level.round_start);
+		level.round_hud setTimer(round_time);
 
 		for (ticks = 0; ticks < 100; ticks++)
 		{
-			round_hud setTimer(round_time);
+			level.round_hud setTimer(round_time);
 			wait 0.05;
 		}
-		round_hud FadeOverTime(0.25);
-		round_hud.alpha = 0;
+		level.round_hud FadeOverTime(0.25);
+		level.round_hud.alpha = 0;
 	}
 }
 
@@ -499,10 +778,10 @@ SplitsTimerHud()
 		level waittill("end_of_round");
 		wait 8.5;	// Perfect round transition
 
-		if ((level.round_number > 10) && (!level.round_number % 5))
+		if (IsRound(15) && (!level.round_number % 5))
 		{
 			time = int(getTime() / 1000);
-			timestamp = ConvertTime(time - level.FRFIX_START);
+			timestamp = ConvertTime(time - (level.FRFIX_START + level.paused_time));
 
 			splits_hud setText("" + level.round_number + " TIME: " + timestamp);
 			splits_hud fadeOverTime(0.25);
@@ -531,7 +810,7 @@ ZombiesHud()
 	{
 		level waittill("start_of_round");
 		wait 0.1;
-		if (level.round_number >= 20)
+		if (isDefined(flag("dog_round")) && !flag("dog_round") && IsRound(20))
 		{
 			label = "HORDES ON " + level.round_number + ": ";
 			zombies_hud.label = istring(label);
@@ -556,19 +835,121 @@ VelocityMeter()
     level endon("end_game");
 
     PlayerThreadBlackscreenWaiter();
+	vel_size = 0;
 
-    self.hud_velocity = createfontstring("hudsmall" , 1.1);
-	self.hud_velocity setPoint("CENTER", "CENTER", "CENTER", 185);
-	self.hud_velocity.alpha = 1;
+    self.hud_velocity = createfontstring("hudsmall" , 1.2);
+	self.hud_velocity setPoint("CENTER", "CENTER", "CENTER", 200);
+	self.hud_velocity.alpha = 0.75;
 	self.hud_velocity.color = level.FRFIX_HUD_COLOR;
 	self.hud_velocity.hidewheninmenu = 1;
-    self.hud_velocity.label = &"Velocity: ";
+    // self.hud_velocity.label = &"Velocity: ";
 
     while (true)
     {
-        self.hud_velocity setValue(int(length(self getvelocity() * (1, 1, 0))));
+		if (isDefined(level.custom_velocity_behaviour))
+			[[level.custom_velocity_behaviour]](self.hud_velocity);
+
+		velocity = int(length(self getvelocity() * (1, 1, 0)));
+		GetVelColorScale(velocity, self.hud_velocity);
+        self.hud_velocity setValue(velocity);
+
+		if (vel_size != getDvarFloat("velocity_size"))
+		{
+			vel_size = getDvarFloat("velocity_size");
+			self.hud_velocity.fontscale = vel_size;
+		}
         wait 0.05;
     }
+}
+
+GetVelColorScale(vel, hud)
+{
+	hud.color = ( 0.6, 0, 0 );
+	hud.glowcolor = ( 0.3, 0, 0 );
+
+	if ( vel < 330 )
+	{
+		hud.color = ( 0.6, 1, 0.6 );
+		hud.glowcolor = ( 0.4, 0.7, 0.4 );
+	}
+
+	else if ( vel <= 340 )
+	{
+		hud.color = ( 0.8, 1, 0.6 );
+		hud.glowcolor = ( 0.6, 0.7, 0.4 );
+	}
+
+	else if ( vel <= 350 )
+	{
+		hud.color = ( 1, 1, 0.6 );
+		hud.glowcolor = ( 0.7, 0.7, 0.4 );
+	}
+
+	else if ( vel <= 360 )
+	{
+		hud.color = ( 1, 0.8, 0.4 );
+		hud.glowcolor = ( 0.7, 0.6, 0.2 );
+	}
+
+	else if ( vel <= 370 )
+	{
+		hud.color = ( 1, 0.6, 0.2 );
+		hud.glowcolor = ( 0.7, 0.4, 0.1 );
+	}
+
+	else if ( vel <= 380 )
+	{
+		hud.color = ( 1, 0.2, 0 );
+		hud.glowcolor = ( 0.7, 0.1, 0 );
+	}
+	
+	return;
+}
+
+SemtexChart()
+{
+	self endon("disconnect");
+	level endon("end_game");
+
+	// Escape if starting round is bigger than 22 since the display is going to be inaccurate
+	if (!isdefined(level.FRFIX_PRENADES) || !level.FRFIX_PRENADES || IsRound(23))
+		return;
+
+	if (IsTown() && !level.enable_magic)
+	{
+		// Starts on r22 and goes onwards
+		chart = array(1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 17, 19, 22, 24, 28, 29, 34, 39, 42, 46, 52, 57, 61, 69, 78, 86, 96, 103);
+
+		semtex_hud = createserverfontstring("hudsmall" , 1.4);
+		semtex_hud setPoint("CENTER", "BOTTOM", 0, -95);
+		semtex_hud.color = level.FRFIX_HUD_COLOR;
+		semtex_hud.alpha = 0;
+		semtex_hud.hidewheninmenu = 1;
+		semtex_hud.label = &"Prenades this round: ";
+
+		while (!IsRound(22))
+			level waittill("between_round_over");
+
+		foreach(semtex in chart)
+		{
+			level waittill("start_of_round");
+			wait 0.1;
+
+			label = "PRENADES ON " + level.round_number + ": ";
+			semtex_hud.label = istring(label);
+
+			semtex_hud setValue(semtex);
+
+			semtex_hud fadeOverTime(0.25);
+			semtex_hud.alpha = 1;
+
+			wait 5;
+
+			semtex_hud fadeOverTime(0.25);
+			semtex_hud.alpha = 0;
+		}
+	}
+	return;
 }
 
 NukeMannequins()
@@ -576,12 +957,12 @@ NukeMannequins()
 	if (!isdefined(level.FRFIX_YELLOWHOUSE) || !level.FRFIX_YELLOWHOUSE)
 		return;
 
-	if (level.script != "zm_nuked")
+	if (!IsNuketown())
 		return;
 
 	wait 1;
     destructibles = getentarray("destructible", "targetname");
-    foreach ( mannequin in destructibles )
+    foreach (mannequin in destructibles)
     {
 		if (isdefined(level.enable_magic) && !level.enable_magic)
 		{
@@ -602,11 +983,10 @@ NukeMannequins()
 
 			if (mannequin.origin == (602.53, 281.09, -55))
 				mannequin delete();
-
-			// FR bus mannequin
-			if (mannequin.origin == (-30, 13.9031, -47.0411))
-           		mannequin delete();
 		}
+		// FR bus mannequin
+		if (mannequin.origin == (-30, 13.9031, -47.0411))
+			mannequin delete();
     }
 }
 
@@ -615,7 +995,7 @@ EyeChange()
 	if (!isdefined(level.NUKETOWN_EYES) || !level.NUKETOWN_EYES)
 		return;
 
-	if (level.script != "zm_nuked")
+	if (!IsNuketown())
 		return;
 
 	level setclientfield("zombie_eye_change", 1);
@@ -695,13 +1075,13 @@ AwardPermaPerks()
 	if (!maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active())
 		return;
 
-	if (level.round_number > 2)		// 2 if ppl don't use minplayers
+	if (IsRound(3))		// 2 if ppl don't use minplayers
 		return;
 
 	if (!isdefined(level.FRFIX_PERMAPERKS) || !level.FRFIX_PERMAPERKS)
 		return;
 
-	if (level.script == "zm_transit" || level.script == "zm_highrise" || level.script == "zm_buried")
+	if (IsTranzit() || IsDieRise() || IsBuried())
 	{
 		if (!flag("initial_blackscreen_passed"))
 			flag_wait("initial_blackscreen_passed");
@@ -715,14 +1095,15 @@ AwardPermaPerks()
 		perks_list = array("revive", "multikill_headshots", "perk_lose", "board");
 
 		// Jugg
-		if (level.round_number < 15)
+		if (!IsRound(15))
 			perks_list[perks_list.size] = "jugg";
 
 		// Flopper
-		if (level.script == "zm_buried")
+		if (IsBuried())
 			perks_list[perks_list.size] = "flopper";
 
 		// RayGun
+		// Handling with array cause it's still subject to change, easier to add stuff to the array later with code if necessary
 		raygun_maps = array("zm_transit", "zm_buried");
 		if (isinarray(raygun_maps, level.script))
 			perks_list[perks_list.size] = "nube";
@@ -750,28 +1131,28 @@ NoFog()
 	if (!isdefined(level.FRFIX_NOFOG) || !level.FRFIX_NOFOG)
 		return;
 
-	if (level.script != "zm_transit")
-		return;
-	
-	if (level.scr_zm_map_start_location == "transit")
-		return;
-
-	setDvar("r_fog", 0);
+	// Maybe make it more flexible?
+	if (IsTown() || IsFarm())
+		setDvar("r_fog", 0);
 }
 
 OriginsFix()
 {
+    self endon("disconnect");
+    level endon("end_game");
+	
 	if (!isdefined(level.FRFIX_ORIGINSFIX) || !level.FRFIX_ORIGINSFIX)
-		return;
-
-	if (level.script != "zm_tomb")
 		return;
 
 	flag_wait("start_zombie_round_logic");
 	wait 0.5;
 
-	if (level.script == "zm_tomb")
+	if (IsOrigins())
 		level.is_forever_solo_game = 0;
+	// else if (IsMob() && level.players.size == 1)
+	// 	level.is_forever_solo_game = 1;
+
+	return;
 }
 
 SongSafety()
@@ -781,6 +1162,569 @@ SongSafety()
 		iPrintLn("^1SONG PATCH DETECTED!!!");
 		level notify("end_game");
 	}
+}
+
+RoundSafety()
+{
+	maxround = 1;
+	if (IsTown() || IsFarm() || IsDepot() || IsNuketown())
+		maxround = 10;
+
+	if (IfDebug())
+		print("DEBUG: Starting round detected: " + level.start_round);
+
+	if (level.start_round <= maxround)
+		return;
+
+	GenerateWatermark("STARTING ROUND", (0.8, 0, 0));
+	return;
+}
+
+DifficultySafety()
+{
+	if (level.gamedifficulty == 0)
+		GenerateWatermark("EASY MODE", (0.8, 0, 0));
+	return;
+}
+
+DebuggerSafety()
+{
+	if (IfDebug())
+		GenerateWatermark("DEBUGGER", (0, 0.8, 0));
+	return;
+}
+
+TrackedPowerupDrop( drop_point )
+{
+    if ( level.powerup_drop_count >= level.zombie_vars["zombie_powerup_drop_max_per_round"] )
+        return;
+
+    if ( !isdefined( level.zombie_include_powerups ) || level.zombie_include_powerups.size == 0 )
+        return;
+
+    rand_drop = randomint( 100 );
+	level notify("powerup_check", rand_drop);
+
+    if ( rand_drop > 2 )
+    {
+        if ( !level.zombie_vars["zombie_drop_item"] )
+            return;
+
+        debug = "score";
+    }
+    else
+        debug = "random";
+
+    playable_area = getentarray( "player_volume", "script_noteworthy" );
+    level.powerup_drop_count++;
+    powerup = maps\mp\zombies\_zm_net::network_safe_spawn( "powerup", 1, "script_model", drop_point + vectorscale( ( 0, 0, 1 ), 40.0 ) );
+    valid_drop = 0;
+
+    for ( i = 0; i < playable_area.size; i++ )
+    {
+        if ( powerup istouching( playable_area[i] ) )
+            valid_drop = 1;
+    }
+
+    if ( valid_drop && level.rare_powerups_active )
+    {
+        pos = ( drop_point[0], drop_point[1], drop_point[2] + 42 );
+
+        if ( check_for_rare_drop_override( pos ) )
+        {
+            level.zombie_vars["zombie_drop_item"] = 0;
+            valid_drop = 0;
+        }
+    }
+
+    if ( !valid_drop )
+    {
+        level.powerup_drop_count--;
+        powerup delete();
+        return;
+    }
+
+    powerup powerup_setup();
+    print_powerup_drop( powerup.powerup_name, debug );
+    powerup thread powerup_timeout();
+    powerup thread powerup_wobble();
+    powerup thread powerup_grab();
+    powerup thread powerup_move();
+    powerup thread powerup_emp();
+    level.zombie_vars["zombie_drop_item"] = 0;
+    level notify( "powerup_dropped", powerup );
+}
+
+Fridge(mode)
+{
+	if (!isDefined(level.FRFIX_FRIDGE) || !level.FRFIX_FRIDGE)
+		return;
+
+	if (!DidGameJustStarted())
+		return;
+
+	if (!IsTranzit() && !IsDieRise() && !IsBuried())
+		return;
+
+	if (!flag("initial_blackscreen_passed"))
+		flag_wait("initial_blackscreen_passed");
+
+	self.account_value = 250000;
+	if (isDefined(mode) && mode == "tranzitnp")
+	{
+		if (!IsTranzit())
+			return;
+
+		self clear_stored_weapondata();
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "name", "mp5k_upgraded_zm");
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "clip", 40);
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "stock", 200);
+	}
+	else
+	{
+		self clear_stored_weapondata();
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "name", "an94_upgraded_zm+mms");
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "clip", 50);
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "stock", 600);
+	}
+	return;
+}
+
+FirstBoxHandler()
+{
+    self endon("disconnect");
+    level endon("end_game");
+
+	if (!isDefined(level.enable_magic) || !level.enable_magic)
+		return;
+
+	flag_wait("initial_blackscreen_passed");
+
+    level.is_first_box = false;
+
+	if (IfDebug())
+		self thread PrintInitialBoxSize();
+
+	self thread ScanInBox();
+	self thread FirstBox();
+	self thread WatchForDomesticFirstBox();
+
+	while (true)
+	{
+		if (isDefined(level.is_first_box) && level.is_first_box)
+			break;
+
+		wait 0.25;
+	}
+
+	GenerateWatermark("FIRST BOX", (0.8, 0, 0));
+}
+
+WatchForDomesticFirstBox()
+{
+    self endon("disconnect");
+    level endon("end_game");
+
+	self waittill("frfix_boxmodule");
+	level.is_first_box = true;
+}
+
+PrintInitialBoxSize()
+{
+	in_box = 0;
+
+	foreach (weapon in getArrayKeys(level.zombie_weapons))
+	{
+		if (maps\mp\zombies\_zm_weapons::get_is_in_box(weapon))
+			in_box++;
+	}
+	print("INFO: Size of initial box weapon list: " + in_box);
+}
+
+ScanInBox()
+{
+    self endon("disconnect");
+    level endon("end_game");
+
+	// Only town needed
+    if (IsTown() || IsFarm() || IsDepot() || IsTranzit())
+        should_be_in_box = 25;
+	else if (IsNuketown())
+        should_be_in_box = 26;
+	else if (IsDieRise())
+        should_be_in_box = 24;
+	else if (IsMob())
+        should_be_in_box = 16;
+    else if (IsBuried())
+        should_be_in_box = 22;
+	else if (IsOrigins())
+		should_be_in_box = 23;
+
+	offset = 0;
+	if (IsDieRise() || IsOrigins())
+		offset = 1;
+
+    while (isDefined(should_be_in_box))
+    {
+        wait 0.05;
+
+        in_box = 0;
+
+		foreach (weapon in getarraykeys(level.zombie_weapons))
+        {
+            if (maps\mp\zombies\_zm_weapons::get_is_in_box(weapon))
+                in_box++;
+        }
+
+		// if (IfDebug())
+        // 	print("in_box: " + in_box + " should: " + should_be_in_box);
+
+        if (in_box == should_be_in_box)
+			continue;
+
+		else if ((offset > 0) && (in_box == (should_be_in_box + offset)))
+			continue;
+
+		level.is_first_box = true;
+		break;
+
+    }
+    return;
+}
+
+FirstBox()
+{	
+    self endon("disconnect");
+    level endon("end_game");
+
+	if (!isDefined(level.FRFIX_FIRSTBOX) || !level.FRFIX_FIRSTBOX)
+		return;
+
+	if (level.start_round > 1 && !IsTown())
+		return;
+
+	if (!flag("initial_blackscreen_passed"))
+		flag_wait("initial_blackscreen_passed");
+
+	iPrintLn("First Box module: ^2AVAILABLE");
+	self thread WatchForFinishFirstBox();
+	self.rigged_hits = 0;
+
+	// First Box module stops after round 10
+	while (!IsRound(11))
+	{
+		while ((getDvar("fbgun") == "select a gun") && (!flag("break_firstbox")))
+			wait 0.05;
+
+		// To avoid a iprint about wrong weapon key
+		if (flag("break_firstbox"))
+			break;
+
+		fbgun = getDvar("fbgun");
+		self thread RigBox(fbgun);
+
+		wait 0.05;
+		while ((flag("box_rigged")) && (!flag("break_firstbox")))
+			wait 0.05;
+
+		setDvar("fbgun", "select a gun");
+	}
+
+	iPrintLn("First Box module: ^1DISABLED");
+	if (self.rigged_hits)
+		iPrintLn("First box used: ^3" + self.rigged_hits + " ^7times");
+	return;
+}
+
+RigBox(gun)
+{
+    self endon("disconnect");
+    level endon("end_game");
+
+	weapon_key = GetWeaponKey(gun);
+	if (weapon_key == "")
+	{
+		iPrintLn("Wrong weapon key: ^1" + gun);
+		return;
+	}
+
+	// weapon_name = level.zombie_weapons[weapon_key].name;
+	iPrintLn("Setting box weapon to: ^3" +  WeaponDisplayWrapper(weapon_key));
+	self notify("frfix_boxmodule");
+	self.rigged_hits++;
+
+	saved_check = level.special_weapon_magicbox_check;
+	current_box_hits = level.total_box_hits;
+	removed_guns = array();
+
+	flag_set("box_rigged");
+	if (IfDebug())
+		print("DEBUG: FIRST BOX: flag('box_rigged'): " + flag("box_rigged"));
+
+	level.special_weapon_magicbox_check = undefined;
+	foreach(weapon in getarraykeys(level.zombie_weapons))
+	{
+		if ((weapon != weapon_key) && level.zombie_weapons[weapon].is_in_box == 1)
+		{
+			removed_guns[removed_guns.size] = weapon;
+			level.zombie_weapons[weapon].is_in_box = 0;
+
+			if (IfDebug())
+				print("DEBUG: FIRST BOX: setting " + weapon + ".is_in_box to 0");
+		}
+	}
+
+	while ((current_box_hits == level.total_box_hits) || !isDefined(level.total_box_hits))
+	{
+		if (IsRound(11))
+		{
+			if (IfDebug())
+				print("DEBUG: FIRST BOX: breaking out of First Box above round 10");
+			break;
+		}
+		wait 0.05;
+	}
+	
+	wait 5;
+
+	level.special_weapon_magicbox_check = saved_check;
+
+	if (IfDebug())
+		print("DEBUG: FIRST BOX: removed_guns.size " + removed_guns.size);
+	if (removed_guns.size > 0)
+	{
+		foreach(rweapon in removed_guns)
+		{
+			level.zombie_weapons[rweapon].is_in_box = 1;
+
+			if (IfDebug())
+				print("DEBUG: FIRST BOX: setting " + rweapon + ".is_in_box to 1");
+		}
+	}
+
+	flag_clear("box_rigged");
+	return;
+}
+
+WatchForFinishFirstBox()
+{
+    self endon("disconnect");
+    level endon("end_game");
+
+	while (!IsRound(11))
+		wait 0.1;
+
+	level notify("break_firstbox");
+	flag_set("break_firstbox");
+	if (IfDebug())
+		print("DEBUG: FIRST BOX: notifying module to break");
+}
+
+GetWeaponKey(weapon_str)
+{
+	key = "";
+
+	switch(weapon_str)
+	{
+		case "mk1":
+			key = "ray_gun_zm";
+			break;
+		case "mk2":
+			key = "raygun_mark2_zm";
+			break;
+		case "monk":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried() || IsOrigins())
+				key = "cymbal_monkey_zm";
+			break;
+		case "emp":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit())
+				key = "emp_grenade_zm";
+			break;
+		case "time":
+			if (IsBuried())
+				key = "time_bomb_zm";
+			break;
+		case "sliq":
+			if (IsDieRise())
+				key = "slipgun_zm";
+			break;
+		case "blunder":
+			if (IsMob())
+				key = "blundergat_zm";
+			break;
+		case "paralyzer":
+			if (IsBuried())
+				key = "slowgun_zm";
+			break;
+
+		case "ak47":
+			if (IsMob())
+				key = "ak47_zm";
+			break;
+		case "barret":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsMob() || IsBuried())
+				key = "barretm82_zm";
+			break;
+		case "b23":
+			if (IsOrigins())
+				key = "beretta93r_extclip_zm";
+			break;
+		case "dsr":
+			key = "dsr50_zm";
+			break;
+		case "evo":
+			if (IsOrigins())
+				key = "evoskorpion_zm";
+			break;
+		case "57":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried())
+				key = "fiveseven_zm";
+			break;
+		case "257":
+			key = "fivesevendw_zm";
+			break;
+		case "fal":
+			key = "fnfal_zm";
+			break;
+		case "galil":
+			key = "galil_zm";
+			break;
+		case "mtar":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsMob() || IsBuried())
+				key = "tar21_zm";
+			break;
+		case "hamr":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried() || IsOrigins())
+				key = "hamr_zm";
+			break;
+		case "m27":
+			if (IsNuketown())
+				key = "hk416_zm";
+			break;
+		case "exe":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsMob() || IsBuried())
+				key = "judge_zm";
+			break;
+		case "kap":
+			key = "kard_zm";
+			break;
+		case "bk":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried())
+				key = "knife_ballistic_zm";
+			break;
+		case "ksg":
+			if (IsOrigins())
+				key = "ksg_zm";
+			break;
+		case "wm":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried() || IsOrigins())
+				key = "m32_zm";
+			break;
+		case "mg":
+		case "lsat":
+			if (IsOrigins())
+				key = "mg08_zm";
+			else if (IsNuketown() || IsMob())
+				key = "lsat_zm";
+			break;
+		case "dm":
+			if (IsMob())
+				key = "minigun_alcatraz_zm";
+		case "mp40":
+			if (IsOrigins())
+				key = "mp40_stalker_zm";
+			break;
+		case "pdw":
+			if (IsMob() || IsOrigins())
+				key = "pdw57_zm";
+			break;
+		case "pyt":
+		case "rnma":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsOrigins())
+				key = "python_zm";
+			else if (IsBuried())
+				key = "rnma_zm";
+			break;
+		case "type":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsOrigins())
+				key = "type95_zm";
+			break;
+		case "rpd":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise())
+				key = "rpd_zm";
+			break;
+		case "s12":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsMob() || IsBuried())
+				key = "saiga12_zm";
+			break;
+		case "scar":
+			if (IsOrigins())
+				key = "scar_zm";
+			break;
+		case "m1216":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried() || IsOrigins())
+				key = "srm1216_zm";
+			break;
+		case "tommy":
+			if (IsMob())
+				key = "thompson_zm";
+			break;
+		case "chic":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsOrigins())
+				key = "qcw05_zm";
+			break;
+		case "rpg":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsMob() || IsBuried())
+				key = "usrpg_zm";
+			break;
+		case "m8":
+			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise())
+				key = "xm8_zm";
+			break;
+	}
+
+	if (IfDebug())
+		print("DEBUG: FIRST BOX: weapon_key: " + key);
+
+	return key;
+}
+
+WeaponDisplayWrapper(weapon_key)
+{
+	if (weapon_key == "emp_grenade_zm")
+		return "Emp Grenade";
+	if (weapon_key == "cymbal_monkey_zm")
+		return "Cymbal Monkey";
+	
+	return get_weapon_display_name(weapon_key);
+}
+
+MagicBoxOpensCounter()
+{
+	level notify("chest_opened");
+
+	if (!isDefined(level.total_box_hits))
+		level.total_box_hits = 1;
+	else
+		level.total_box_hits++;
+
+	if (IfDebug())
+		print("DEBUG: current box hits: " + level.total_box_hits);
+
+    self setzbarrierpiecestate( 2, "opening" );
+
+    while ( self getzbarrierpiecestate( 2 ) == "opening" )
+        wait 0.1;
+
+    self notify( "opened" );
+}
+
+HideInAfterlife(hud)
+{
+	if (self.afterlife)
+		hud.alpha = 0;
+	else
+		hud.alpha = 1;
 }
 
 // SetCharacters()
