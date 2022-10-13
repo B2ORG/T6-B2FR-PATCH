@@ -116,12 +116,12 @@ OnPlayerSpawned()
 
 	self.initial_spawn = true;
 
-	while (!aretexturesloaded())
-		wait 0.05;
-
 	for(;;)
 	{
 		self waittill("spawned_player");
+
+		while (!flag("initial_players_connected"))
+			wait 0.05;
 
 		if (self.initial_spawn)
 		{
