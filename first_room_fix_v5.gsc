@@ -116,6 +116,9 @@ OnPlayerSpawned()
 
 	self.initial_spawn = true;
 
+	while (!aretexturesloaded())
+		wait 0.05;
+
 	for(;;)
 	{
 		self waittill("spawned_player");
