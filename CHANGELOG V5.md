@@ -13,3 +13,8 @@
 
 ### Version 5.2
 - Fixed Tickrate fix (check README)
+
+### Version 5.3
+- Applied a fix to initial prints for them to display after long loading times
+- Basic splits (when timers are disabled) now also display at the game over screen
+- Created a Vanilla release that doesn't have most of the HUD elements
