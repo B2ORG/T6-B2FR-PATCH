@@ -330,7 +330,7 @@ WelcomePrints()
 	wait 0.75;
 	self iPrintLn("^5FIRST ROOM FIX V" + level.FRFIX_VER + " " + level.FRFIX_BETA);
 	wait 0.75;
-	self iPrintLn("Source: github.com/Zi0MIX/First-Room-Fix");
+	self iPrintLn("Source: github.com/Zi0MIX/T6-FIRST-ROOM-FIX");
 }
 
 GenerateCheat()
