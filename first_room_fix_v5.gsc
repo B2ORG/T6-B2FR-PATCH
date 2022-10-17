@@ -542,6 +542,9 @@ BasicSplitsHud()
 	basert_hud.hidewheninmenu = 1;
 	basert_hud.label = &"ROUND: ";
 
+	if (!isdefined(level.FRFIX_TIMER_ENABLED) || !level.FRFIX_TIMER_ENABLED)
+		level.custom_end_screen = ::PrintOnGameEnd;
+
 	while (true)
 	{
 		level waittill("start_of_round");
@@ -588,6 +591,20 @@ BasicSplitsHud()
 	}
 
 	return;
+}
+
+PrintOnGameEnd()
+{
+	end_hud = createserverfontstring("hudsmall" , 1.4);
+	end_hud setPoint("CENTER", "MIDDLE", 0, -75);
+	end_hud.alpha = 0;
+
+	gt = ConvertTime(int(getTime() / 1000) - (level.paused_time + level.FRFIX_START));
+	rt = ConvertTime(int(getTime() / 1000) - (level.paused_round + level.round_start));
+
+	end_hud setText("GAMETIME: " + gt + " / TIME INTO THE ROUND: " + rt);
+	end_hud fadeOverTime(0.25);
+	end_hud.alpha = 1;
 }
 
 CoopPause()
