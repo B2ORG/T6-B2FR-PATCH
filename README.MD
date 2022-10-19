@@ -44,10 +44,10 @@
 - Game and round time display after each round.
 - Velocity meter.
     * Use `velocity_size` dvar to change the size of the Velocity meter (1.0 - 5.0)
+- Round splits displayed every 5 rounds after 10.
 
 ### Optional features:
 - Static timer / static round timer
-- Round splits displayed every 5 rounds after 10.
 - Amount of hordes displayed for each round on round 20 onwards.
 - Set Zombie Blood as a challenge box reward on Origins.
 - No fog
