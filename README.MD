@@ -2,7 +2,8 @@
 - Source code for every given patch can be found in `Raw` directory.
 - Development thread on my Discord https://discord.gg/fDY4VR6rNE
 
-# Versions
+# Launchers
+
 #### Redacted
 - Use V4 or V5 Redacted specific versions (/Precompiled/V4 | /Precompiled/V5)
 #### Ancient Pluto
@@ -18,14 +19,9 @@
 - Coop
     * V3 or V5.2 onwards
 #### Notes
-- By any version i mean the stable ones, they were releases when stuff wasn't working, so please make sure to use stable patches
+- By any version i mean the stable ones, there were releases when stuff wasn't working, so please make sure to use stable patches
 
-# Credits
-- JezuzLizard
-- 5and5
-- Txchno
-
-# First Room Fix V5
+# Features
 - Send me a message if you want a version with custom settings
 - Please download dedicated version for Redacted, as normal one will most likely throw an error. Use Redacted version in case you want to inject Ancient Pluto.
 
@@ -92,48 +88,11 @@
         + `rpg` - RPG
         + `M8A1` - M8A1
 
-# First Room Fix V4
+# Tech
+- All versions below 5.4 were Compiled using irony.dll
+- 5.4 onwards is compiled using xensiks [gsc-tool](https://github.com/xensik/gsc-tool)
 
-##### Built in features:
-- Fix for Strafe & Backspeed scale
-- Fix for host migration issue in private matches
-- Fix for Target Assist in zombies
-- Fix for pre-patch recoil
-- Fix for Tickrate
-- Print network frame at the beginning of the game (tickrate)
-- Round time displayed at the end of each round + splits displayed every 5 rounds after 15
-- Anticheat (dvars)
-
-##### Optional features:
-- No Fog (dependent on map and player count)
-- Game timer + Always visible round timer
-- Preset characters
-- Mannequins on Nuketown preset for Yellow House challenge
-- Blue Eyes & Richtofen announcer on Nuketown
-- Always Red Dot reticle on Origins PaP weapon reward
-##### r3042+
-- Solo / Custom split returned -> Zombie Blood fix disabled
-- Target Assist option added to custom games option, patch disables that on game start
-
-# First Room Fix V3
-Fixes:
-- Strafe & Backspeed
-- Host migration issue in private matches
-- Target Assist
-- Pre-patch recoil
-
-Optional Fixes
-- No fog
-- Ingame timer
-- Preset viewmodel (always same hands)
-- Mannequins set on Nuketown (Marking: "NOT ENOUGH MANNEQUINS ...")
-- Blue Eyes + Richtofen announcer on Nuketown
-
-# First Room Fix V2
-Fixes:
-- Strafe & Backspeed
-- Ingame timer for solo
-
-# First Room Fix
-Fixes:
-- Strafe, Backspeed & Aim Assist
+# Thanks to
+- [JezuzLizard](https://github.com/JezuzLizard)
+- [5and5](https://github.com/5and5)
+- [Txchno](https://github.com/mbahgatTech)
