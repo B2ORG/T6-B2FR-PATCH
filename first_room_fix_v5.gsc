@@ -37,7 +37,7 @@ init()
 
 	// Patch Config
 	level.FRFIX_ACTIVE = true;
-	level.FRFIX_VER = 5.3;
+	level.FRFIX_VER = 5.4;
 	level.FRFIX_BETA = "";
 	level.FRFIX_DEBUG = false;
 
