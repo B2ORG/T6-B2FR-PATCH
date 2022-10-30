@@ -50,7 +50,6 @@
 - Round splits displayed every 5 rounds after 10.
 - Amount of hordes displayed for each round on round 20 onwards.
 - Set Zombie Blood as a challenge box reward on Origins.
-- No fog
 - Nuketown blue eyes for the entire game
 - Nuketown mannequins set for yellow house & first room
 - Semtex prenades

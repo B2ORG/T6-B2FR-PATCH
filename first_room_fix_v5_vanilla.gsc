@@ -50,7 +50,6 @@ OnGameStart()
 	level.FRFIX_PERMAPERKS = true;
 	level.FRFIX_YELLOWHOUSE = false;
 	level.FRFIX_NUKETOWN_EYES = false;
-	level.FRFIX_NOFOG = false;
 	level.FRFIX_ORIGINSFIX = false;
 	level.FRFIX_FRIDGE = false;
 	level.FRFIX_FIRSTBOX = false;
@@ -65,7 +64,6 @@ OnGameStart()
 	level thread DvarDetector();
 	level thread FirstBoxHandler();
 	level thread OriginsFix();
-	level thread NoFog();
 	level thread EyeChange();
 	level thread DebugGamePrints();
 
@@ -693,16 +691,6 @@ AwardPermaPerks()
 		playfx(level._effect["upgrade_aquired"], self.origin);
 		self playsoundtoplayer("evt_player_upgrade", self);
 	}
-}
-
-NoFog()
-{
-	if (!isdefined(level.FRFIX_NOFOG) || !level.FRFIX_NOFOG)
-		return;
-
-	// Maybe make it more flexible?
-	if (IsTown() || IsFarm())
-		setDvar("r_fog", 0);
 }
 
 OriginsFix()
