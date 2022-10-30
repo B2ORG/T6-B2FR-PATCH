@@ -918,7 +918,7 @@ NukeMannequins()
 
 EyeChange()
 {
-	if (!isdefined(level.NUKETOWN_EYES) || !level.NUKETOWN_EYES)
+	if (!isdefined(level.FRFIX_NUKETOWN_EYES) || !level.FRFIX_NUKETOWN_EYES)
 		return;
 
 	if (!IsNuketown())
