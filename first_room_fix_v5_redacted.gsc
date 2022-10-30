@@ -1,16 +1,16 @@
-#include maps/mp/gametypes_zm/_hud_util;
-#include maps/mp/zombies/_zm_utility;
-#include maps/mp/zombies/_zm_stats;
-#include maps/mp/zombies/_zm_weapons;
-#include maps/mp/zombies/_zm_powerups;
-#include common_scripts/utility;
-#include maps/mp/_utility;
-#include maps/mp/animscripts/zm_utility;
-#include maps/mp/zm_prison;
-#include maps/mp/zm_tomb;
-#include maps/mp/zm_tomb_utility;
-#include maps/mp/zombies/_zm_audio;
-#include maps/mp/zombies/_zm_net;
+#include common_scripts\utility;
+#include maps\mp\gametypes_zm\_hud_util;
+#include maps\mp\_utility;
+#include maps\mp\animscripts\zm_utility;
+#include maps\mp\zombies\_zm_utility;
+#include maps\mp\zombies\_zm_stats;
+#include maps\mp\zombies\_zm_weapons;
+#include maps\mp\zombies\_zm_powerups;
+#include maps\mp\zombies\_zm_audio;
+#include maps\mp\zombies\_zm_net;
+#include maps\mp\zm_prison;
+#include maps\mp\zm_tomb;
+#include maps\mp\zm_tomb_utility;
 
 init()
 {
@@ -555,7 +555,7 @@ CoopPause()
 
 	while(true)
 	{
-		current_zombies = int(maps/mp/zombies/_zm_utility::get_round_enemy_array().size + level.zombie_total);
+		current_zombies = int(maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total);
 
 		current_time = int(getTime() / 1000) - (level.paused_time + level.FRFIX_START);
 		current_round_time = int(getTime() / 1000) - (level.paused_round + level.round_start);
@@ -573,7 +573,7 @@ CoopPause()
 			level.paused_round += 0.05;
 			wait 0.05;
 
-			if (current_zombies != int(maps/mp/zombies/_zm_utility::get_round_enemy_array().size + level.zombie_total))
+			if (current_zombies != int(maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total))
 				UnpauseGame();
 		}
 
@@ -593,7 +593,7 @@ CoopPauseSwitch()
 			setDvar("paused", 0);				// To make sure pause doesn't kick in as soon as round starts
 		}
 
-		zombie_count = int(maps/mp/zombies/_zm_utility::get_round_enemy_array().size + level.zombie_total);
+		zombie_count = int(maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total);
 
 		if (zombie_count > 0 && getDvarInt("paused") && !flag("game_paused") && level.players.size > 1)
 			PauseGame();
@@ -746,7 +746,7 @@ ZombiesHud()
 			label = "HORDES ON " + level.round_number + ": ";
 			zombies_hud.label = istring(label);
 
-			zombies_value = int(((maps/mp/zombies/_zm_utility::get_round_enemy_array().size + level.zombie_total) / 24) * 100);
+			zombies_value = int(((maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total) / 24) * 100);
 			zombies_hud setValue(zombies_value / 100);
 
 			zombies_hud fadeOverTime(0.25);

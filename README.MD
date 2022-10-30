@@ -1,10 +1,10 @@
-- Ready to use patches can be found in `Compiled` directory.
+- Ready to use patches can be found in `Precompiled` directory.
 - Source code for every given patch can be found in `Raw` directory.
 - Development thread on my Discord https://discord.gg/fDY4VR6rNE
 
 # Versions
 #### Redacted
-- Use V4 or V5 Redacted specific versions (/Compiled/V4 | /Compiled/V5)
+- Use V4 or V5 Redacted specific versions (/Precompiled/V4 | /Precompiled/V5)
 #### Ancient Pluto
 - I'm yet to test if any of the versions work with it, your best bet are going to be Redacted versions
 #### Plutonium R2905
