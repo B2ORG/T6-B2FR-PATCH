@@ -75,7 +75,7 @@ OnGameStart()
 	level thread GlobalRoundStart();
 
 	// Game settings
-	SongSafety();
+	ZioSafety();
 	RoundSafety();
 	DifficultySafety();
 	DebuggerSafety();
@@ -712,13 +712,21 @@ OriginsFix()
 	return;
 }
 
-SongSafety()
+ZioSafety()
 {
 	if (isDefined(level.SONG_AUTO_TIMER_ACTIVE) && level.SONG_AUTO_TIMER_ACTIVE)
 	{
 		iPrintLn("^1SONG PATCH DETECTED!!!");
 		level notify("end_game");
 	}
+
+	if (isDefined(level.INNIT_ACTIVE) && level.INNIT_ACTIVE)
+	{
+		iPrintLn("^1INNIT PATCH DETECTED!!!");
+		level notify("end_game");
+	}
+
+	return;
 }
 
 RoundSafety()
