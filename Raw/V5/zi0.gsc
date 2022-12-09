@@ -37,10 +37,11 @@ init()
 
 	// Patch Config
 	level.FRFIX_ACTIVE = true;
-	level.FRFIX_VER = 5.4;
+	level.FRFIX_VER = 5.5;
 	level.FRFIX_BETA = "";
 	level.FRFIX_DEBUG = false;
 
+	level thread SetDvars();
 	level thread OnGameStart();
 }
 
@@ -66,7 +67,6 @@ OnGameStart()
 	level.FRFIX_WATERMARKS = array();
 
 	// Initial game settings
-	level thread SetDvars();
 	level thread DvarDetector();
 	level thread FirstBoxHandler();
 	level thread OriginsFix();
@@ -79,6 +79,7 @@ OnGameStart()
 	flag_set("game_started");
 
 	// HUD
+	GetHudPosition();
 	level thread GlobalRoundStart();
 	level thread BasicSplitsHud();
 	level thread TimerHud();
@@ -164,27 +165,6 @@ GenerateWatermark(text, color, alpha_override)
 	watermark.hidewheninmenu = 0;
 
 	level.FRFIX_WATERMARKS[level.FRFIX_WATERMARKS.size] = watermark;
-}
-
-HudPos(hud, y_offset)
-{
-	if (!isDefined(y_offset))
-		y_offset = 0;
-
-	last_state = -1;
-
-	while (true)
-	{
-		if (getDvarInt("timer_left") != last_state)
-		{
-			last_state = getDvarInt("timer_left");
-			if (getDvarInt("timer_left"))
-				hud setPoint("TOPLEFT", "TOPLEFT", -8, y_offset);
-			else
-				hud setPoint("TOPRIGHT", "TOPRIGHT", -8, y_offset);
-		}
-		wait 0.05;
-	}
 }
 
 ConvertTime(seconds)
@@ -372,9 +352,11 @@ PowerupOddsWatcher()
 
 SetDvars()
 {
-	setDvar("timer_left", 0);
-	setDvar("velocity_size", 1.2);
+	level endon("end_game");
+
 	setDvar("fbgun", "select a gun");
+	if (!getDvarFloat("velocity_size"))
+		setDvar("velocity_size", 1.2);
 
 	if (IsMob())
 		level.custom_velocity_behaviour = ::HideInAfterlife;
@@ -393,7 +375,7 @@ SetDvars()
 
 		setdvar("sv_endGameIfISuck", 0); 		// Prevent host migration
 		setdvar("sv_allowAimAssist", 0); 	 	// Removes target assist
-		setdvar("sv_patch_zm_weapons", 0);		// Depatch patched recoil
+		setdvar("sv_patch_zm_weapons", 1);		// Force post dlc1 patch on recoil
 		setdvar("sv_cheats", 0);
 
 		if (!flag("dvars_set"))
@@ -479,6 +461,59 @@ FixNetworkFrame()
 		wait 0.05;
 }
 
+GetHudPosition()
+{
+	if (!isDefined(level.hudpos_timer_game))
+		level.hudpos_timer_game = ::HudPosTimerGame;
+	if (!isDefined(level.hudpos_timer_round))
+		level.hudpos_timer_round = ::HudPosTimerRound;
+	if (!isDefined(level.hudpos_ongame_end))
+		level.hudpos_ongame_end = ::HudPosOngameEnd;
+	if (!isDefined(level.hudpos_splits))
+		level.hudpos_splits = ::HudPosSplits;
+	if (!isDefined(level.hudpos_zombies))
+		level.hudpos_zombies = ::HudPosZombies;
+	if (!isDefined(level.hudpos_velocity))
+		level.hudpos_velocity = ::HudPosVelocity;
+	if (!isDefined(level.hudpos_semtex_chart))
+		level.hudpos_semtex_chart = ::HudPosSemtexChart;
+}
+
+HudPosTimerGame(hudelem)
+{
+	hudelem setpoint("TOPRIGHT", "TOPRIGHT", -8, 0);
+}
+
+HudPosTimerRound(hudelem)
+{
+	hudelem setpoint ("TOPRIGHT", "TOPRIGHT", -8, 17);
+}
+
+HudPosOngameEnd(hudelem)
+{
+	hudelem setpoint ("CENTER", "MIDDLE", 0, -75);
+}
+
+HudPosSplits(hudelem)
+{
+	hudelem setpoint ("CENTER", "TOP", 0, 0);
+}
+
+HudPosZombies(hudelem)
+{
+	hudelem setpoint ("CENTER", "BOTTOM", 0, -75);
+}
+
+HudPosVelocity(hudelem)
+{
+	hudelem setpoint ("CENTER", "CENTER", "CENTER", 200);
+}
+
+HudPosSemtexChart(hudelem)
+{
+	hudelem setpoint ("CENTER", "BOTTOM", 0, -95);
+}
+
 PrintNetworkFrame(len)
 {
     PlayerThreadBlackscreenWaiter();
@@ -527,14 +562,14 @@ BasicSplitsHud()
     level endon("end_game");
 
 	basegt_hud = createserverfontstring("hudsmall" , 1.5);
-	basegt_hud setPoint("TOPRIGHT", "TOPRIGHT", -8, 0);
+	[[level.hudpos_timer_game]](basegt_hud);
 	basegt_hud.color = level.FRFIX_HUD_COLOR;
 	basegt_hud.alpha = 0;
 	basegt_hud.hidewheninmenu = 1;
 	basegt_hud.label = &"GAME: ";
 
 	basert_hud = createserverfontstring("hudsmall" , 1.5);
-	basert_hud setPoint("TOPRIGHT", "TOPRIGHT", -8, 17);
+	[[level.hudpos_timer_round]](basert_hud);
 	basert_hud.color = level.FRFIX_HUD_COLOR;
 	basert_hud.alpha = 0;
 	basert_hud.hidewheninmenu = 1;
@@ -594,7 +629,7 @@ BasicSplitsHud()
 PrintOnGameEnd()
 {
 	end_hud = createserverfontstring("hudsmall" , 1.4);
-	end_hud setPoint("CENTER", "MIDDLE", 0, -75);
+	[[level.hudpos_ongame_end]](end_hud);
 	end_hud.alpha = 0;
 
 	gt = ConvertTime(int(getTime() / 1000) - (level.paused_time + level.FRFIX_START));
@@ -732,15 +767,13 @@ TimerHud()
 		return;
 
     level.timer_hud = createserverfontstring("hudsmall" , 1.5);
-	level.timer_hud setPoint("TOPRIGHT", "TOPRIGHT", -8, 0);
+	[[level.hudpos_timer_game]](level.timer_hud);
 	level.timer_hud.color = level.FRFIX_HUD_COLOR;
 	level.timer_hud.alpha = 0;
 	level.timer_hud.hidewheninmenu = 1;
 
 	level.timer_hud setTimerUp(0);
 	level.timer_hud.alpha = 1;
-
-	self thread HudPos(level.timer_hud);
 }
 
 RoundTimerHud()
@@ -752,12 +785,10 @@ RoundTimerHud()
 		return;
 
 	level.round_hud = createserverfontstring("hudsmall" , 1.5);
-	level.round_hud setPoint("TOPRIGHT", "TOPRIGHT", -8, 17);
+	[[level.hudpos_timer_round]](level.round_hud);
 	level.round_hud.color = level.FRFIX_HUD_COLOR;
 	level.round_hud.alpha = 0;
 	level.round_hud.hidewheninmenu = 1;
-
-	self thread HudPos(level.round_hud, 17);
 
 	while (true)
 	{
@@ -771,12 +802,11 @@ RoundTimerHud()
 		round_end = int(getTime() / 1000);
 		// round_start is now calculated globally for the benefit of coop pause func
 		round_time = round_end - (level.paused_round + level.round_start);
-		level.round_hud setTimer(round_time);
 
-		for (ticks = 0; ticks < 100; ticks++)
+		for (ticks = 0; ticks < 20; ticks++)
 		{
-			level.round_hud setTimer(round_time);
-			wait 0.05;
+			level.round_hud setTimer(round_time - 0.1);
+			wait 0.25;
 		}
 		level.round_hud FadeOverTime(0.25);
 		level.round_hud.alpha = 0;
@@ -786,7 +816,7 @@ RoundTimerHud()
 SplitsTimerHud()
 {
     splits_hud = createserverfontstring("hudsmall" , 1.4);
-	splits_hud setPoint("CENTER", "TOP", 0, 0);
+	[[level.hudpos_splits]](splits_hud);
 	splits_hud.color = level.FRFIX_HUD_COLOR;
 	splits_hud.alpha = 0;
 	splits_hud.hidewheninmenu = 1;
@@ -818,7 +848,7 @@ ZombiesHud()
 		return;
 
     zombies_hud = createserverfontstring("hudsmall" , 1.4);
-	zombies_hud setPoint("CENTER", "BOTTOM", 0, -75);
+	[[level.hudpos_zombies]](zombies_hud);
 	zombies_hud.color = level.FRFIX_HUD_COLOR;
 	zombies_hud.alpha = 0;
 	zombies_hud.hidewheninmenu = 1;
@@ -856,7 +886,7 @@ VelocityMeter()
 	vel_size = 0;
 
     self.hud_velocity = createfontstring("hudsmall" , 1.2);
-	self.hud_velocity setPoint("CENTER", "CENTER", "CENTER", 200);
+	[[level.hudpos_velocity]](self.hud_velocity);
 	self.hud_velocity.alpha = 0.75;
 	self.hud_velocity.color = level.FRFIX_HUD_COLOR;
 	self.hud_velocity.hidewheninmenu = 1;
@@ -939,7 +969,7 @@ SemtexChart()
 		chart = array(1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 17, 19, 22, 24, 28, 29, 34, 39, 42, 46, 52, 57, 61, 69, 78, 86, 96, 103);
 
 		semtex_hud = createserverfontstring("hudsmall" , 1.4);
-		semtex_hud setPoint("CENTER", "BOTTOM", 0, -95);
+		[[level.hudpos_semtex_chart]](semtex_hud);
 		semtex_hud.color = level.FRFIX_HUD_COLOR;
 		semtex_hud.alpha = 0;
 		semtex_hud.hidewheninmenu = 1;
