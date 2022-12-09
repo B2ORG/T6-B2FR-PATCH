@@ -12,16 +12,6 @@
 #include maps\mp\zm_tomb;
 #include maps\mp\zm_tomb_utility;
 
-main()
-{
-	replaceFunc(maps\mp\animscripts\zm_utility::wait_network_frame, ::FixNetworkFrame);
-	replaceFunc(maps\mp\zombies\_zm_utility::wait_network_frame, ::FixNetworkFrame);
-
-	replaceFunc(maps\mp\zombies\_zm_weapons::get_pack_a_punch_weapon_options, ::GetPapWeaponReticle);
-	replaceFunc(maps\mp\zombies\_zm_powerups::powerup_drop, ::TrackedPowerupDrop);
-	replaceFunc(maps\mp\zombies\_zm_magicbox::magic_box_opens, ::MagicBoxOpensCounter);
-}
-
 init()
 {
 	flag_init("dvars_set");
@@ -32,13 +22,11 @@ init()
 	flag_init("cheat_printed_gspeed");
 
 	flag_init("game_started");
-	flag_init("box_rigged");
-	flag_init("break_firstbox");
 
 	// Patch Config
 	level.FRFIX_ACTIVE = true;
 	level.FRFIX_VER = 5.5;
-	level.FRFIX_BETA = "";
+	level.FRFIX_BETA = "for REDACTED";
 	level.FRFIX_DEBUG = false;
 
 	level thread SetDvars();
@@ -49,17 +37,14 @@ OnGameStart()
 {
 	// Func Config
 	level.FRFIX_TIMER_ENABLED = true;
-	level.FRFIX_ROUND_ENABLED = true;
+	level.FRFIX_ROUND_ENABLED = false;
 	level.FRFIX_HORDES_ENABLED = true;
 	level.FRFIX_PERMAPERKS = true;
 	level.FRFIX_HUD_COLOR = (0.9, 0.8, 1);
-	level.FRFIX_YELLOWHOUSE = true;
-	level.FRFIX_NUKETOWN_EYES = true;
-	level.FRFIX_NOFOG = false;
-	level.FRFIX_ORIGINSFIX = true;
+	level.FRFIX_YELLOWHOUSE = false;
+	level.FRFIX_NUKETOWN_EYES = false;
 	level.FRFIX_PRENADES = true;
 	level.FRFIX_FRIDGE = false;
-	level.FRFIX_FIRSTBOX = false;
 	level.FRFIX_COOP_PAUSE_ACTIVE = false;		// Disabled for 5.1 need more testing
 
 	level thread OnPlayerJoined();
@@ -70,9 +55,7 @@ OnGameStart()
 	// Initial game settings
 	level thread DvarDetector();
 	level thread FirstBoxHandler();
-	level thread OriginsFix();
 	level thread EyeChange();
-	level thread DebugGamePrints();
 
 	flag_wait("initial_blackscreen_passed");
 
@@ -296,9 +279,6 @@ IsRound(rnd)
 	else
 		is_rnd = false;
 	
-	// if (IfDebug())
-	// 	print("DEBUG: if " + rnd + " <= " + level.round_number +": " + is_rnd);
-
 	return is_rnd;
 }
 
@@ -327,37 +307,17 @@ GenerateCheat()
 	return;
 }
 
-DebugGamePrints()
-{
-	self endon("disconnect");
-	level endon("end_game");
-
-	self thread PowerupOddsWatcher();
-
-	while (true)
-	{
-		level waittill("start_of_round");
-		print("DEBUG: ROUND: " + level.round_number + " level.powerup_drop_count = " + level.powerup_drop_count + " | Should be 0");
-		print("DEBUG: ROUND: " + level.round_number + " size of level.zombie_powerup_array = " + level.zombie_powerup_array.size + " | Should be above 0");
-	}
-}
-
 PowerupOddsWatcher()
 {
 	while (true)
 	{
 		level waittill("powerup_check", chance);
-		print("DEBUG: rand_drop = " + chance);
 	}
 }
 
 SetDvars()
 {
 	level endon("end_game");
-
-	setDvar("fbgun", "select a gun");
-	if (!getDvarFloat("velocity_size"))
-		setDvar("velocity_size", 1.2);
 
 	if (IsMob())
 		level.custom_velocity_behaviour = ::HideInAfterlife;
@@ -374,9 +334,6 @@ SetDvars()
 		setdvar("con_gameMsgWindow0FadeInTime", 0.25);
 		setdvar("con_gameMsgWindow0FadeOutTime", 0.5);
 
-		setdvar("sv_endGameIfISuck", 0); 		// Prevent host migration
-		setdvar("sv_allowAimAssist", 0); 	 	// Removes target assist
-		setdvar("sv_patch_zm_weapons", 1);		// Force post dlc1 patch on recoil
 		setdvar("sv_cheats", 0);
 
 		if (!flag("dvars_set"))
@@ -452,14 +409,6 @@ DvarDetector()
 		}
 		wait 0.1;
 	}
-}
-
-FixNetworkFrame()
-{
-	if (!isDefined(level.players) || level.players.size == 1)
-		wait 0.1;
-	else
-		wait 0.05;
 }
 
 GetHudPosition()
@@ -729,21 +678,9 @@ UnpauseGame()
 	if (isDefined(level.timer_hud))
 		level.timer_hud setTimerUp(reclocked);
 
-	if (IfDebug())
-	{
-		print("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_time = " + level.paused_time + " level.FIFIX_START = " + level.FRFIX_START);
-		print("Setting the timer to: " + reclocked + " s");
-	}
-
 	rtreclocked = (int(getTime() / 1000) - (level.paused_round + level.round_start)) * -1;
 	if (isDefined(level.round_hud))
 		level.round_hud setTimerUp(rtreclocked);
-
-	if (IfDebug())
-	{
-		print("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_round = " + level.paused_round + " level.round_start = " + level.round_start);
-		print("Setting the round timer to: " + rtreclocked + " s");
-	}
 }
 
 GlobalRoundStart()
@@ -902,11 +839,6 @@ VelocityMeter()
 		GetVelColorScale(velocity, self.hud_velocity);
         self.hud_velocity setValue(velocity);
 
-		if (vel_size != getDvarFloat("velocity_size"))
-		{
-			vel_size = getDvarFloat("velocity_size");
-			self.hud_velocity.fontscale = vel_size;
-		}
         wait 0.05;
     }
 }
@@ -1051,74 +983,6 @@ EyeChange()
 	sndswitchannouncervox("richtofen");
 }
 
-GetPapWeaponReticle ( weapon ) // Override to get rid of rng reticle
-{
-	if ( !isDefined( self.pack_a_punch_weapon_options ) )
-	{
-		self.pack_a_punch_weapon_options = [];
-	}
-	if ( !is_weapon_upgraded( weapon ) )
-	{
-		return self calcweaponoptions( 0, 0, 0, 0, 0 );
-	}
-	if ( isDefined( self.pack_a_punch_weapon_options[ weapon ] ) )
-	{
-		return self.pack_a_punch_weapon_options[ weapon ];
-	}
-	smiley_face_reticle_index = 1;
-	base = get_base_name( weapon );
-	camo_index = 39;
-	if ( level.script == "zm_prison" )
-	{
-		camo_index = 40;
-	}
-	else if ( level.script == "zm_tomb" )
-	{
-		camo_index = 45;
-	}
-	lens_index = randomintrange( 0, 6 );
-	reticle_index = randomintrange( 0, 16 );
-	reticle_color_index = randomintrange( 0, 6 );
-	plain_reticle_index = 16;
-	if (level.cfg_reticle)
-	{
-		use_plain = true;  
-	}
-	else
-	{
-		r = randomint( 10 );
-		use_plain = r < 3;
-	}
-	if ( base == "saritch_upgraded_zm" )
-	{
-		reticle_index = smiley_face_reticle_index;
-	}
-	else if ( use_plain )
-	{
-		reticle_index = plain_reticle_index;
-	}
-	scary_eyes_reticle_index = 8;
-	purple_reticle_color_index = 3;
-	if ( reticle_index == scary_eyes_reticle_index )
-	{
-		reticle_color_index = purple_reticle_color_index;
-	}
-	letter_a_reticle_index = 2;
-	pink_reticle_color_index = 6;
-	if ( reticle_index == letter_a_reticle_index )
-	{
-		reticle_color_index = pink_reticle_color_index;
-	}
-	letter_e_reticle_index = 7;
-	green_reticle_color_index = 1;
-	if ( reticle_index == letter_e_reticle_index )
-	{
-		reticle_color_index = green_reticle_color_index;
-	}
-	self.pack_a_punch_weapon_options[ weapon ] = self calcweaponoptions( camo_index, lens_index, reticle_index, reticle_color_index );
-	return self.pack_a_punch_weapon_options[ weapon ];
-}
-
 AwardPermaPerks()
 {
 	if (!maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active())
@@ -1175,25 +1039,6 @@ AwardPermaPerks()
 	}
 }
 
-OriginsFix()
-{
-    self endon("disconnect");
-    level endon("end_game");
-	
-	if (!isdefined(level.FRFIX_ORIGINSFIX) || !level.FRFIX_ORIGINSFIX)
-		return;
-
-	flag_wait("start_zombie_round_logic");
-	wait 0.5;
-
-	if (IsOrigins())
-		level.is_forever_solo_game = 0;
-	// else if (IsMob() && level.players.size == 1)
-	// 	level.is_forever_solo_game = 1;
-
-	return;
-}
-
 ZioSafety()
 {
 	if (isDefined(level.SONG_AUTO_TIMER_ACTIVE) && level.SONG_AUTO_TIMER_ACTIVE)
@@ -1217,9 +1062,6 @@ RoundSafety()
 	if (IsTown() || IsFarm() || IsDepot() || IsNuketown())
 		maxround = 10;
 
-	if (IfDebug())
-		print("DEBUG: Starting round detected: " + level.start_round);
-
 	if (level.start_round <= maxround)
 		return;
 
@@ -1239,67 +1081,6 @@ DebuggerSafety()
 	if (IfDebug())
 		GenerateWatermark("DEBUGGER", (0, 0.8, 0));
 	return;
-}
-
-TrackedPowerupDrop( drop_point )
-{
-    if ( level.powerup_drop_count >= level.zombie_vars["zombie_powerup_drop_max_per_round"] )
-        return;
-
-    if ( !isdefined( level.zombie_include_powerups ) || level.zombie_include_powerups.size == 0 )
-        return;
-
-    rand_drop = randomint( 100 );
-	level notify("powerup_check", rand_drop);
-
-    if ( rand_drop > 2 )
-    {
-        if ( !level.zombie_vars["zombie_drop_item"] )
-            return;
-
-        debug = "score";
-    }
-    else
-        debug = "random";
-
-    playable_area = getentarray( "player_volume", "script_noteworthy" );
-    level.powerup_drop_count++;
-    powerup = maps\mp\zombies\_zm_net::network_safe_spawn( "powerup", 1, "script_model", drop_point + vectorscale( ( 0, 0, 1 ), 40.0 ) );
-    valid_drop = 0;
-
-    for ( i = 0; i < playable_area.size; i++ )
-    {
-        if ( powerup istouching( playable_area[i] ) )
-            valid_drop = 1;
-    }
-
-    if ( valid_drop && level.rare_powerups_active )
-    {
-        pos = ( drop_point[0], drop_point[1], drop_point[2] + 42 );
-
-        if ( check_for_rare_drop_override( pos ) )
-        {
-            level.zombie_vars["zombie_drop_item"] = 0;
-            valid_drop = 0;
-        }
-    }
-
-    if ( !valid_drop )
-    {
-        level.powerup_drop_count--;
-        powerup delete();
-        return;
-    }
-
-    powerup powerup_setup();
-    print_powerup_drop( powerup.powerup_name, debug );
-    powerup thread powerup_timeout();
-    powerup thread powerup_wobble();
-    powerup thread powerup_grab();
-    powerup thread powerup_move();
-    powerup thread powerup_emp();
-    level.zombie_vars["zombie_drop_item"] = 0;
-    level notify( "powerup_dropped", powerup );
 }
 
 Fridge(mode)
@@ -1349,12 +1130,7 @@ FirstBoxHandler()
 
     level.is_first_box = false;
 
-	if (IfDebug())
-		self thread PrintInitialBoxSize();
-
 	self thread ScanInBox();
-	self thread FirstBox();
-	self thread WatchForDomesticFirstBox();
 
 	while (true)
 	{
@@ -1365,27 +1141,6 @@ FirstBoxHandler()
 	}
 
 	GenerateWatermark("FIRST BOX", (0.8, 0, 0));
-}
-
-WatchForDomesticFirstBox()
-{
-    self endon("disconnect");
-    level endon("end_game");
-
-	self waittill("frfix_boxmodule");
-	level.is_first_box = true;
-}
-
-PrintInitialBoxSize()
-{
-	in_box = 0;
-
-	foreach (weapon in getArrayKeys(level.zombie_weapons))
-	{
-		if (maps\mp\zombies\_zm_weapons::get_is_in_box(weapon))
-			in_box++;
-	}
-	print("INFO: Size of initial box weapon list: " + in_box);
 }
 
 ScanInBox()
@@ -1423,9 +1178,6 @@ ScanInBox()
                 in_box++;
         }
 
-		// if (IfDebug())
-        // 	print("in_box: " + in_box + " should: " + should_be_in_box);
-
         if (in_box == should_be_in_box)
 			continue;
 
@@ -1435,335 +1187,8 @@ ScanInBox()
 		level.is_first_box = true;
 		break;
 
-    }
+	}
     return;
-}
-
-FirstBox()
-{	
-    self endon("disconnect");
-    level endon("end_game");
-
-	if (!isDefined(level.FRFIX_FIRSTBOX) || !level.FRFIX_FIRSTBOX)
-		return;
-
-	if (level.start_round > 1 && !IsTown())
-		return;
-
-	if (!flag("initial_blackscreen_passed"))
-		flag_wait("initial_blackscreen_passed");
-
-	iPrintLn("First Box module: ^2AVAILABLE");
-	self thread WatchForFinishFirstBox();
-	self.rigged_hits = 0;
-
-	// First Box module stops after round 10
-	while (!IsRound(11))
-	{
-		while ((getDvar("fbgun") == "select a gun") && (!flag("break_firstbox")))
-			wait 0.05;
-
-		// To avoid a iprint about wrong weapon key
-		if (flag("break_firstbox"))
-			break;
-
-		fbgun = getDvar("fbgun");
-		self thread RigBox(fbgun);
-
-		wait 0.05;
-		while ((flag("box_rigged")) && (!flag("break_firstbox")))
-			wait 0.05;
-
-		setDvar("fbgun", "select a gun");
-	}
-
-	iPrintLn("First Box module: ^1DISABLED");
-	if (self.rigged_hits)
-		iPrintLn("First box used: ^3" + self.rigged_hits + " ^7times");
-	return;
-}
-
-RigBox(gun)
-{
-    self endon("disconnect");
-    level endon("end_game");
-
-	weapon_key = GetWeaponKey(gun);
-	if (weapon_key == "")
-	{
-		iPrintLn("Wrong weapon key: ^1" + gun);
-		return;
-	}
-
-	// weapon_name = level.zombie_weapons[weapon_key].name;
-	iPrintLn("Setting box weapon to: ^3" +  WeaponDisplayWrapper(weapon_key));
-	self notify("frfix_boxmodule");
-	self.rigged_hits++;
-
-	saved_check = level.special_weapon_magicbox_check;
-	current_box_hits = level.total_box_hits;
-	removed_guns = array();
-
-	flag_set("box_rigged");
-	if (IfDebug())
-		print("DEBUG: FIRST BOX: flag('box_rigged'): " + flag("box_rigged"));
-
-	level.special_weapon_magicbox_check = undefined;
-	foreach(weapon in getarraykeys(level.zombie_weapons))
-	{
-		if ((weapon != weapon_key) && level.zombie_weapons[weapon].is_in_box == 1)
-		{
-			removed_guns[removed_guns.size] = weapon;
-			level.zombie_weapons[weapon].is_in_box = 0;
-
-			if (IfDebug())
-				print("DEBUG: FIRST BOX: setting " + weapon + ".is_in_box to 0");
-		}
-	}
-
-	while ((current_box_hits == level.total_box_hits) || !isDefined(level.total_box_hits))
-	{
-		if (IsRound(11))
-		{
-			if (IfDebug())
-				print("DEBUG: FIRST BOX: breaking out of First Box above round 10");
-			break;
-		}
-		wait 0.05;
-	}
-	
-	wait 5;
-
-	level.special_weapon_magicbox_check = saved_check;
-
-	if (IfDebug())
-		print("DEBUG: FIRST BOX: removed_guns.size " + removed_guns.size);
-	if (removed_guns.size > 0)
-	{
-		foreach(rweapon in removed_guns)
-		{
-			level.zombie_weapons[rweapon].is_in_box = 1;
-
-			if (IfDebug())
-				print("DEBUG: FIRST BOX: setting " + rweapon + ".is_in_box to 1");
-		}
-	}
-
-	flag_clear("box_rigged");
-	return;
-}
-
-WatchForFinishFirstBox()
-{
-    self endon("disconnect");
-    level endon("end_game");
-
-	while (!IsRound(11))
-		wait 0.1;
-
-	level notify("break_firstbox");
-	flag_set("break_firstbox");
-	if (IfDebug())
-		print("DEBUG: FIRST BOX: notifying module to break");
-}
-
-GetWeaponKey(weapon_str)
-{
-	key = "";
-
-	switch(weapon_str)
-	{
-		case "mk1":
-			key = "ray_gun_zm";
-			break;
-		case "mk2":
-			key = "raygun_mark2_zm";
-			break;
-		case "monk":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried() || IsOrigins())
-				key = "cymbal_monkey_zm";
-			break;
-		case "emp":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit())
-				key = "emp_grenade_zm";
-			break;
-		case "time":
-			if (IsBuried())
-				key = "time_bomb_zm";
-			break;
-		case "sliq":
-			if (IsDieRise())
-				key = "slipgun_zm";
-			break;
-		case "blunder":
-			if (IsMob())
-				key = "blundergat_zm";
-			break;
-		case "paralyzer":
-			if (IsBuried())
-				key = "slowgun_zm";
-			break;
-
-		case "ak47":
-			if (IsMob())
-				key = "ak47_zm";
-			break;
-		case "barret":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsMob() || IsBuried())
-				key = "barretm82_zm";
-			break;
-		case "b23":
-			if (IsOrigins())
-				key = "beretta93r_extclip_zm";
-			break;
-		case "dsr":
-			key = "dsr50_zm";
-			break;
-		case "evo":
-			if (IsOrigins())
-				key = "evoskorpion_zm";
-			break;
-		case "57":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried())
-				key = "fiveseven_zm";
-			break;
-		case "257":
-			key = "fivesevendw_zm";
-			break;
-		case "fal":
-			key = "fnfal_zm";
-			break;
-		case "galil":
-			key = "galil_zm";
-			break;
-		case "mtar":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsMob() || IsBuried())
-				key = "tar21_zm";
-			break;
-		case "hamr":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried() || IsOrigins())
-				key = "hamr_zm";
-			break;
-		case "m27":
-			if (IsNuketown())
-				key = "hk416_zm";
-			break;
-		case "exe":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsMob() || IsBuried())
-				key = "judge_zm";
-			break;
-		case "kap":
-			key = "kard_zm";
-			break;
-		case "bk":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried())
-				key = "knife_ballistic_zm";
-			break;
-		case "ksg":
-			if (IsOrigins())
-				key = "ksg_zm";
-			break;
-		case "wm":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried() || IsOrigins())
-				key = "m32_zm";
-			break;
-		case "mg":
-		case "lsat":
-			if (IsOrigins())
-				key = "mg08_zm";
-			else if (IsNuketown() || IsMob())
-				key = "lsat_zm";
-			break;
-		case "dm":
-			if (IsMob())
-				key = "minigun_alcatraz_zm";
-		case "mp40":
-			if (IsOrigins())
-				key = "mp40_stalker_zm";
-			break;
-		case "pdw":
-			if (IsMob() || IsOrigins())
-				key = "pdw57_zm";
-			break;
-		case "pyt":
-		case "rnma":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsOrigins())
-				key = "python_zm";
-			else if (IsBuried())
-				key = "rnma_zm";
-			break;
-		case "type":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsOrigins())
-				key = "type95_zm";
-			break;
-		case "rpd":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise())
-				key = "rpd_zm";
-			break;
-		case "s12":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsMob() || IsBuried())
-				key = "saiga12_zm";
-			break;
-		case "scar":
-			if (IsOrigins())
-				key = "scar_zm";
-			break;
-		case "m1216":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsBuried() || IsOrigins())
-				key = "srm1216_zm";
-			break;
-		case "tommy":
-			if (IsMob())
-				key = "thompson_zm";
-			break;
-		case "chic":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsOrigins())
-				key = "qcw05_zm";
-			break;
-		case "rpg":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise() || IsMob() || IsBuried())
-				key = "usrpg_zm";
-			break;
-		case "m8":
-			if (IsTown() || IsFarm() || IsDepot() || IsTranzit() || IsNuketown() || IsDieRise())
-				key = "xm8_zm";
-			break;
-	}
-
-	if (IfDebug())
-		print("DEBUG: FIRST BOX: weapon_key: " + key);
-
-	return key;
-}
-
-WeaponDisplayWrapper(weapon_key)
-{
-	if (weapon_key == "emp_grenade_zm")
-		return "Emp Grenade";
-	if (weapon_key == "cymbal_monkey_zm")
-		return "Cymbal Monkey";
-	
-	return get_weapon_display_name(weapon_key);
-}
-
-MagicBoxOpensCounter()
-{
-	level notify("chest_opened");
-
-	if (!isDefined(level.total_box_hits))
-		level.total_box_hits = 1;
-	else
-		level.total_box_hits++;
-
-	if (IfDebug())
-		print("DEBUG: current box hits: " + level.total_box_hits);
-
-    self setzbarrierpiecestate( 2, "opening" );
-
-    while ( self getzbarrierpiecestate( 2 ) == "opening" )
-        wait 0.1;
-
-    self notify( "opened" );
 }
 
 HideInAfterlife(hud)
@@ -1773,246 +1198,3 @@ HideInAfterlife(hud)
 	else
 		hud.alpha = 1;
 }
-
-// SetCharacters()
-// {
-// 	if (isdefined(level.char_survival) && level.char_survival && !is_classic())
-// 	{
-// 		ciaviewmodel = "c_zom_suit_viewhands";
-// 		cdcviewmodel = "c_zom_hazmat_viewhands";
-// 		if (level.script == "zm_nuked")
-// 		{
-// 			cdcviewmodel = "c_zom_hazmat_viewhands_light";
-// 		}
-		
-// 		// Get properties
-// 		if (self.clientid == 0 || self.clientid == 4)
-// 		{
-// 			preset_player = level.survival1;
-// 		}
-// 		else if (self.clientid == 1 || self.clientid == 5)
-// 		{
-// 			preset_player = level.survival2;
-// 		}
-// 		else if (self.clientid == 2 || self.clientid == 6)
-// 		{
-// 			preset_player = level.survival3;
-// 		}	
-// 		else if (self.clientid == 3 || self.clientid == 7)
-// 		{
-// 			preset_player = level.survival4;
-// 		}		
-		
-// 		// Set characters
-// 		if (preset_player == "cdc")
-// 		{
-// 			self setmodel("c_zom_player_cdc_fb");
-// 			self setviewmodel(cdcviewmodel);
-// 			self.characterindex = 1;		
-// 		}
-// 		else if (preset_player == "cia")
-// 		{
-// 			self setmodel("c_zom_player_cia_fb");
-// 			self setviewmodel(ciaviewmodel);
-// 			self.characterindex = 0;
-// 		}
-// 	}
-// 	else if (isdefined(level.char_victis) && level.char_victis)
-// 	{
-// 		if (level.script == "zm_transit" || level.script == "zm_highrise" || level.script == "zm_buried")	// Cause compiler sucks
-// 		{
-// 			// Get properties
-// 			if (self.clientid == 0 || self.clientid == 4)
-// 			{
-// 				preset_player = level.victis1;
-// 			}
-// 			else if (self.clientid == 1 || self.clientid == 5)
-// 			{
-// 				preset_player = level.victis2;
-// 			}
-// 			else if (self.clientid == 2 || self.clientid == 6)
-// 			{
-// 				preset_player = level.victis3;
-// 			}	
-// 			else if (self.clientid == 3 || self.clientid == 7)
-// 			{
-// 				preset_player = level.victis4;
-// 			}		
-			
-// 			// Set characters
-// 			if (preset_player == "misty")
-// 			{
-// 				self setmodel("c_zom_player_farmgirl_fb");
-// 				self setviewmodel("c_zom_farmgirl_viewhands");
-// 				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "rottweil72_zm";
-// 				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "870mcs_zm";
-// 				self set_player_is_female(1);
-// 				self.characterindex = 2;
-// 				if (level.script == "zm_highrise")
-// 				{
-// 					self setmodel("c_zom_player_farmgirl_dlc1_fb");
-// 					self.whos_who_shader = "c_zom_player_farmgirl_dlc1_fb";
-// 				}
-// 			}
-// 			else if (preset_player == "russman")
-// 			{
-// 				self setmodel("c_zom_player_oldman_fb");
-// 				self setviewmodel("c_zom_oldman_viewhands");
-// 				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "frag_grenade_zm";
-// 				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "claymore_zm";
-// 				self set_player_is_female(0);
-// 				self.characterindex = 0;
-// 				if (level.script == "zm_highrise")
-// 				{
-// 					self setmodel("c_zom_player_oldman_dlc1_fb");
-// 					self.whos_who_shader = "c_zom_player_oldman_dlc1_fb";
-// 				}
-// 			}
-// 			else if (preset_player == "marlton")
-// 			{
-// 				self setmodel("c_zom_player_engineer_fb");
-// 				self setviewmodel("c_zom_engineer_viewhands");
-// 				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "m14_zm";
-// 				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "m16_zm";
-// 				self set_player_is_female(0);
-// 				self.characterindex = 3;
-// 				if (level.script == "zm_highrise")
-// 				{
-// 					self setmodel("c_zom_player_engineer_dlc1_fb");
-// 					self.whos_who_shader = "c_zom_player_engineer_dlc1_fb";
-// 				}
-// 			}
-// 			else if (preset_player == "stuhlinger")
-// 			{
-// 				self setmodel("c_zom_player_reporter_fb");
-// 				self setviewmodel("c_zom_reporter_viewhands");
-// 				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "beretta93r_zm";
-// 				self.talks_in_danger = 1;
-// 				level.rich_sq_player = self;
-// 				self set_player_is_female(0);
-// 				self.characterindex = 1;
-// 				if (level.script == "zm_highrise")
-// 				{
-// 					self setmodel("c_zom_player_reporter_dlc1_fb");
-// 					self.whos_who_shader = "c_zom_player_reporter_dlc1_fb";
-// 				}
-// 			}
-// 		}
-// 	}
-
-// 	else if (isdefined(level.char_mob) && level.char_mob && level.script == "zm_prison")
-// 	{
-// 		// Get properties
-// 		if (self.clientid == 0 || self.clientid == 4)
-// 		{
-// 			preset_player = level.mob1;
-// 		}
-// 		else if (self.clientid == 1 || self.clientid == 5)
-// 		{
-// 			preset_player = level.mob2;
-// 		}
-// 		else if (self.clientid == 2 || self.clientid == 6)
-// 		{
-// 			preset_player = level.mob3;
-// 		}	
-// 		else if (self.clientid == 3 || self.clientid == 7)
-// 		{
-// 			preset_player = level.mob4;
-// 		}		
-		
-// 		// Set characters
-// 		if (preset_player == "weasel")
-// 		{
-// 			self setmodel("c_zom_player_arlington_fb");
-// 			self setviewmodel("c_zom_arlington_coat_viewhands");
-// 			self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "ray_gun_zm";
-// 			self set_player_is_female(0);
-// 			self.characterindex = 3;
-// 			self.character_name = "Arlington";
-// 			level.has_weasel = 1;
-// 		}
-// 		else if (preset_player == "finn")
-// 		{
-// 			self setmodel("c_zom_player_oleary_fb");
-// 			self setviewmodel("c_zom_oleary_shortsleeve_viewhands");
-// 			self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "judge_zm";
-// 			self set_player_is_female(0);
-// 			self.characterindex = 0;
-// 			self.character_name = "Finn";
-// 		}
-// 		else if (preset_player == "sal")
-// 		{
-// 			self setmodel("c_zom_player_deluca_fb");
-// 			self setviewmodel("c_zom_deluca_longsleeve_viewhands");
-// 			self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "thompson_zm";
-// 			self set_player_is_female(0);
-// 			self.characterindex = 1;
-// 			self.character_name = "Sal";
-// 		}
-// 		else if (preset_player == "billy")
-// 		{
-// 			self setmodel("c_zom_player_handsome_fb");
-// 			self setviewmodel("c_zom_handsome_sleeveless_viewhands");
-// 			self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "blundergat_zm";
-// 			self set_player_is_female(0);
-// 			self.characterindex = 2;
-// 			self.character_name = "Billy";
-// 		}
-// 	}
-
-// 	else if (isdefined(level.char_origins) && level.char_origins && level.script == "zm_tomb")
-// 	{
-// 		// Get properties
-// 		if (self.clientid == 0 || self.clientid == 4)
-// 		{
-// 			preset_player = level.origins1;
-// 		}
-// 		else if (self.clientid == 1 || self.clientid == 5)
-// 		{
-// 			preset_player = level.origins2;
-// 		}
-// 		else if (self.clientid == 2 || self.clientid == 6)
-// 		{
-// 			preset_player = level.origins3;
-// 		}	
-// 		else if (self.clientid == 3 || self.clientid == 7)
-// 		{
-// 			preset_player = level.origins4;
-// 		}		
-		
-// 		// Set characters
-// 		if (preset_player == "dempsey")
-// 		{
-// 			self setmodel("c_zom_tomb_dempsey_fb");
-// 			self setviewmodel("c_zom_dempsey_viewhands");
-// 			self set_player_is_female(0);
-// 			self.characterindex = 0;
-// 			self.character_name = "Dempsey";
-// 		}
-// 		else if (preset_player == "nikolai")
-// 		{
-// 			self setmodel("c_zom_tomb_nikolai_fb");
-// 			self setviewmodel("c_zom_nikolai_viewhands");
-// 			self.voice = "russian";
-// 			self set_player_is_female(0);
-// 			self.characterindex = 1;
-// 			self.character_name = "Nikolai";
-// 		}
-// 		else if (preset_player == "takeo")
-// 		{
-// 			self setmodel("c_zom_tomb_takeo_fb");
-// 			self setviewmodel("c_zom_takeo_viewhands");
-// 			self set_player_is_female(0);
-// 			self.characterindex = 3;
-// 			self.character_name = "Takeo";
-// 		}
-// 		else if (preset_player == "richtofen")
-// 		{
-// 			self setmodel("c_zom_tomb_richtofen_fb");
-// 			self setviewmodel("c_zom_richtofen_viewhands");
-// 			self set_player_is_female(0);
-// 			self.characterindex = 2;
-// 			self.character_name = "Richtofen";
-// 		}
-// 	}
-// }
