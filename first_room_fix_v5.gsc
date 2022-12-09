@@ -800,12 +800,11 @@ RoundTimerHud()
 		round_end = int(getTime() / 1000);
 		// round_start is now calculated globally for the benefit of coop pause func
 		round_time = round_end - (level.paused_round + level.round_start);
-		level.round_hud setTimer(round_time);
 
-		for (ticks = 0; ticks < 100; ticks++)
+		for (ticks = 0; ticks < 20; ticks++)
 		{
-			level.round_hud setTimer(round_time);
-			wait 0.05;
+			level.round_hud setTimer(round_time - 0.1);
+			wait 0.25;
 		}
 		level.round_hud FadeOverTime(0.25);
 		level.round_hud.alpha = 0;
