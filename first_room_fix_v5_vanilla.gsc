@@ -37,7 +37,7 @@ init()
 
 	// Patch Config
 	level.FRFIX_ACTIVE = true;
-	level.FRFIX_VER = 5.3;
+	level.FRFIX_VER = 5.5;
 	level.FRFIX_BETA = "VANILLA";
 	level.FRFIX_DEBUG = false;
 
@@ -73,6 +73,7 @@ OnGameStart()
 	flag_set("game_started");
 
 	level thread GlobalRoundStart();
+	level thread BasicSplitsPrint();
 
 	// Game settings
 	ZioSafety();
@@ -454,6 +455,31 @@ DvarDetector()
 		}
 		wait 0.1;
 	}
+}
+
+BasicSplitsPrint()
+{
+    self endon("disconnect");
+    level endon("end_game");
+
+	level waittill("start_of_round");
+
+	while (true)
+	{
+		level waittill("end_of_round");
+
+		label = "GAME TIME: ";
+		if (level.players.size > 1)
+			label = "LOBBY TIME: ";
+
+		gt_freeze = int(getTime() / 1000) - level.FRFIX_START;
+		rt_freeze = int(getTime() / 1000) - (level.paused_round + level.round_start);
+
+		print("INFO: Round " + level.round_number - 1 + ": " + label + ConvertTime(gt_freeze));
+		print("INFO: Round " + level.round_number - 1 + ": ROUND TIME: " + ConvertTime(rt_freeze));
+	}
+
+	return;
 }
 
 FixNetworkFrame()
