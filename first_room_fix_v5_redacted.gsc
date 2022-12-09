@@ -29,6 +29,7 @@ init()
 	level.FRFIX_BETA = "for REDACTED";
 	level.FRFIX_DEBUG = false;
 
+	level thread SetDvars();
 	level thread OnGameStart();
 }
 
@@ -52,7 +53,6 @@ OnGameStart()
 	level.FRFIX_WATERMARKS = array();
 
 	// Initial game settings
-	level thread SetDvars();
 	level thread DvarDetector();
 	level thread FirstBoxHandler();
 	level thread EyeChange();
@@ -317,6 +317,8 @@ PowerupOddsWatcher()
 
 SetDvars()
 {
+	level endon("end_game");
+
 	if (IsMob())
 		level.custom_velocity_behaviour = ::HideInAfterlife;
 

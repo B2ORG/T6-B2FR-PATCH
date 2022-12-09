@@ -41,6 +41,7 @@ init()
 	level.FRFIX_BETA = "VANILLA";
 	level.FRFIX_DEBUG = false;
 
+	level thread SetDvars();
 	level thread OnGameStart();
 }
 
@@ -60,7 +61,6 @@ OnGameStart()
 	level.FRFIX_WATERMARKS = array();
 
 	// Initial game settings
-	level thread SetDvars();
 	level thread DvarDetector();
 	level thread FirstBoxHandler();
 	level thread OriginsFix();
@@ -358,9 +358,11 @@ PowerupOddsWatcher()
 
 SetDvars()
 {
-	setDvar("timer_left", 0);
-	setDvar("velocity_size", 1.2);
+	level endon("end_game");
+
 	setDvar("fbgun", "select a gun");
+	if (!getDvarFloat("velocity_size"))
+		setDvar("velocity_size", 1.2);
 
 	if (IsMob())
 		level.custom_velocity_behaviour = ::HideInAfterlife;
@@ -379,7 +381,7 @@ SetDvars()
 
 		setdvar("sv_endGameIfISuck", 0); 		// Prevent host migration
 		setdvar("sv_allowAimAssist", 0); 	 	// Removes target assist
-		setdvar("sv_patch_zm_weapons", 0);		// Depatch patched recoil
+		setdvar("sv_patch_zm_weapons", 1);		// Force post dlc1 patch on recoil
 		setdvar("sv_cheats", 0);
 
 		if (!flag("dvars_set"))
