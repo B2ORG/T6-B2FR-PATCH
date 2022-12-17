@@ -11,26 +11,26 @@
 | New Pluto | First Room Fix, First Room Fix Vanilla |
 
 # Pluto Versions
-Compatibility ragarding legitinacy of the game while playing for records
+Compatibility ragarding legitimacy of the game while playing for records
 
 | Version | V3 | V4 | V5 | V5.2+ | Redacted |
 | --- | --- | --- | --- | --- | --- |
-| Ancient | x | x | x | x | v |
+| Ancient | - | - | - | - | v |
 | R2905 (solo) | x | v | v | v | x |
 | R2905 (coop) | v | x | x | v | x |
 | R3000+ (solo) | v | v | v | v | x |
-| R3000+ (coop) | v | x | x | v | x | 
+| R3000+ (coop) | v | x | x | v | x |
 
 # Gameplay:
 Default features:
-- Fix for Strafe & Backspeed scale.
-- Fix for host migration issue in private matches.
-- Fix for Target Assist in zombies.
-- Fix for pre-patch recoil.
-- Fix for Tickrate.
-- Red dot reticle for scopes.
 - Anticheat (dvars & gameplay).
-- Debug prints (pluto console).
+- Fix for Strafe & Backspeed scale.
+- Fix for host migration issue in private matches (pluto only).
+- Fix for Target Assist in zombies (pluto only).
+- Fix for pre-patch recoil (pluto only).
+- Fix for Tickrate (pluto only).
+- Red dot reticle for scopes (pluto only).
+- Info and debug prints to console (pluto only).
 
 Optional features:
 - Set Zombie Blood as a challenge box reward on Origins.
@@ -45,7 +45,7 @@ Optional features:
     - Tombstone
     - Metal boards
     - Raygun (Tranzit & Buried)
-- First Box module
+- First Box module (pluto only)
     * First box module will be active until round 11
     * Not setting the dvar will result in box behaving normally
     * If weapon is set the game will show First Box warning
