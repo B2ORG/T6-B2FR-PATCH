@@ -37,7 +37,7 @@ init()
 
 	// Patch Config
 	level.FRFIX_ACTIVE = true;
-	level.FRFIX_VER = 5.2;
+	level.FRFIX_VER = 5.3;
 	level.FRFIX_BETA = "";
 	level.FRFIX_DEBUG = false;
 
@@ -49,14 +49,14 @@ OnGameStart()
 	// Func Config
 	level.FRFIX_TIMER_ENABLED = true;
 	level.FRFIX_ROUND_ENABLED = false;
-	level.FRFIX_HORDES_ENABLED = true;
+	level.FRFIX_HORDES_ENABLED = false;
 	level.FRFIX_PERMAPERKS = true;
-	level.FRFIX_HUD_COLOR = (0.9, 0.8, 1);
+	level.FRFIX_HUD_COLOR = (0.255, 0.875, 0.941);
 	level.FRFIX_YELLOWHOUSE = false;
 	level.FRFIX_NUKETOWN_EYES = false;
 	level.FRFIX_NOFOG = false;
-	level.FRFIX_ORIGINSFIX = false;
-	level.FRFIX_PRENADES = true;
+	level.FRFIX_ORIGINSFIX = true;
+	level.FRFIX_PRENADES = false;
 	level.FRFIX_FRIDGE = false;
 	level.FRFIX_FIRSTBOX = false;
 	level.FRFIX_COOP_PAUSE_ACTIVE = false;		// Disabled for 5.1 need more testing
@@ -119,6 +119,9 @@ OnPlayerSpawned()
 	for(;;)
 	{
 		self waittill("spawned_player");
+
+		while (!flag("initial_players_connected"))
+			wait 0.05;
 
 		if (self.initial_spawn)
 		{
@@ -327,7 +330,7 @@ WelcomePrints()
 	wait 0.75;
 	self iPrintLn("^5FIRST ROOM FIX V" + level.FRFIX_VER + " " + level.FRFIX_BETA);
 	wait 0.75;
-	self iPrintLn("Source: github.com/Zi0MIX/First-Room-Fix");
+	self iPrintLn("Source: github.com/Zi0MIX/T6-FIRST-ROOM-FIX");
 }
 
 GenerateCheat()
@@ -539,6 +542,9 @@ BasicSplitsHud()
 	basert_hud.hidewheninmenu = 1;
 	basert_hud.label = &"ROUND: ";
 
+	if (!isdefined(level.FRFIX_TIMER_ENABLED) || !level.FRFIX_TIMER_ENABLED)
+		level.custom_end_screen = ::PrintOnGameEnd;
+
 	while (true)
 	{
 		level waittill("start_of_round");
@@ -585,6 +591,20 @@ BasicSplitsHud()
 	}
 
 	return;
+}
+
+PrintOnGameEnd()
+{
+	end_hud = createserverfontstring("hudsmall" , 1.4);
+	end_hud setPoint("CENTER", "MIDDLE", 0, -75);
+	end_hud.alpha = 0;
+
+	gt = ConvertTime(int(getTime() / 1000) - (level.paused_time + level.FRFIX_START));
+	rt = ConvertTime(int(getTime() / 1000) - (level.paused_round + level.round_start));
+
+	end_hud setText("GAMETIME: " + gt + " / TIME INTO THE ROUND: " + rt);
+	end_hud fadeOverTime(0.25);
+	end_hud.alpha = 1;
 }
 
 CoopPause()
