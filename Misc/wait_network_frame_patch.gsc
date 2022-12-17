@@ -6,5 +6,8 @@ main()
 
 wait_network_frame_override()
 {
-	wait 0.1;
+	if (!isDefined(level.players) || level.players.size == 1)
+		wait 0.1;
+	else
+		wait 0.05;
 }
