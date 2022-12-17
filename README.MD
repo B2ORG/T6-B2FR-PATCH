@@ -1,31 +1,28 @@
-- Ready to use patches can be found in `Precompiled` directory.
-- Source code for every given patch can be found in `Raw` directory.
+- Ready to use patches can be found in [releases](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/releases) section.
 - Development thread on my Discord https://discord.gg/fDY4VR6rNE
 
 # Launchers
 
-#### Redacted
-- Use V4 or V5 Redacted specific versions (/Precompiled/V4 | /Precompiled/V5)
-#### Ancient Pluto
-- I'm yet to test if any of the versions work with it, your best bet are going to be Redacted versions
-#### Plutonium R2905
-- Solo
-    * Any V4 or any V5
-- Coop
-    * V3 or V5.2 onwards
-#### Plutonium R3000+
-- Solo
-    * Any version
-- Coop
-    * V3 or V5.2 onwards
-#### Notes
-- By any version i mean the stable ones, there were releases when stuff wasn't working, so please make sure to use stable patches
+| Launcher | Compatibile versions |
+| --- | --- |
+| Redacted Lan | First Room Fix Redacted |
+| Redacted Nightly | First Room Fix Redacted |
+| Ancient Pluto | First Room Fix Redacted |
+| New Pluto | First Room Fix, First Room Fix Vanilla |
 
-# Features
-- Send me a message if you want a version with custom settings
-- Please download dedicated version for Redacted, as normal one will most likely throw an error. Use Redacted version in case you want to inject Ancient Pluto.
+# Pluto Versions
+Compatibility ragarding legitinacy of the game while playing for records
 
-### Built-in gameplay features:
+| Version | V3 | V4 | V5 | V5.2+ | Redacted |
+| --- | --- | --- | --- | --- | --- |
+| Ancient | x | x | x | x | v |
+| R2905 (solo) | x | v | v | v | x |
+| R2905 (coop) | v | x | x | v | x |
+| R3000+ (solo) | v | v | v | v | x |
+| R3000+ (coop) | v | x | x | v | x | 
+
+# Gameplay:
+Default features:
 - Fix for Strafe & Backspeed scale.
 - Fix for host migration issue in private matches.
 - Fix for Target Assist in zombies.
@@ -35,20 +32,10 @@
 - Anticheat (dvars & gameplay).
 - Debug prints (pluto console).
 
-### Built-in HUD features:
-- Print network frame at the beginning of the game (tickrate).
-- Game and round time display after each round.
-- Velocity meter.
-    * Use `velocity_size` dvar to change the size of the Velocity meter (1.0 - 5.0)
-- Round splits displayed every 5 rounds after 10.
-
-### Optional features:
-- Static timer / static round timer
-- Amount of hordes displayed for each round on round 20 onwards.
+Optional features:
 - Set Zombie Blood as a challenge box reward on Origins.
 - Nuketown blue eyes for the entire game
 - Nuketown mannequins set for yellow house & first room
-- Semtex prenades
 - Set weapon in the fridge & full bank
 - Give permaperks
     - Jug
@@ -87,6 +74,37 @@
         + `chic` - Chicom CQB
         + `rpg` - RPG
         + `M8A1` - M8A1
+
+# HUD 
+Default features:
+- Print network frame at the beginning of the game (tickrate).
+- Game and round time display after each round (if static timers are disabled).
+- Velocity meter.
+    * Use `velocity_size` dvar to change the size of the Velocity meter (1.0 - 5.0)
+- Round splits displayed every 5 rounds after 10.
+
+Optional features:
+- Static timer / static round timer
+- Amount of hordes displayed for each round on round 20 onwards.
+- Semtex prenades
+
+# Optional features
+Let me know which of the optional features you want enabled while requesting the patch. If you like the default settings (table below), use version from releases
+
+Default settings of First Room Fix
+| Function | Main | Vanilla | Redacted |
+| --- | --- | --- | --- |
+| Timer | v | x | v |
+| Round Timer | x | x | x |
+| Horde count | v | x | v |
+| Semtex Prenades | v | x | v |
+| Origins Zombie Blood override | x | x | x |
+| Permaperks | v | v | v |
+| Fridge weapon | x | x | x |
+| Nuketown Mannequinns | x | x | x |
+| Nuketown Blue Eyes | x | x | x |
+| First Box Module | x | x | - |
+| Timer coop pause | - | - | - |
 
 # Tech
 - All versions below 5.4 were Compiled using irony.dll
