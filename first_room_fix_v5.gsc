@@ -40,6 +40,7 @@ init()
 	level.FRFIX_VER = 5.5;
 	level.FRFIX_BETA = "";
 	level.FRFIX_DEBUG = false;
+	level.FRFIX_VANILLA = false;
 
 	level thread SetDvars();
 	level thread OnGameStart();
@@ -514,6 +515,23 @@ HudPosSemtexChart(hudelem)
 	hudelem setpoint ("CENTER", "BOTTOM", 0, -95);
 }
 
+DisplaySplit(hudelem, time, length);
+{
+	display_time = 20;
+	if (isDefined(length))
+		display_time = int(length / 4);
+
+	for (ticks = 0; ticks < display_time; ticks++)
+	{
+		hudelem setTimer(time - 0.1);
+		wait 0.25;
+	}
+	hudelem fadeOverTime(0.25);
+	hudelem.alpha = 0;
+
+	return;
+}
+
 PrintNetworkFrame(len)
 {
     PlayerThreadBlackscreenWaiter();
@@ -578,52 +596,55 @@ BasicSplitsHud()
 	if (!isdefined(level.FRFIX_TIMER_ENABLED) || !level.FRFIX_TIMER_ENABLED)
 		level.custom_end_screen = ::PrintOnGameEnd;
 
+	show_timer_split = true;
+	show_round_split = true;
+	if ((isDefined(level.FRFIX_TIMER_ENABLED) && level.FRFIX_TIMER_ENABLED) || (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA))
+	{
+		show_timer_split = false;
+		basegt_hud destroy();
+	}
+	if ((isDefined(level.FRFIX_ROUND_ENABLED) && level.FRFIX_ROUND_ENABLED) || (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA))
+	{
+		show_round_split = false;
+		basert_hud destroy();
+	}
+
 	while (true)
 	{
 		level waittill("start_of_round");
 
 		level waittill("end_of_round");
 
-		if (level.players.size > 1)
+		if (isDefined(basegt_hud) && level.players.size > 1)
 			basegt_hud.label = &"LOBBY: ";
-
-		if (!isdefined(level.FRFIX_TIMER_ENABLED) || !level.FRFIX_TIMER_ENABLED)
-		{
-			basegt_hud fadeOverTime(0.1);
-			basegt_hud.alpha = 1;
-		}
-		if (!isdefined(level.FRFIX_ROUND_ENABLED) || !level.FRFIX_ROUND_ENABLED)
-		{
-			basert_hud fadeOverTime(0.1);
-			basert_hud.alpha = 1;
-		}
-
-		if (basegt_hud.alpha == 0 && basert_hud.alpha == 0)
-		{
-			basegt_hud destroy();
-			basert_hud destroy();
-			break;
-		}
 
 		gt_freeze = int(getTime() / 1000) - (level.paused_time + level.FRFIX_START);
 		rt_freeze = int(getTime() / 1000) - (level.paused_round + level.round_start);
 
-		basegt_hud setTimer(gt_freeze);
-		basert_hud setTimer(rt_freeze);
-
-		for (ticks = 0; ticks < 100; ticks++)
+		// Show timers at the end of the round if they're not enabled
+		if (isDefined(basegt_hud) && show_timer_split)
 		{
 			basegt_hud setTimer(gt_freeze);
-			basert_hud setTimer(rt_freeze);
-			wait 0.05;
+			basegt_hud fadeOverTime(0.1);
+			basegt_hud.alpha = 1;
 		}
-		basegt_hud fadeOverTime(0.1);
-		basert_hud fadeOverTime(0.1);
-		basegt_hud.alpha = 0;
-		basert_hud.alpha = 0;
-	}
+		if (isDefined(basert_hud) && show_round_split)
+		{
+			basert_hud setTimer(rt_freeze);
+			basert_hud fadeOverTime(0.1);
+			basert_hud.alpha = 1;
+		}
 
-	return;
+		// Log times to console
+		print("INFO: Time at the end of round " + (level.round_number - 1) + ": " + ConvertTime(gt_freeze));
+		print("INFO: Round " + (level.round_number - 1) + " time: " + ConvertTime(rt_freeze));
+
+		// Update HUD elements
+		if (isDefined(basegt_hud))
+			self thread DisplaySplit(basegt_hud, gt_freeze);
+		if (isDefined(basert_hud))
+			self thread DisplaySplit(basert_hud, rt_freeze);
+	}
 }
 
 PrintOnGameEnd()
@@ -636,8 +657,11 @@ PrintOnGameEnd()
 	rt = ConvertTime(int(getTime() / 1000) - (level.paused_round + level.round_start));
 
 	end_hud setText("GAMETIME: " + gt + " / TIME INTO THE ROUND: " + rt);
-	end_hud fadeOverTime(0.25);
-	end_hud.alpha = 1;
+	if ((isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA))
+	{
+		end_hud fadeOverTime(0.25);
+		end_hud.alpha = 1;
+	}
 }
 
 CoopPause()
@@ -763,6 +787,9 @@ TimerHud()
     self endon("disconnect");
     level endon("end_game");
 
+	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+		return;
+
 	if (!isdefined(level.FRFIX_TIMER_ENABLED) || !level.FRFIX_TIMER_ENABLED)
 		return;
 
@@ -780,6 +807,9 @@ RoundTimerHud()
 {
     self endon("disconnect");
     level endon("end_game");
+
+	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+		return;
 
 	if (!isdefined(level.FRFIX_ROUND_ENABLED) || !level.FRFIX_ROUND_ENABLED)
 		return;
@@ -815,6 +845,9 @@ RoundTimerHud()
 
 SplitsTimerHud()
 {
+	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+		return;
+
     splits_hud = createserverfontstring("hudsmall" , 1.4);
 	[[level.hudpos_splits]](splits_hud);
 	splits_hud.color = level.FRFIX_HUD_COLOR;
@@ -844,6 +877,9 @@ SplitsTimerHud()
 
 ZombiesHud()
 {
+	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+		return;
+
 	if (!isdefined(level.FRFIX_HORDES_ENABLED) || !level.FRFIX_HORDES_ENABLED)
 		return;
 
@@ -881,6 +917,9 @@ VelocityMeter()
 {
     self endon("disconnect");
     level endon("end_game");
+
+	(isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+		return;
 
     PlayerThreadBlackscreenWaiter();
 	vel_size = 0;
@@ -958,6 +997,9 @@ SemtexChart()
 {
 	self endon("disconnect");
 	level endon("end_game");
+
+	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+		return;
 
 	// Escape if starting round is bigger than 22 since the display is going to be inaccurate
 	if (!isdefined(level.FRFIX_PRENADES) || !level.FRFIX_PRENADES || IsRound(23))
