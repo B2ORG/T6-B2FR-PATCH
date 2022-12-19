@@ -1296,16 +1296,8 @@ AwardPermaPerks()
 			PrintInfo("Value " + level.pers_upgrades[perk].stat_desired_values[j] + " set to stat " + stat_name + " for " + self.name);
 
 			wait_network_frame();
-
-			// Zero desired value to prevent the perk from getting stucked
-			// if (!isinarray(do_not_zero, stat_name))
-			// self increment_client_stat(stat_name, 0);
 		}
 	}
-
-	// No need to play those, after the fix the game triggers it itself
-	/* playfx(level._effect["upgrade_aquired"], self.origin);
-	self playsoundtoplayer("evt_player_upgrade", self); */
 }
 
 
