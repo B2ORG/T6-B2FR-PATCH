@@ -325,8 +325,7 @@ IsRound(rnd)
 	else
 		is_rnd = false;
 	
-	// if (IfDebug())
-	// 	print("DEBUG: if " + rnd + " <= " + level.round_number +": " + is_rnd);
+	// DebugPrint("if " + rnd + " <= " + level.round_number +": " + is_rnd)
 
 	return is_rnd;
 }
@@ -369,8 +368,8 @@ DebugGamePrints()
 	while (true)
 	{
 		level waittill("start_of_round");
-		print("DEBUG: ROUND: " + level.round_number + " level.powerup_drop_count = " + level.powerup_drop_count + " | Should be 0");
-		print("DEBUG: ROUND: " + level.round_number + " size of level.zombie_powerup_array = " + level.zombie_powerup_array.size + " | Should be above 0");
+		PrintInfo("ROUND: " + level.round_number + " level.powerup_drop_count = " + level.powerup_drop_count + " | Should be 0");
+		PrintInfo("ROUND: " + level.round_number + " size of level.zombie_powerup_array = " + level.zombie_powerup_array.size + " | Should be above 0");
 	}
 }
 
@@ -379,7 +378,7 @@ PowerupOddsWatcher()
 	while (true)
 	{
 		level waittill("powerup_check", chance);
-		print("DEBUG: rand_drop = " + chance);
+		PrintInfo("rand_drop = " + chance);
 	}
 }
 
@@ -668,8 +667,8 @@ BasicSplitsHud()
 		}
 
 		// Log times to console
-		print("INFO: Time at the end of round " + (level.round_number - 1) + ": " + ConvertTime(gt_freeze));
-		print("INFO: Round " + (level.round_number - 1) + " time: " + ConvertTime(rt_freeze));
+		PrintInfo("Time at the end of round " + (level.round_number - 1) + ": " + ConvertTime(gt_freeze));
+		PrintInfo("Round " + (level.round_number - 1) + " time: " + ConvertTime(rt_freeze));
 
 		// Update HUD elements
 		if (isDefined(basegt_hud))
@@ -784,21 +783,15 @@ UnpauseGame()
 	if (isDefined(level.timer_hud))
 		level.timer_hud setTimerUp(reclocked);
 
-	if (IfDebug())
-	{
-		print("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_time = " + level.paused_time + " level.FIFIX_START = " + level.FRFIX_START);
-		print("Setting the timer to: " + reclocked + " s");
-	}
+	DebugPrint("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_time = " + level.paused_time + " level.FIFIX_START = " + level.FRFIX_START);
+	DebugPrint("Setting the timer to: " + reclocked + " s");
 
 	rtreclocked = (int(getTime() / 1000) - (level.paused_round + level.round_start)) * -1;
 	if (isDefined(level.round_hud))
 		level.round_hud setTimerUp(rtreclocked);
 
-	if (IfDebug())
-	{
-		print("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_round = " + level.paused_round + " level.round_start = " + level.round_start);
-		print("Setting the round timer to: " + rtreclocked + " s");
-	}
+	DebugPrint("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_round = " + level.paused_round + " level.round_start = " + level.round_start);
+	DebugPrint("Setting the round timer to: " + rtreclocked + " s");
 }
 
 GlobalRoundStart()
@@ -1245,8 +1238,7 @@ StopPermaPerksSystem()
 		level waittill("end_of_round");
 		if (!DidGameJustStarted())
 		{
-			if (IfDebug())
-				print("DEBUG: Stopping permaperks award");
+			DebugPrint("Stopping permaperks award");
 			self notify("stop_permaperks_award");
 			break;
 		}
@@ -1301,7 +1293,7 @@ AwardPermaPerks()
 			self set_global_stat(stat_name, level.pers_upgrades[perk].stat_desired_values[j]);
 			self.stats_this_frame[stat_name] = 1;
 
-			print("INFO: Value " + level.pers_upgrades[perk].stat_desired_values[j] + " set to stat " + stat_name + " for " + self.name);
+			PrintInfo("Value " + level.pers_upgrades[perk].stat_desired_values[j] + " set to stat " + stat_name + " for " + self.name);
 
 			wait_network_frame();
 
@@ -1526,8 +1518,7 @@ RoundSafety()
 	if (IsTown() || IsFarm() || IsDepot() || IsNuketown())
 		maxround = 10;
 
-	if (IfDebug())
-		print("DEBUG: Starting round detected: " + level.start_round);
+	DebugPrint("Starting round detected: " + level.start_round);
 
 	if (level.start_round <= maxround)
 		return;
@@ -1674,8 +1665,7 @@ FirstBoxHandler()
 
     level.is_first_box = false;
 
-	if (IfDebug())
-		self thread PrintInitialBoxSize();
+	self thread PrintInitialBoxSize();
 
 	self thread ScanInBox();
 	self thread FirstBox();
@@ -1710,7 +1700,7 @@ PrintInitialBoxSize()
 		if (maps\mp\zombies\_zm_weapons::get_is_in_box(weapon))
 			in_box++;
 	}
-	print("INFO: Size of initial box weapon list: " + in_box);
+	DebugPrint("Size of initial box weapon list: " + in_box);
 }
 
 ScanInBox()
@@ -1748,8 +1738,7 @@ ScanInBox()
                 in_box++;
         }
 
-		// if (IfDebug())
-        // 	print("in_box: " + in_box + " should: " + should_be_in_box);
+		// DebugPrint("in_box: " + in_box + " should: " + should_be_in_box);
 
         if (in_box == should_be_in_box)
 			continue;
@@ -1830,8 +1819,7 @@ RigBox(gun)
 	removed_guns = array();
 
 	flag_set("box_rigged");
-	if (IfDebug())
-		print("DEBUG: FIRST BOX: flag('box_rigged'): " + flag("box_rigged"));
+	DebugPrint("FIRST BOX: flag('box_rigged'): " + flag("box_rigged"));
 
 	level.special_weapon_magicbox_check = undefined;
 	foreach(weapon in getarraykeys(level.zombie_weapons))
@@ -1841,8 +1829,7 @@ RigBox(gun)
 			removed_guns[removed_guns.size] = weapon;
 			level.zombie_weapons[weapon].is_in_box = 0;
 
-			if (IfDebug())
-				print("DEBUG: FIRST BOX: setting " + weapon + ".is_in_box to 0");
+			DebugPrint("FIRST BOX: setting " + weapon + ".is_in_box to 0");
 		}
 	}
 
@@ -1850,8 +1837,7 @@ RigBox(gun)
 	{
 		if (IsRound(11))
 		{
-			if (IfDebug())
-				print("DEBUG: FIRST BOX: breaking out of First Box above round 10");
+			DebugPrint("FIRST BOX: breaking out of First Box above round 10");
 			break;
 		}
 		wait 0.05;
@@ -1861,16 +1847,13 @@ RigBox(gun)
 
 	level.special_weapon_magicbox_check = saved_check;
 
-	if (IfDebug())
-		print("DEBUG: FIRST BOX: removed_guns.size " + removed_guns.size);
+	DebugPrint("FIRST BOX: removed_guns.size " + removed_guns.size);
 	if (removed_guns.size > 0)
 	{
 		foreach(rweapon in removed_guns)
 		{
 			level.zombie_weapons[rweapon].is_in_box = 1;
-
-			if (IfDebug())
-				print("DEBUG: FIRST BOX: setting " + rweapon + ".is_in_box to 1");
+			DebugPrint("FIRST BOX: setting " + rweapon + ".is_in_box to 1");
 		}
 	}
 
@@ -1888,8 +1871,7 @@ WatchForFinishFirstBox()
 
 	level notify("break_firstbox");
 	flag_set("break_firstbox");
-	if (IfDebug())
-		print("DEBUG: FIRST BOX: notifying module to break");
+	DebugPrint("FIRST BOX: notifying module to break");
 }
 
 GetWeaponKey(weapon_str)
@@ -2055,9 +2037,7 @@ GetWeaponKey(weapon_str)
 			break;
 	}
 
-	if (IfDebug())
-		print("DEBUG: FIRST BOX: weapon_key: " + key);
-
+	DebugPrint("FIRST BOX: weapon_key: " + key);
 	return key;
 }
 
@@ -2080,8 +2060,7 @@ MagicBoxOpensCounter()
 	else
 		level.total_box_hits++;
 
-	if (IfDebug())
-		print("DEBUG: current box hits: " + level.total_box_hits);
+	DebugPrint("current box hits: " + level.total_box_hits);
 
     self setzbarrierpiecestate( 2, "opening" );
 
