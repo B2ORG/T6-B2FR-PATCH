@@ -1285,7 +1285,11 @@ DifficultySafety()
 DebuggerSafety()
 {
 	if (IfDebug())
+	{
+		foreach(player in level.players)
+			player.score = 333333;
 		GenerateWatermark("DEBUGGER", (0, 0.8, 0));
+	}
 	return;
 }
 
