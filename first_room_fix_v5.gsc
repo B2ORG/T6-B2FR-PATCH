@@ -75,6 +75,7 @@ OnGameStart()
 	level thread OriginsFix();
 	level thread EyeChange();
 	level thread DebugGamePrints();
+	level thread AnticheatSafety();
 
 	flag_wait("initial_blackscreen_passed");
 
@@ -133,9 +134,6 @@ OnPlayerSpawned()
 			self thread WelcomePrints();
 			self thread PrintNetworkFrame(6);
 			self thread VelocityMeter();
-
-			if (IfDebug())
-				self.score = 50000;
 		}
 	}
 
@@ -355,6 +353,9 @@ GenerateCheat()
 	level.cheat_hud setText("Alright there fuckaroo, quit this cheated sheit and touch grass loser.");
 	level.cheat_hud.alpha = 1;
 	level.cheat_hud.hidewheninmenu = 0;
+
+	level notify("cheat_generated");
+
 	return;
 }
 
@@ -1551,6 +1552,18 @@ DebuggerSafety()
 		GenerateWatermark("DEBUGGER", (0, 0.8, 0));
 	}
 	return;
+}
+
+AnticheatSafety()
+{
+	level endon("end_game");
+
+	level waittill("cheat_generated");
+	while (isDefined(level.cheat_hud))
+		wait 0.1;
+
+	foreach (player in level.players)
+		player doDamage(player.health + 69, player.origin);
 }
 
 TrackedPowerupDrop( drop_point )
