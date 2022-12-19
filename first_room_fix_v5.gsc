@@ -39,7 +39,7 @@ init()
 	level.FRFIX_ACTIVE = true;
 	level.FRFIX_VER = 5.5;
 	level.FRFIX_BETA = "";
-	level.FRFIX_DEBUG = false;
+	level.FRFIX_DEBUG = true;
 	level.FRFIX_VANILLA = false;
 
 	level thread SetDvars();
@@ -515,7 +515,7 @@ HudPosSemtexChart(hudelem)
 	hudelem setpoint ("CENTER", "BOTTOM", 0, -95);
 }
 
-DisplaySplit(hudelem, time, length);
+DisplaySplit(hudelem, time, length)
 {
 	display_time = 20;
 	if (isDefined(length))
@@ -918,7 +918,7 @@ VelocityMeter()
     self endon("disconnect");
     level endon("end_game");
 
-	(isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
 		return;
 
     PlayerThreadBlackscreenWaiter();
@@ -1184,35 +1184,42 @@ AwardPermaPerks()
 		// QR, Deadshot, Tombstone & Boards
 		perks_list = array("revive", "multikill_headshots", "perk_lose", "board");
 
-		// Jugg
+		// Award Jug if it's not round 15 yet
 		if (!IsRound(15))
 			perks_list[perks_list.size] = "jugg";
 
-		// Flopper
+		// Award Flopper if it's buried
 		if (IsBuried())
 			perks_list[perks_list.size] = "flopper";
 
-		// RayGun
-		// Handling with array cause it's still subject to change, easier to add stuff to the array later with code if necessary
+		// Award Nube on Tranzit / Buried if it's not round 10 yet
 		raygun_maps = array("zm_transit", "zm_buried");
-		if (isinarray(raygun_maps, level.script))
+		if (isinarray(raygun_maps, level.script) && !IsRound(10))
 			perks_list[perks_list.size] = "nube";
 
 		// Set permaperks
-		for (i = 0; i < perks_list.size; i++)
+		foreach(perk in perks_list)
 		{
-			name = perks_list[i];
-
-			for (j = 0; j < level.pers_upgrades[name].stat_names.size; j++)
+			for (j = 0; j < level.pers_upgrades[perk].stat_names.size; j++)
 			{
-				stat_name = level.pers_upgrades[name].stat_names[j];
-				self set_global_stat(stat_name, level.pers_upgrades[name].stat_desired_values[j]);
+				// Award permaperks by assigning desired values
+				stat_name = level.pers_upgrades[perk].stat_names[j];
+				self set_global_stat(stat_name, level.pers_upgrades[perk].stat_desired_values[j]);
 				self.stats_this_frame[stat_name] = 1;
+
+				if (IfDebug())
+					print("DEBUG: Setting: " + stat_name + " to " + level.pers_upgrades[perk].stat_desired_values[j]);
+
+				wait_network_frame();
+
+				// Zero desired value to prevent the perk from getting stucked
+				self set_global_stat(stat_name, 0);
 			}
 		}
 
-		playfx(level._effect["upgrade_aquired"], self.origin);
-		self playsoundtoplayer("evt_player_upgrade", self);
+		// No need to play those, after the fix the game triggers it itself
+		/* playfx(level._effect["upgrade_aquired"], self.origin);
+		self playsoundtoplayer("evt_player_upgrade", self); */
 	}
 }
 
