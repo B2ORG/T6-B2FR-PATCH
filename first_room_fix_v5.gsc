@@ -49,6 +49,8 @@ init()
 
 OnGameStart()
 {
+	level endon("end_game");
+
 	// Func Config
 	level.FRFIX_TIMER_ENABLED = true;
 	level.FRFIX_ROUND_ENABLED = false;
@@ -105,6 +107,8 @@ OnGameStart()
 
 OnPlayerJoined()
 {
+	level endon("end_game");
+
 	for(;;)
 	{
 		level waittill("connected", player);
@@ -114,7 +118,7 @@ OnPlayerJoined()
 
 OnPlayerSpawned()
 {
-    level endon("game_ended");
+	level endon("end_game");
     self endon("disconnect");
 
 	self.initial_spawn = true;
@@ -239,6 +243,8 @@ ConvertTime(seconds)
 
 PlayerThreadBlackscreenWaiter()
 {
+	level endon("end_game");
+
     while (!flag("game_started"))
         wait 0.05;
     return;
@@ -360,7 +366,6 @@ GenerateCheat()
 
 DebugGamePrints()
 {
-	self endon("disconnect");
 	level endon("end_game");
 
 	self thread PowerupOddsWatcher();
@@ -375,6 +380,8 @@ DebugGamePrints()
 
 PowerupOddsWatcher()
 {
+	level endon("end_game");
+
 	while (true)
 	{
 		level waittill("powerup_check", chance);
@@ -419,6 +426,8 @@ SetDvars()
 
 DvarDetector() 
 {
+	level endon("end_game");
+
 	while (true) 
 	{
 		// Waiting on top so it doesn't trigger before initial dvars are set
@@ -548,6 +557,8 @@ HudPosSemtexChart(hudelem)
 
 DisplaySplit(hudelem, time, length)
 {
+	level endon("end_game");
+
 	display_time = 20;
 	if (isDefined(length))
 		display_time = int(length / 4);
@@ -565,6 +576,9 @@ DisplaySplit(hudelem, time, length)
 
 PrintNetworkFrame(len)
 {
+	level endon("end_game");
+	self endon("disconnect");
+
     PlayerThreadBlackscreenWaiter();
 
     self.network_hud = createfontstring("hudsmall" , 1.9);
@@ -607,7 +621,6 @@ PrintNetworkFrame(len)
 
 BasicSplitsHud()
 {
-    self endon("disconnect");
     level endon("end_game");
 
 	basegt_hud = createserverfontstring("hudsmall" , 1.5);
@@ -697,7 +710,6 @@ PrintOnGameEnd()
 
 CoopPause()
 {
-	self endon("disconnect");
 	level endon("end_game");
 
 	level.paused_time = 0.00;
@@ -744,6 +756,8 @@ CoopPause()
 
 CoopPauseSwitch()
 {
+	level endon("end_game");
+
 	level waittill("start_of_round");
 
 	while (true)
@@ -796,6 +810,8 @@ UnpauseGame()
 
 GlobalRoundStart()
 {
+	level endon("end_game");
+
 	level.round_start = level.FRFIX_START;
 	level.paused_round = 0.00;
 
@@ -809,7 +825,6 @@ GlobalRoundStart()
 
 TimerHud()
 {
-    self endon("disconnect");
     level endon("end_game");
 
 	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
@@ -830,7 +845,6 @@ TimerHud()
 
 RoundTimerHud()
 {
-    self endon("disconnect");
     level endon("end_game");
 
 	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
@@ -870,6 +884,8 @@ RoundTimerHud()
 
 SplitsTimerHud()
 {
+	level endon("end_game");
+
 	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
 		return;
 
@@ -902,6 +918,8 @@ SplitsTimerHud()
 
 ZombiesHud()
 {
+	level endon("end_game");
+
 	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
 		return;
 
@@ -1020,7 +1038,7 @@ GetVelColorScale(vel, hud)
 
 SemtexChart()
 {
-	self endon("disconnect");
+	// self endon("disconnect");
 	level endon("end_game");
 
 	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
@@ -1069,6 +1087,8 @@ SemtexChart()
 
 NukeMannequins()
 {
+	level endon("end_game");
+
 	if (!isdefined(level.FRFIX_YELLOWHOUSE) || !level.FRFIX_YELLOWHOUSE)
 		return;
 
@@ -1265,6 +1285,8 @@ WatchForNewPlayers()
 
 AwardPermaPerks()
 {
+	level endon("end_game");
+
 	self endon("disconnect");
 
 	while (!isalive(self))
@@ -1470,7 +1492,6 @@ PermaOverrideFlopper()
 
 OriginsFix()
 {
-    self endon("disconnect");
     level endon("end_game");
 	
 	if (!isdefined(level.FRFIX_ORIGINSFIX) || !level.FRFIX_ORIGINSFIX)
@@ -1647,7 +1668,6 @@ Fridge(mode)
 
 FirstBoxHandler()
 {
-    self endon("disconnect");
     level endon("end_game");
 
 	if (!isDefined(level.enable_magic) || !level.enable_magic)
@@ -1676,7 +1696,6 @@ FirstBoxHandler()
 
 WatchForDomesticFirstBox()
 {
-    self endon("disconnect");
     level endon("end_game");
 
 	self waittill("frfix_boxmodule");
@@ -1697,7 +1716,6 @@ PrintInitialBoxSize()
 
 ScanInBox()
 {
-    self endon("disconnect");
     level endon("end_game");
 
 	// Only town needed
@@ -1747,7 +1765,6 @@ ScanInBox()
 
 FirstBox()
 {	
-    self endon("disconnect");
     level endon("end_game");
 
 	if (!isDefined(level.FRFIX_FIRSTBOX) || !level.FRFIX_FIRSTBOX)
@@ -1791,7 +1808,6 @@ FirstBox()
 
 RigBox(gun)
 {
-    self endon("disconnect");
     level endon("end_game");
 
 	weapon_key = GetWeaponKey(gun);
@@ -1855,7 +1871,6 @@ RigBox(gun)
 
 WatchForFinishFirstBox()
 {
-    self endon("disconnect");
     level endon("end_game");
 
 	while (!IsRound(11))
