@@ -43,6 +43,7 @@ init()
 	level.FRFIX_VANILLA = false;
 
 	level thread SetDvars();
+	level thread PermaPerksSetup();
 	level thread OnGameStart();
 }
 
@@ -60,7 +61,8 @@ OnGameStart()
 	level.FRFIX_PRENADES = true;
 	level.FRFIX_FRIDGE = false;
 	level.FRFIX_FIRSTBOX = false;
-	level.FRFIX_COOP_PAUSE_ACTIVE = false;		// Disabled for 5.1 need more testing
+	level.FRFIX_PERMAPERKS_TRACKING = true;
+	// level.FRFIX_COOP_PAUSE_ACTIVE = false;
 
 	level thread OnPlayerJoined();
 
@@ -130,7 +132,6 @@ OnPlayerSpawned()
 			self thread Fridge("tranzitnp");
 			self thread WelcomePrints();
 			self thread PrintNetworkFrame(6);
-			self thread AwardPermaPerks();
 			self thread VelocityMeter();
 
 			if (IfDebug())
@@ -147,6 +148,36 @@ IfDebug()
 	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
 		return true;
 	return false;
+}
+
+DebugPrint(text)
+{
+	if (IfDebug())
+		print("DEBUG: " + text);
+	return;
+}
+
+InfoPrint(text)
+{
+	print("INFO: " + text);
+	return;
+}
+
+DebugPrintPermaPerk(enabled, perk)
+{
+	if (enabled)
+	{
+		if (isDefined(level.FRFIX_PERMAPERKS_TRACKING) && level.FRFIX_PERMAPERKS_TRACKING && flag("initial_blackscreen_passed"))
+			self iPrintLn("Permaperk " + perk + " ^2ENABLED");
+		DebugPrint("Permaperks: " + perk + " enabled");
+	}
+	else if (!enabled)
+	{
+		if (isDefined(level.FRFIX_PERMAPERKS_TRACKING) && level.FRFIX_PERMAPERKS_TRACKING)
+			self iPrintLn("Permaperk " + perk + " ^1DISABLED");
+		DebugPrint("Permaperks: " + perk + " disabled");
+	}
+	return;
 }
 
 GenerateWatermark(text, color, alpha_override)
@@ -283,7 +314,7 @@ DidGameJustStarted()
 	if (!isDefined(level.start_round))
 		return true;
 
-	if (IsRound(level.start_round) || IsRound(level.start_round + 1))
+	if (IsRound(level.start_round + 1))
 		return true;
 
 	return false;
@@ -1160,67 +1191,296 @@ GetPapWeaponReticle ( weapon ) // Override to get rid of rng reticle
 	return self.pack_a_punch_weapon_options[ weapon ];
 }
 
-AwardPermaPerks()
+PermaPerksSetup()
 {
+	level endon("end_game");
+
 	if (!maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active())
 		return;
 
-	if (IsRound(3))		// 2 if ppl don't use minplayers
-		return;
+	ReplacePointers();
 
-	if (!isdefined(level.FRFIX_PERMAPERKS) || !level.FRFIX_PERMAPERKS)
-		return;
+	if (!flag("initial_blackscreen_passed"))
+		flag_wait("initial_blackscreen_passed");
 
-	if (IsTranzit() || IsDieRise() || IsBuried())
+	if (isdefined(level.FRFIX_PERMAPERKS) && level.FRFIX_PERMAPERKS)
 	{
-		if (!flag("initial_blackscreen_passed"))
-			flag_wait("initial_blackscreen_passed");
-
-		while (!isalive(self))
-			wait 0.05;
-
-		wait 0.5;
-
-		// QR, Deadshot, Tombstone & Boards
-		perks_list = array("revive", "multikill_headshots", "perk_lose", "board");
-
-		// Award Jug if it's not round 15 yet
-		if (!IsRound(15))
-			perks_list[perks_list.size] = "jugg";
-
-		// Award Flopper if it's buried
-		if (IsBuried())
-			perks_list[perks_list.size] = "flopper";
-
-		// Award Nube on Tranzit / Buried if it's not round 10 yet
-		raygun_maps = array("zm_transit", "zm_buried");
-		if (isinarray(raygun_maps, level.script) && !IsRound(10))
-			perks_list[perks_list.size] = "nube";
-
-		// Set permaperks
-		foreach(perk in perks_list)
-		{
-			for (j = 0; j < level.pers_upgrades[perk].stat_names.size; j++)
-			{
-				// Award permaperks by assigning desired values
-				stat_name = level.pers_upgrades[perk].stat_names[j];
-				self set_global_stat(stat_name, level.pers_upgrades[perk].stat_desired_values[j]);
-				self.stats_this_frame[stat_name] = 1;
-
-				if (IfDebug())
-					print("DEBUG: Setting: " + stat_name + " to " + level.pers_upgrades[perk].stat_desired_values[j]);
-
-				wait_network_frame();
-
-				// Zero desired value to prevent the perk from getting stucked
-				self set_global_stat(stat_name, 0);
-			}
-		}
-
-		// No need to play those, after the fix the game triggers it itself
-		/* playfx(level._effect["upgrade_aquired"], self.origin);
-		self playsoundtoplayer("evt_player_upgrade", self); */
+		self thread StopPermaPerksSystem();
+		self thread WatchForNewPlayers();
 	}
+}
+
+ReplacePointers()
+{
+	while (!isDefined(level.pers_upgrades))
+		wait 0.05;
+
+	foreach(perk in level.pers_upgrades_keys)
+	{
+		if (perk == "board")
+			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideBoards;
+		else if (perk == "revive")
+			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideRevive;
+		else if (perk == "multikill_headshots")
+			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideHeadshot;
+		else if (perk == "jugg")
+			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideJugg;
+		else if (perk == "nube")
+			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideNube;
+		else if (perk == "perk_lose")
+			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideTombstone;
+		else if (perk == "flopper")
+			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideFlopper;
+	}
+	return;
+}
+
+StopPermaPerksSystem()
+{
+	level endon("end_game");
+
+	while (true)
+	{
+		level waittill("end_of_round");
+		if (!DidGameJustStarted())
+		{
+			if (IfDebug())
+				print("DEBUG: Stopping permaperks award");
+			self notify("stop_permaperks_award");
+			break;
+		}
+	}
+}
+
+WatchForNewPlayers()
+{
+	level endon("end_game");
+	self endon("stop_permaperks_award");
+
+	// Give perma perks to everyone who is connected at this point
+	foreach(player in level.players)
+		player thread AwardPermaPerks();
+
+	// And wait for new players
+	while (true)
+	{
+		level waittill("connected", player);
+
+		player thread AwardPermaPerks();
+	}
+}
+
+AwardPermaPerks()
+{
+	self endon("disconnect");
+
+	while (!isalive(self))
+		wait 0.05;
+
+	wait 0.5;
+
+	perks_to_award = array("revive", "multikill_headshots", "perk_lose", "board");
+
+	if (!IsRound(15))
+		perks_to_award[perks_to_award.size] = "jugg";
+
+	if (IsBuried())
+		perks_to_award[perks_to_award.size] = "flopper";
+
+	if (!IsDieRise() && !IsRound(10))
+		perks_to_award[perks_to_award.size] = "nube";
+
+	// Set permaperks
+	foreach(perk in perks_to_award)
+	{
+		for (j = 0; j < level.pers_upgrades[perk].stat_names.size; j++)
+		{
+			// Award permaperks by assigning desired values
+			stat_name = level.pers_upgrades[perk].stat_names[j];
+			self set_global_stat(stat_name, level.pers_upgrades[perk].stat_desired_values[j]);
+			self.stats_this_frame[stat_name] = 1;
+
+			print("INFO: Value " + level.pers_upgrades[perk].stat_desired_values[j] + " set to stat " + stat_name + " for " + self.name);
+
+			wait_network_frame();
+
+			// Zero desired value to prevent the perk from getting stucked
+			// if (!isinarray(do_not_zero, stat_name))
+			// self increment_client_stat(stat_name, 0);
+		}
+	}
+
+	// No need to play those, after the fix the game triggers it itself
+	/* playfx(level._effect["upgrade_aquired"], self.origin);
+	self playsoundtoplayer("evt_player_upgrade", self); */
+}
+
+
+PermaOverrideBoards()
+{
+    self endon( "disconnect" );
+
+	DebugPrintPermaPerk(true, "Boarding");
+
+    for ( last_round_number = level.round_number; 1; last_round_number = level.round_number )
+    {
+        self waittill( "pers_stats_end_of_round" );
+
+        if ( level.round_number >= last_round_number )
+        {
+            if ( maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active() )
+            {
+                if ( self.rebuild_barrier_reward == 0 )
+                {
+                    self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_boarding", 0 );
+
+					DebugPrintPermaPerk(false, "Boarding");
+                    return;
+                }
+            }
+        }
+    }
+}
+
+PermaOverrideRevive()
+{
+    self endon( "disconnect" );
+
+	DebugPrintPermaPerk(true, "Revive");
+
+    while ( true )
+    {
+        self waittill( "player_failed_revive" );
+
+        if ( maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active() )
+        {
+            if ( self.failed_revives >= level.pers_revivenoperk_number_of_chances_to_keep )
+            {
+                self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_revivenoperk", 0 );
+                self.failed_revives = 0;
+
+				DebugPrintPermaPerk(false, "Revive");
+                return;
+            }
+        }
+    }
+}
+
+PermaOverrideHeadshot()
+{
+    self endon( "disconnect" );
+
+	DebugPrintPermaPerk(true, "Headshots");
+
+    while ( true )
+    {
+        self waittill( "zombie_death_no_headshot" );
+
+        if ( maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active() )
+        {
+            self.non_headshot_kill_counter++;
+
+            if ( self.non_headshot_kill_counter >= level.pers_multikill_headshots_upgrade_reset_counter )
+            {
+                self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_multikill_headshots", 0 );
+                self.non_headshot_kill_counter = 0;
+
+				DebugPrintPermaPerk(false, "Headshots");
+                return;
+            }
+        }
+    }
+}
+
+PermaOverrideJugg()
+{
+    self endon( "disconnect" );
+    wait 1;
+
+	DebugPrintPermaPerk(true, "Jugg");
+
+    self maps\mp\zombies\_zm_perks::perk_set_max_health_if_jugg( "jugg_upgrade", 1, 0 );
+
+    while ( true )
+    {
+        level waittill( "start_of_round" );
+
+        if ( maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active() )
+        {
+            if ( level.round_number == level.pers_jugg_round_lose_target )
+            {
+                self maps\mp\zombies\_zm_stats::increment_client_stat( "pers_jugg_downgrade_count", 0 );
+                wait 0.5;
+
+                if ( self.pers["pers_jugg_downgrade_count"] >= level.pers_jugg_round_reached_max )
+                    break;
+            }
+        }
+    }
+
+	DebugPrintPermaPerk(false, "Jugg");
+
+    self maps\mp\zombies\_zm_perks::perk_set_max_health_if_jugg( "jugg_upgrade", 1, 1 );
+
+    self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_jugg", 0 );
+    self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_jugg_downgrade_count", 0 );
+}
+
+PermaOverrideNube()
+{
+    self endon( "disconnect" );
+    wait 0.1;
+
+	DebugPrintPermaPerk(true, "Nube");
+
+    while ( true )
+    {
+        level waittill( "start_of_round" );
+
+        if ( maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active() )
+        {
+            if ( level.round_number >= level.pers_nube_lose_round )
+			{
+				DebugPrintPermaPerk(false, "Nube");
+                break;
+			}
+        }
+    }
+
+    self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_nube_counter", 0 );
+}
+
+PermaOverrideTombstone()
+{
+    self endon( "disconnect" );
+    wait 0.1;
+
+	DebugPrintPermaPerk(true, "Tombstone");
+	
+    self.pers_perk_lose_start_round = level.round_number;
+
+    self waittill( "pers_perk_lose_lost" );
+
+	DebugPrintPermaPerk(false, "Tombstone");
+
+    self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_perk_lose_counter", 0 );
+}
+
+PermaOverrideFlopper()
+{
+    self endon( "disconnect" );
+    wait 0.1;
+
+	DebugPrintPermaPerk(true, "Flopper");
+
+    self thread maps\mp\zombies\_zm_pers_upgrades_functions::pers_upgrade_flopper_watcher();
+
+    self waittill( "pers_flopper_lost" );
+
+	DebugPrintPermaPerk(false, "Flopper");
+
+    self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_flopper_counter", 0 );
+    self.pers_num_flopper_damages = 0;
 }
 
 OriginsFix()
