@@ -373,8 +373,8 @@ DebugGamePrints()
 	while (true)
 	{
 		level waittill("start_of_round");
-		PrintInfo("ROUND: " + level.round_number + " level.powerup_drop_count = " + level.powerup_drop_count + " | Should be 0");
-		PrintInfo("ROUND: " + level.round_number + " size of level.zombie_powerup_array = " + level.zombie_powerup_array.size + " | Should be above 0");
+		InfoPrint("ROUND: " + level.round_number + " level.powerup_drop_count = " + level.powerup_drop_count + " | Should be 0");
+		InfoPrint("ROUND: " + level.round_number + " size of level.zombie_powerup_array = " + level.zombie_powerup_array.size + " | Should be above 0");
 	}
 }
 
@@ -385,7 +385,7 @@ PowerupOddsWatcher()
 	while (true)
 	{
 		level waittill("powerup_check", chance);
-		PrintInfo("rand_drop = " + chance);
+		InfoPrint("rand_drop = " + chance);
 	}
 }
 
@@ -680,8 +680,8 @@ BasicSplitsHud()
 		}
 
 		// Log times to console
-		PrintInfo("Time at the end of round " + (level.round_number - 1) + ": " + ConvertTime(gt_freeze));
-		PrintInfo("Round " + (level.round_number - 1) + " time: " + ConvertTime(rt_freeze));
+		InfoPrint("Time at the end of round " + (level.round_number - 1) + ": " + ConvertTime(gt_freeze));
+		InfoPrint("Round " + (level.round_number - 1) + " time: " + ConvertTime(rt_freeze));
 
 		// Update HUD elements
 		if (isDefined(basegt_hud))
@@ -1315,7 +1315,7 @@ AwardPermaPerks()
 			self set_global_stat(stat_name, level.pers_upgrades[perk].stat_desired_values[j]);
 			self.stats_this_frame[stat_name] = 1;
 
-			PrintInfo("Value " + level.pers_upgrades[perk].stat_desired_values[j] + " set to stat " + stat_name + " for " + self.name);
+			InfoPrint("Value " + level.pers_upgrades[perk].stat_desired_values[j] + " set to stat " + stat_name + " for " + self.name);
 
 			wait_network_frame();
 		}
@@ -1677,11 +1677,13 @@ FirstBoxHandler()
 
     level.is_first_box = false;
 
+	// Debug func, doesn't do anything in production
 	self thread PrintInitialBoxSize();
 
+	// Scan weapons in the box
 	self thread ScanInBox();
+	// First Box main loop
 	self thread FirstBox();
-	self thread WatchForDomesticFirstBox();
 
 	while (true)
 	{
@@ -1692,14 +1694,6 @@ FirstBoxHandler()
 	}
 
 	GenerateWatermark("FIRST BOX", (0.8, 0, 0));
-}
-
-WatchForDomesticFirstBox()
-{
-    level endon("end_game");
-
-	self waittill("frfix_boxmodule");
-	level.is_first_box = true;
 }
 
 PrintInitialBoxSize()
@@ -1766,6 +1760,7 @@ ScanInBox()
 FirstBox()
 {	
     level endon("end_game");
+	level endon("break_firstbox");
 
 	if (!isDefined(level.FRFIX_FIRSTBOX) || !level.FRFIX_FIRSTBOX)
 		return;
@@ -1780,33 +1775,19 @@ FirstBox()
 	self thread WatchForFinishFirstBox();
 	self.rigged_hits = 0;
 
-	// First Box module stops after round 10
-	while (!IsRound(11))
+	while (true)
 	{
-		while ((getDvar("fbgun") == "select a gun") && (!flag("break_firstbox")))
+		level waittill("say", message, player, ishidden);
+
+		self thread RigBox(message, player);
+		wait_network_frame();
+
+		while (flag("box_rigged"))
 			wait 0.05;
-
-		// To avoid a iprint about wrong weapon key
-		if (flag("break_firstbox"))
-			break;
-
-		fbgun = getDvar("fbgun");
-		self thread RigBox(fbgun);
-
-		wait 0.05;
-		while ((flag("box_rigged")) && (!flag("break_firstbox")))
-			wait 0.05;
-
-		setDvar("fbgun", "select a gun");
 	}
-
-	iPrintLn("First Box module: ^1DISABLED");
-	if (self.rigged_hits)
-		iPrintLn("First box used: ^3" + self.rigged_hits + " ^7times");
-	return;
 }
 
-RigBox(gun)
+RigBox(gun, player)
 {
     level endon("end_game");
 
@@ -1818,8 +1799,8 @@ RigBox(gun)
 	}
 
 	// weapon_name = level.zombie_weapons[weapon_key].name;
-	iPrintLn("Setting box weapon to: ^3" +  WeaponDisplayWrapper(weapon_key));
-	self notify("frfix_boxmodule");
+	iPrintLn("" + player.name + " set box weapon to: ^3" +  WeaponDisplayWrapper(weapon_key));
+	level.is_first_box = true;
 	self.rigged_hits++;
 
 	saved_check = level.special_weapon_magicbox_check;
@@ -1876,9 +1857,15 @@ WatchForFinishFirstBox()
 	while (!IsRound(11))
 		wait 0.1;
 
+	iPrintLn("First Box module: ^1DISABLED");
+	if (self.rigged_hits)
+		iPrintLn("First box used: ^3" + self.rigged_hits + " ^7times");
+
 	level notify("break_firstbox");
 	flag_set("break_firstbox");
 	DebugPrint("FIRST BOX: notifying module to break");
+
+	return;
 }
 
 GetWeaponKey(weapon_str)
