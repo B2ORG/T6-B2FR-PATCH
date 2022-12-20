@@ -37,9 +37,9 @@ init()
 
 	// Patch Config
 	level.FRFIX_ACTIVE = true;
-	level.FRFIX_VER = 5.5;
+	level.FRFIX_VER = 5.6;
 	level.FRFIX_BETA = "";
-	level.FRFIX_DEBUG = true;
+	level.FRFIX_DEBUG = false;
 	level.FRFIX_VANILLA = false;
 
 	level thread SetDvars();
@@ -62,7 +62,7 @@ OnGameStart()
 	level.FRFIX_ORIGINSFIX = false;
 	level.FRFIX_PRENADES = true;
 	level.FRFIX_FRIDGE = false;
-	level.FRFIX_FIRSTBOX = true;
+	level.FRFIX_FIRSTBOX = false;
 	level.FRFIX_PERMAPERKS_TRACKING = true;
 	// level.FRFIX_COOP_PAUSE_ACTIVE = false;
 
