@@ -393,10 +393,6 @@ SetDvars()
 {
 	level endon("end_game");
 
-	setDvar("fbgun", "select a gun");
-	if (!getDvarFloat("velocity_size"))
-		setDvar("velocity_size", 1.2);
-
 	if (IsMob())
 		level.custom_velocity_behaviour = ::HideInAfterlife;
 
@@ -965,13 +961,13 @@ VelocityMeter()
 		return;
 
     PlayerThreadBlackscreenWaiter();
-	vel_size = 0;
 
     self.hud_velocity = createfontstring("hudsmall" , 1.2);
 	[[level.hudpos_velocity]](self.hud_velocity);
 	self.hud_velocity.alpha = 0.75;
 	self.hud_velocity.color = level.FRFIX_HUD_COLOR;
 	self.hud_velocity.hidewheninmenu = 1;
+	self.hud_velocity.fontscale = 1.2;
     // self.hud_velocity.label = &"Velocity: ";
 
     while (true)
@@ -983,11 +979,6 @@ VelocityMeter()
 		GetVelColorScale(velocity, self.hud_velocity);
         self.hud_velocity setValue(velocity);
 
-		if (vel_size != getDvarFloat("velocity_size"))
-		{
-			vel_size = getDvarFloat("velocity_size");
-			self.hud_velocity.fontscale = vel_size;
-		}
         wait 0.05;
     }
 }
