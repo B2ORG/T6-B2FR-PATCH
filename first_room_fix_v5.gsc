@@ -62,7 +62,7 @@ OnGameStart()
 	level.FRFIX_ORIGINSFIX = false;
 	level.FRFIX_PRENADES = true;
 	level.FRFIX_FRIDGE = false;
-	level.FRFIX_FIRSTBOX = false;
+	level.FRFIX_FIRSTBOX = true;
 	level.FRFIX_PERMAPERKS_TRACKING = true;
 	// level.FRFIX_COOP_PAUSE_ACTIVE = false;
 
@@ -1795,7 +1795,12 @@ FirstBox()
 	{
 		level waittill("say", message, player, ishidden);
 
-		self thread RigBox(message, player);
+		if (isSubStr(message, "fb"))
+			wpn_key = getSubStr(message, 3);
+		else
+			continue;
+
+		self thread RigBox(wpn_key, player);
 		wait_network_frame();
 
 		while (flag("box_rigged"))
