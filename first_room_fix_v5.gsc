@@ -967,8 +967,9 @@ VelocityMeter()
 	self.hud_velocity.alpha = 0.75;
 	self.hud_velocity.color = level.FRFIX_HUD_COLOR;
 	self.hud_velocity.hidewheninmenu = 1;
-	self.hud_velocity.fontscale = 1.2;
     // self.hud_velocity.label = &"Velocity: ";
+
+	self thread VelocityMeterSize(self.hud_velocity);
 
     while (true)
     {
@@ -1025,6 +1026,30 @@ GetVelColorScale(vel, hud)
 	}
 	
 	return;
+}
+
+VelocityMeterSize(hud)
+{
+    self endon("disconnect");
+    level endon("end_game");
+
+	while (true)
+	{
+		level waittill("say", message, player, ishidden);
+
+		if (isSubStr(message, "vel") && player.name == self.name)
+		{
+			new_size = string_to_float(getSubStr(message, 4));
+
+			// Fontscale does not accept values outside that range
+			if (new_size < 1 || new_size > 4)
+				continue;
+
+			DebugPrint("Velocity: Current size: " + hud.fontscale + " / New size: " + new_size + " detected for player " + self.name);
+
+			hud.fontscale = new_size;
+		}
+	}
 }
 
 SemtexChart()
