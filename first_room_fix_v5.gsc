@@ -80,13 +80,8 @@ OnGameStart()
 
 	flag_wait("initial_blackscreen_passed");
 
-	level.FRFIX_START = int(getTime() / 1000);
-	flag_set("game_started");
-
 	// HUD
 	GetHudPosition();
-	level thread GlobalRoundStart();
-	level thread BasicSplitsHud();
 	level thread TimerHud();
 	level thread RoundTimerHud();
 	level thread SplitsTimerHud();
@@ -332,6 +327,13 @@ IsRound(rnd)
 	// DebugPrint("if " + rnd + " <= " + level.round_number +": " + is_rnd)
 
 	return is_rnd;
+}
+
+IsVanilla()
+{
+	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+		return true;
+	return false;
 }
 
 // Functions
@@ -613,172 +615,114 @@ PrintNetworkFrame(len)
 	self.network_hud destroy();
 }
 
-BasicSplitsHud()
-{
-    level endon("end_game");
-
-	basegt_hud = createserverfontstring("hudsmall" , 1.5);
-	[[level.hudpos_timer_game]](basegt_hud);
-	basegt_hud.color = level.FRFIX_HUD_COLOR;
-	basegt_hud.alpha = 0;
-	basegt_hud.hidewheninmenu = 1;
-	basegt_hud.label = &"GAME: ";
-
-	basert_hud = createserverfontstring("hudsmall" , 1.5);
-	[[level.hudpos_timer_round]](basert_hud);
-	basert_hud.color = level.FRFIX_HUD_COLOR;
-	basert_hud.alpha = 0;
-	basert_hud.hidewheninmenu = 1;
-	basert_hud.label = &"ROUND: ";
-
-	if (!isdefined(level.FRFIX_TIMER_ENABLED) || !level.FRFIX_TIMER_ENABLED)
-		level.custom_end_screen = ::PrintOnGameEnd;
-
-	show_timer_split = true;
-	show_round_split = true;
-	if ((isDefined(level.FRFIX_TIMER_ENABLED) && level.FRFIX_TIMER_ENABLED) || (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA))
-	{
-		show_timer_split = false;
-		basegt_hud destroy();
-	}
-	if ((isDefined(level.FRFIX_ROUND_ENABLED) && level.FRFIX_ROUND_ENABLED) || (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA))
-	{
-		show_round_split = false;
-		basert_hud destroy();
-	}
-
-	while (true)
-	{
-		level waittill("start_of_round");
-
-		level waittill("end_of_round");
-
-		if (isDefined(basegt_hud) && level.players.size > 1)
-			basegt_hud.label = &"LOBBY: ";
-
-		gt_freeze = int(getTime() / 1000) - level.FRFIX_START;
-		rt_freeze = int(getTime() / 1000) - level.round_start;
-
-		// Show timers at the end of the round if they're not enabled
-		if (isDefined(basegt_hud) && show_timer_split)
-		{
-			basegt_hud setTimer(gt_freeze);
-			basegt_hud fadeOverTime(0.1);
-			basegt_hud.alpha = 1;
-		}
-		if (isDefined(basert_hud) && show_round_split)
-		{
-			basert_hud setTimer(rt_freeze);
-			basert_hud fadeOverTime(0.1);
-			basert_hud.alpha = 1;
-		}
-
-		// Log times to console
-		InfoPrint("Time at the end of round " + (level.round_number - 1) + ": " + ConvertTime(gt_freeze));
-		InfoPrint("Round " + (level.round_number - 1) + " time: " + ConvertTime(rt_freeze));
-
-		// Update HUD elements
-		if (isDefined(basegt_hud))
-			self thread DisplaySplit(basegt_hud, gt_freeze);
-		if (isDefined(basert_hud))
-			self thread DisplaySplit(basert_hud, rt_freeze);
-	}
-}
-
-PrintOnGameEnd()
-{
-	end_hud = createserverfontstring("hudsmall" , 1.4);
-	[[level.hudpos_ongame_end]](end_hud);
-	end_hud.alpha = 0;
-
-	gt = ConvertTime(int(getTime() / 1000) - level.FRFIX_START);
-	rt = ConvertTime(int(getTime() / 1000) - level.round_start);
-
-	end_hud setText("GAMETIME: " + gt + " / TIME INTO THE ROUND: " + rt);
-	if ((isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA))
-	{
-		end_hud fadeOverTime(0.25);
-		end_hud.alpha = 1;
-	}
-}
-
-GlobalRoundStart()
-{
-	level endon("end_game");
-
-	level.round_start = level.FRFIX_START;
-
-	while (true)
-	{
-		level waittill("start_of_round");
-		level.round_start = int(getTime() / 1000);
-	}
-}
-
 TimerHud()
 {
     level endon("end_game");
 
-	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
-		return;
+    timer_hud = createserverfontstring("hudsmall" , 1.5);
+	[[level.hudpos_timer_game]](timer_hud);
+	timer_hud.color = level.FRFIX_HUD_COLOR;
+	timer_hud.alpha = 0;
+	timer_hud.hidewheninmenu = 1;
 
-	if (!isdefined(level.FRFIX_TIMER_ENABLED) || !level.FRFIX_TIMER_ENABLED)
-		return;
+	level.FRFIX_START = int(getTime() / 1000);
+	flag_set("game_started");
 
-    level.timer_hud = createserverfontstring("hudsmall" , 1.5);
-	[[level.hudpos_timer_game]](level.timer_hud);
-	level.timer_hud.color = level.FRFIX_HUD_COLOR;
-	level.timer_hud.alpha = 0;
-	level.timer_hud.hidewheninmenu = 1;
+	skip_split = false;
+	label_time_set = false;
 
-	level.timer_hud setTimerUp(0);
-	level.timer_hud.alpha = 1;
+	if (!IsVanilla() && isdefined(level.FRFIX_TIMER_ENABLED) && level.FRFIX_TIMER_ENABLED)
+	{
+		timer_hud setTimerUp(0);
+		timer_hud.alpha = 1;
+		skip_split = true;
+	}
+	else if (!IsVanilla())
+	{
+		timer_hud.label = "TIME: ";
+		label_time_set = true;
+	}
+
+	while (true)
+	{
+		level waittill("end_of_round");
+		split_time = int(GetTime() / 1000) - level.FRFIX_START;
+		InfoPrint("Time at the end of round " + (level.round_number - 1) + ": " + ConvertTime(split_time));
+
+		if (IsVanilla() || skip_split)
+			continue;
+
+		if (level.players.size > 1 && label_time_set)
+		{
+			timer_hud.label = "LOBBY: ";
+			label_time_set = false;
+		}
+
+		timer_hud fadeOverTime(0.25);
+		timer_hud.alpha = 1;
+
+		for (ticks = 0; ticks < 20; ticks++)
+		{
+			timer_hud setTimer(split_time - 0.1);
+			wait 0.25;
+		}
+
+		timer_hud fadeOverTime(0.25);
+		timer_hud.alpha = 0;
+	}
 }
 
 RoundTimerHud()
 {
     level endon("end_game");
 
-	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
-		return;
-
-	if (!isdefined(level.FRFIX_ROUND_ENABLED) || !level.FRFIX_ROUND_ENABLED)
-		return;
-
-	level.round_hud = createserverfontstring("hudsmall" , 1.5);
-	[[level.hudpos_timer_round]](level.round_hud);
-	level.round_hud.color = level.FRFIX_HUD_COLOR;
-	level.round_hud.alpha = 0;
-	level.round_hud.hidewheninmenu = 1;
+	round_hud = createserverfontstring("hudsmall" , 1.5);
+	[[level.hudpos_timer_round]](round_hud);
+	round_hud.color = level.FRFIX_HUD_COLOR;
+	round_hud.alpha = 0;
+	round_hud.hidewheninmenu = 1;
 
 	while (true)
 	{
 		level waittill("start_of_round");
-		level.round_hud setTimerUp(0);
 
-		level.round_hud FadeOverTime(0.25);
-		level.round_hud.alpha = 1;
+		round_start = int(getTime() / 1000);
+
+		if (!IsVanilla() && isdefined(level.FRFIX_ROUND_ENABLED) && level.FRFIX_ROUND_ENABLED)
+		{
+			round_hud setTimerUp(0);
+			round_hud FadeOverTime(0.25);
+			round_hud.alpha = 1;
+		}
 
 		level waittill("end_of_round");
-		round_end = int(getTime() / 1000);
-		round_time = round_end - level.round_start;
+
+		round_end = int(getTime() / 1000) - round_start;
+		InfoPrint("Round " + (level.round_number - 1) + " time: " + ConvertTime(round_end));
+
+		if (IsVanilla())
+			continue;
+
+		if (!round_hud.alpha)
+		{
+			round_hud FadeOverTime(0.25);
+			round_hud.alpha = 1;
+		}
 
 		for (ticks = 0; ticks < 20; ticks++)
 		{
-			level.round_hud setTimer(round_time - 0.1);
+			round_hud setTimer(round_end - 0.1);
 			wait 0.25;
 		}
-		level.round_hud FadeOverTime(0.25);
-		level.round_hud.alpha = 0;
+
+		round_hud FadeOverTime(0.25);
+		round_hud.alpha = 0;
 	}
 }
 
 SplitsTimerHud()
 {
 	level endon("end_game");
-
-	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
-		return;
 
     splits_hud = createserverfontstring("hudsmall" , 1.4);
 	[[level.hudpos_splits]](splits_hud);
@@ -793,8 +737,11 @@ SplitsTimerHud()
 
 		if (IsRound(15) && (!level.round_number % 5))
 		{
-			time = int(getTime() / 1000);
-			timestamp = ConvertTime(time - level.FRFIX_START);
+			timestamp = ConvertTime(int(getTime() / 1000) - level.FRFIX_START);
+			InfoPrint("Split: Round " + (level.round_number - 1) + ": " + timestamp);
+
+			if (IsVanilla())
+				continue;
 
 			splits_hud setText("" + level.round_number + " TIME: " + timestamp);
 			splits_hud fadeOverTime(0.25);
