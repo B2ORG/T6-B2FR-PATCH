@@ -34,12 +34,13 @@ init()
 	flag_init("game_started");
 	flag_init("box_rigged");
 	flag_init("break_firstbox");
+	flag_init("permaperks_states_read");
 
 	// Patch Config
 	level.FRFIX_ACTIVE = true;
 	level.FRFIX_VER = 5.6;
-	level.FRFIX_BETA = "";
-	level.FRFIX_DEBUG = false;
+	level.FRFIX_BETA = "BETA";
+	level.FRFIX_DEBUG = true;
 	level.FRFIX_VANILLA = false;
 
 	level thread SetDvars();
@@ -1228,7 +1229,8 @@ PermaPerksSetup()
 	if (!maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active())
 		return;
 
-	ReplacePointers();
+	DebugPrint("Entered PermaPerksSetup");
+	// ReplacePointers();
 
 	if (!flag("initial_blackscreen_passed"))
 		flag_wait("initial_blackscreen_passed");
@@ -1240,30 +1242,30 @@ PermaPerksSetup()
 	}
 }
 
-ReplacePointers()
-{
-	while (!isDefined(level.pers_upgrades))
-		wait 0.05;
+// ReplacePointers()
+// {
+// 	while (!isDefined(level.pers_upgrades))
+// 		wait 0.05;
 
-	foreach(perk in level.pers_upgrades_keys)
-	{
-		if (perk == "board")
-			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideBoards;
-		else if (perk == "revive")
-			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideRevive;
-		else if (perk == "multikill_headshots")
-			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideHeadshot;
-		else if (perk == "jugg")
-			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideJugg;
-		else if (perk == "nube")
-			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideNube;
-		else if (perk == "perk_lose")
-			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideTombstone;
-		else if (perk == "flopper")
-			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideFlopper;
-	}
-	return;
-}
+// 	foreach(perk in level.pers_upgrades_keys)
+// 	{
+// 		if (perk == "board")
+// 			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideBoards;
+// 		else if (perk == "revive")
+// 			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideRevive;
+// 		else if (perk == "multikill_headshots")
+// 			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideHeadshot;
+// 		else if (perk == "jugg")
+// 			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideJugg;
+// 		else if (perk == "nube")
+// 			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideNube;
+// 		else if (perk == "perk_lose")
+// 			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideTombstone;
+// 		else if (perk == "flopper")
+// 			level.pers_upgrades[perk].upgrade_active_func = ::PermaOverrideFlopper;
+// 	}
+// 	return;
+// }
 
 StopPermaPerksSystem()
 {
@@ -1288,21 +1290,56 @@ WatchForNewPlayers()
 
 	// Give perma perks to everyone who is connected at this point
 	foreach(player in level.players)
+	{
+		player thread PermaWatcher();
 		player thread AwardPermaPerks();
+	}
 
 	// And wait for new players
 	while (true)
 	{
 		level waittill("connected", player);
 
+		player thread PermaWatcher();
 		player thread AwardPermaPerks();
+	}
+}
+
+PermaWatcher()
+{
+	level endon("end_game");
+	self endon("disconnect");
+
+	self.last_perk_state = array();
+
+	while (!isDefined(self.pers_upgrades_awarded))
+		wait 0.05;
+
+	foreach(perk in level.pers_upgrades_keys)
+		self.last_perk_state[perk] = self.perks_upgrades_awarded[perk];
+
+	flag_set("permaperks_states_read");
+
+	while (true)
+	{
+		foreach(perk in level.pers_upgrades_keys)
+		{
+			DebugPrint("last_state: " + self.last_perk_state[perk] + " / current_state: " + self.pers_upgrades_awarded[perk]);
+			if (self.pers_upgrades_awarded[perk] != self.last_perk_state[perk])
+			{
+				self DebugPrintPermaPerk(self.pers_upgrades_awarded[perk], perk);
+				self.last_perk_state[perk] = self.pers_upgrades_awarded[perk];
+				wait 0.1;
+			}
+		}
+
+		wait 0.1;
 	}
 }
 
 AwardPermaPerks()
 {
 	level endon("end_game");
-
 	self endon("disconnect");
 
 	while (!isalive(self))
@@ -1311,6 +1348,7 @@ AwardPermaPerks()
 	wait 0.5;
 
 	perks_to_award = array("revive", "multikill_headshots", "perk_lose", "board");
+	perks_to_override = array("board", "nube");
 
 	if (!IsRound(15))
 		perks_to_award[perks_to_award.size] = "jugg";
@@ -1321,190 +1359,205 @@ AwardPermaPerks()
 	if (!IsDieRise() && !IsRound(10))
 		perks_to_award[perks_to_award.size] = "nube";
 
+	flag_wait("permaperks_states_read");
+
 	// Set permaperks
 	foreach(perk in perks_to_award)
 	{
 		for (j = 0; j < level.pers_upgrades[perk].stat_names.size; j++)
 		{
-			// Award permaperks by assigning desired values
 			stat_name = level.pers_upgrades[perk].stat_names[j];
-			self set_global_stat(stat_name, level.pers_upgrades[perk].stat_desired_values[j]);
-			self.stats_this_frame[stat_name] = 1;
+			stat_value = level.pers_upgrades[perk].stat_desired_values[j];
 
-			InfoPrint("Value " + level.pers_upgrades[perk].stat_desired_values[j] + " set to stat " + stat_name + " for " + self.name);
+			is_perk_override = false;
+			if (isinarray(perks_to_override, perk))
+				is_perk_override = true;
 
+			self AwardPermaPerk(stat_name, perk, stat_value, is_perk_override);
 			wait_network_frame();
 		}
 	}
 }
 
-
-PermaOverrideBoards()
+AwardPermaPerk(stat_name, perk_name, stat_value, override)
 {
-    self endon( "disconnect" );
+	if (override)
+	{
+		self.pers_upgrades_awarded[perk_name] = 1;
+		InfoPrint("Perk Activation for " + self.name + ": " + perk_name + " with method override");
+	}
+	else
+	{
+		self set_global_stat(stat_name, stat_value);
+		self.stats_this_frame[stat_name] = 1;
+		InfoPrint("Perk Activation for " + self.name + ": " + perk_name + " with method conditions. " + stat_value + " set to: " + stat_value);
+	}
 
-	DebugPrintPermaPerk(true, "Boarding");
-
-    for ( last_round_number = level.round_number; 1; last_round_number = level.round_number )
-    {
-        self waittill( "pers_stats_end_of_round" );
-
-        if ( level.round_number >= last_round_number )
-        {
-            if ( maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active() )
-            {
-                if ( self.rebuild_barrier_reward == 0 )
-                {
-                    self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_boarding", 0 );
-
-					DebugPrintPermaPerk(false, "Boarding");
-                    return;
-                }
-            }
-        }
-    }
 }
 
-PermaOverrideRevive()
-{
-    self endon( "disconnect" );
 
-	DebugPrintPermaPerk(true, "Revive");
+// PermaOverrideBoards()
+// {
+//     self endon( "disconnect" );
 
-    while ( true )
-    {
-        self waittill( "player_failed_revive" );
+// 	DebugPrintPermaPerk(true, "Boarding");
 
-        if ( maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active() )
-        {
-            if ( self.failed_revives >= level.pers_revivenoperk_number_of_chances_to_keep )
-            {
-                self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_revivenoperk", 0 );
-                self.failed_revives = 0;
+//     for ( last_round_number = level.round_number; 1; last_round_number = level.round_number )
+//     {
+//         self waittill( "pers_stats_end_of_round" );
 
-				DebugPrintPermaPerk(false, "Revive");
-                return;
-            }
-        }
-    }
-}
+//         if ( level.round_number >= last_round_number )
+//         {
+//             if ( maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active() )
+//             {
+//                 if ( self.rebuild_barrier_reward == 0 )
+//                 {
+// 					DebugPrintPermaPerk(false, "Boarding");
+//                     self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_boarding", 0 );
 
-PermaOverrideHeadshot()
-{
-    self endon( "disconnect" );
+//                     return;
+//                 }
+//             }
+//         }
+//     }
+// }
 
-	DebugPrintPermaPerk(true, "Headshots");
+// PermaOverrideRevive()
+// {
+//     self endon( "disconnect" );
 
-    while ( true )
-    {
-        self waittill( "zombie_death_no_headshot" );
+// 	DebugPrintPermaPerk(true, "Revive");
 
-        if ( maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active() )
-        {
-            self.non_headshot_kill_counter++;
+//     while ( true )
+//     {
+//         self waittill( "player_failed_revive" );
 
-            if ( self.non_headshot_kill_counter >= level.pers_multikill_headshots_upgrade_reset_counter )
-            {
-                self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_multikill_headshots", 0 );
-                self.non_headshot_kill_counter = 0;
+//         if ( maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active() )
+//         {
+//             if ( self.failed_revives >= level.pers_revivenoperk_number_of_chances_to_keep )
+//             {
+//                 self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_revivenoperk", 0 );
+//                 self.failed_revives = 0;
 
-				DebugPrintPermaPerk(false, "Headshots");
-                return;
-            }
-        }
-    }
-}
+// 				DebugPrintPermaPerk(false, "Revive");
+//                 return;
+//             }
+//         }
+//     }
+// }
 
-PermaOverrideJugg()
-{
-    self endon( "disconnect" );
-    wait 1;
+// PermaOverrideHeadshot()
+// {
+//     self endon( "disconnect" );
 
-	DebugPrintPermaPerk(true, "Jugg");
+// 	DebugPrintPermaPerk(true, "Headshots");
 
-    self maps\mp\zombies\_zm_perks::perk_set_max_health_if_jugg( "jugg_upgrade", 1, 0 );
+//     while ( true )
+//     {
+//         self waittill( "zombie_death_no_headshot" );
 
-    while ( true )
-    {
-        level waittill( "start_of_round" );
+//         if ( maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active() )
+//         {
+//             self.non_headshot_kill_counter++;
 
-        if ( maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active() )
-        {
-            if ( level.round_number == level.pers_jugg_round_lose_target )
-            {
-                self maps\mp\zombies\_zm_stats::increment_client_stat( "pers_jugg_downgrade_count", 0 );
-                wait 0.5;
+//             if ( self.non_headshot_kill_counter >= level.pers_multikill_headshots_upgrade_reset_counter )
+//             {
+//                 self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_multikill_headshots", 0 );
+//                 self.non_headshot_kill_counter = 0;
 
-                if ( self.pers["pers_jugg_downgrade_count"] >= level.pers_jugg_round_reached_max )
-                    break;
-            }
-        }
-    }
+// 				DebugPrintPermaPerk(false, "Headshots");
+//                 return;
+//             }
+//         }
+//     }
+// }
 
-	DebugPrintPermaPerk(false, "Jugg");
+// PermaOverrideJugg()
+// {
+//     self endon( "disconnect" );
+//     wait 1;
 
-    self maps\mp\zombies\_zm_perks::perk_set_max_health_if_jugg( "jugg_upgrade", 1, 1 );
+// 	DebugPrintPermaPerk(true, "Jugg");
 
-    self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_jugg", 0 );
-    self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_jugg_downgrade_count", 0 );
-}
+//     self maps\mp\zombies\_zm_perks::perk_set_max_health_if_jugg( "jugg_upgrade", 1, 0 );
 
-PermaOverrideNube()
-{
-    self endon( "disconnect" );
-    wait 0.1;
+//     while ( true )
+//     {
+//         level waittill( "start_of_round" );
 
-	DebugPrintPermaPerk(true, "Nube");
+//         if ( maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active() )
+//         {
+//             if ( level.round_number == level.pers_jugg_round_lose_target )
+//             {
+//                 self maps\mp\zombies\_zm_stats::increment_client_stat( "pers_jugg_downgrade_count", 0 );
+//                 wait 0.5;
 
-    while ( true )
-    {
-        level waittill( "start_of_round" );
+//                 if ( self.pers["pers_jugg_downgrade_count"] >= level.pers_jugg_round_reached_max )
+//                     break;
+//             }
+//         }
+//     }
 
-        if ( maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active() )
-        {
-            if ( level.round_number >= level.pers_nube_lose_round )
-			{
-				DebugPrintPermaPerk(false, "Nube");
-                break;
-			}
-        }
-    }
+// 	DebugPrintPermaPerk(false, "Jugg");
 
-    self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_nube_counter", 0 );
-}
+//     self maps\mp\zombies\_zm_perks::perk_set_max_health_if_jugg( "jugg_upgrade", 1, 1 );
 
-PermaOverrideTombstone()
-{
-    self endon( "disconnect" );
-    wait 0.1;
+//     self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_jugg", 0 );
+//     self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_jugg_downgrade_count", 0 );
+// }
 
-	DebugPrintPermaPerk(true, "Tombstone");
+// PermaOverrideNube()
+// {
+//     self endon( "disconnect" );
+//     wait 0.1;
+
+// 	DebugPrintPermaPerk(true, "Nube");
+
+//     while ( true )
+//     {
+//         level waittill( "start_of_round" );
+
+//         if ( maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active() )
+//         {
+//             if ( level.round_number >= level.pers_nube_lose_round )
+//                 break;
+//         }
+//     }
+
+// 	DebugPrintPermaPerk(false, "Nube");
+//     self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_nube_counter", 0 );
+// }
+
+// PermaOverrideTombstone()
+// {
+//     self endon( "disconnect" );
+//     wait 0.1;
+
+// 	DebugPrintPermaPerk(true, "Tombstone");
 	
-    self.pers_perk_lose_start_round = level.round_number;
+//     self.pers_perk_lose_start_round = level.round_number;
 
-    self waittill( "pers_perk_lose_lost" );
+//     self waittill( "pers_perk_lose_lost" );
 
-	DebugPrintPermaPerk(false, "Tombstone");
+// 	DebugPrintPermaPerk(false, "Tombstone");
+//     self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_perk_lose_counter", 0 );
+// }
 
-    self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_perk_lose_counter", 0 );
-}
+// PermaOverrideFlopper()
+// {
+//     self endon( "disconnect" );
+//     wait 0.1;
 
-PermaOverrideFlopper()
-{
-    self endon( "disconnect" );
-    wait 0.1;
+// 	DebugPrintPermaPerk(true, "Flopper");
 
-	DebugPrintPermaPerk(true, "Flopper");
+//     self thread maps\mp\zombies\_zm_pers_upgrades_functions::pers_upgrade_flopper_watcher();
 
-    self thread maps\mp\zombies\_zm_pers_upgrades_functions::pers_upgrade_flopper_watcher();
+//     self waittill( "pers_flopper_lost" );
 
-    self waittill( "pers_flopper_lost" );
-
-	DebugPrintPermaPerk(false, "Flopper");
-
-    self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_flopper_counter", 0 );
-    self.pers_num_flopper_damages = 0;
-}
+// 	DebugPrintPermaPerk(false, "Flopper");
+//     self maps\mp\zombies\_zm_stats::zero_client_stat( "pers_flopper_counter", 0 );
+//     self.pers_num_flopper_damages = 0;
+// }
 
 OriginsFix()
 {
