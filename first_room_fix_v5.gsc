@@ -25,7 +25,6 @@ main()
 init()
 {
 	flag_init("dvars_set");
-	flag_init("game_paused");
 	flag_init("cheat_printed_backspeed");
 	flag_init("cheat_printed_noprint");
 	flag_init("cheat_printed_cheats");
@@ -65,7 +64,6 @@ OnGameStart()
 	level.FRFIX_FRIDGE = false;
 	level.FRFIX_FIRSTBOX = false;
 	level.FRFIX_PERMAPERKS_TRACKING = true;
-	// level.FRFIX_COOP_PAUSE_ACTIVE = false;
 
 	level thread OnPlayerJoined();
 
@@ -100,7 +98,6 @@ OnGameStart()
 	RoundSafety();
 	DifficultySafety();
 	DebuggerSafety();
-	level thread CoopPause();
 	level thread NukeMannequins();
 
 	level waittill("end_game");
@@ -659,8 +656,8 @@ BasicSplitsHud()
 		if (isDefined(basegt_hud) && level.players.size > 1)
 			basegt_hud.label = &"LOBBY: ";
 
-		gt_freeze = int(getTime() / 1000) - (level.paused_time + level.FRFIX_START);
-		rt_freeze = int(getTime() / 1000) - (level.paused_round + level.round_start);
+		gt_freeze = int(getTime() / 1000) - level.FRFIX_START;
+		rt_freeze = int(getTime() / 1000) - level.round_start;
 
 		// Show timers at the end of the round if they're not enabled
 		if (isDefined(basegt_hud) && show_timer_split)
@@ -694,8 +691,8 @@ PrintOnGameEnd()
 	[[level.hudpos_ongame_end]](end_hud);
 	end_hud.alpha = 0;
 
-	gt = ConvertTime(int(getTime() / 1000) - (level.paused_time + level.FRFIX_START));
-	rt = ConvertTime(int(getTime() / 1000) - (level.paused_round + level.round_start));
+	gt = ConvertTime(int(getTime() / 1000) - level.FRFIX_START);
+	rt = ConvertTime(int(getTime() / 1000) - level.round_start);
 
 	end_hud setText("GAMETIME: " + gt + " / TIME INTO THE ROUND: " + rt);
 	if ((isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA))
@@ -705,118 +702,16 @@ PrintOnGameEnd()
 	}
 }
 
-CoopPause()
-{
-	level endon("end_game");
-
-	level.paused_time = 0.00;
-
-	if (!isDefined(level.FRFIX_COOP_PAUSE_ACTIVE) || !level.FRFIX_COOP_PAUSE_ACTIVE)
-		return;
-
-	// Wait till next round if it's solo
-	while (level.players.size == 1)
-		level waittill ("start_of_round");
-
-	self thread CoopPauseSwitch();
-	// Don't allow pausing on the 1st round of the game regardless what it is (was causing issues)
-	level.last_paused_round = getgametypesetting("startRound");
-	setDvar("paused", 0);
-
-	while(true)
-	{
-		current_zombies = int(maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total);
-
-		current_time = int(getTime() / 1000) - (level.paused_time + level.FRFIX_START);
-		current_round_time = int(getTime() / 1000) - (level.paused_round + level.round_start);
-
-		while(flag("game_paused"))
-		{
-			// Lil inaccuracy occurs here
-			if (isDefined(level.timer_hud))
-				level.timer_hud setTimer(current_time);
-
-			if (isDefined(level.round_hud))
-				level.round_hud setTimer(current_round_time);
-
-			level.paused_time += 0.05;
-			level.paused_round += 0.05;
-			wait 0.05;
-
-			if (current_zombies != int(maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total))
-				UnpauseGame();
-		}
-
-		wait 0.05;
-	}
-}
-
-CoopPauseSwitch()
-{
-	level endon("end_game");
-
-	level waittill("start_of_round");
-
-	while (true)
-	{		
-		while (level.last_paused_round == level.round_number)
-		{
-			level waittill("start_of_round");
-			setDvar("paused", 0);				// To make sure pause doesn't kick in as soon as round starts
-		}
-
-		zombie_count = int(maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total);
-
-		if (zombie_count > 0 && getDvarInt("paused") && !flag("game_paused") && level.players.size > 1)
-			PauseGame();
-		else if ((!getDvarInt("paused") && flag("game_paused")) || (zombie_count <= 0 && flag("game_paused")))
-			UnpauseGame();
-
-		wait 0.05;
-	}
-}
-
-PauseGame()
-{
-	iPrintLn("^2pausing...");
-	flag_set("game_paused");
-	setDvar("paused", 1);
-}
-
-UnpauseGame()
-{
-	iPrintLn("^3unpausing...");
-	flag_clear("game_paused");
-	setDvar("paused", 0);
-	level.last_paused_round = level.round_number;
-
-	reclocked = (int(getTime() / 1000) - (level.paused_time + level.FRFIX_START)) * -1;
-	if (isDefined(level.timer_hud))
-		level.timer_hud setTimerUp(reclocked);
-
-	DebugPrint("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_time = " + level.paused_time + " level.FIFIX_START = " + level.FRFIX_START);
-	DebugPrint("Setting the timer to: " + reclocked + " s");
-
-	rtreclocked = (int(getTime() / 1000) - (level.paused_round + level.round_start)) * -1;
-	if (isDefined(level.round_hud))
-		level.round_hud setTimerUp(rtreclocked);
-
-	DebugPrint("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_round = " + level.paused_round + " level.round_start = " + level.round_start);
-	DebugPrint("Setting the round timer to: " + rtreclocked + " s");
-}
-
 GlobalRoundStart()
 {
 	level endon("end_game");
 
 	level.round_start = level.FRFIX_START;
-	level.paused_round = 0.00;
 
 	while (true)
 	{
 		level waittill("start_of_round");
 		level.round_start = int(getTime() / 1000);
-		level.paused_round = 0.00;
 	}
 }
 
@@ -866,8 +761,7 @@ RoundTimerHud()
 
 		level waittill("end_of_round");
 		round_end = int(getTime() / 1000);
-		// round_start is now calculated globally for the benefit of coop pause func
-		round_time = round_end - (level.paused_round + level.round_start);
+		round_time = round_end - level.round_start;
 
 		for (ticks = 0; ticks < 20; ticks++)
 		{
@@ -900,7 +794,7 @@ SplitsTimerHud()
 		if (IsRound(15) && (!level.round_number % 5))
 		{
 			time = int(getTime() / 1000);
-			timestamp = ConvertTime(time - (level.FRFIX_START + level.paused_time));
+			timestamp = ConvertTime(time - level.FRFIX_START);
 
 			splits_hud setText("" + level.round_number + " TIME: " + timestamp);
 			splits_hud fadeOverTime(0.25);
