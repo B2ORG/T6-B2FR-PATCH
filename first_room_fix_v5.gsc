@@ -1207,7 +1207,7 @@ AwardPermaPerk(stat_name, perk_name, stat_value, override)
 	{
 		self set_global_stat(stat_name, stat_value);
 		self.stats_this_frame[stat_name] = 1;
-		InfoPrint("Perk Activation for " + self.name + ": " + perk_name + " with method conditions. " + stat_value + " set to: " + stat_value);
+		InfoPrint("Perk Activation for " + self.name + ": " + perk_name + " with method conditions. " + stat_name + " set to: " + stat_value);
 	}
 
 }
