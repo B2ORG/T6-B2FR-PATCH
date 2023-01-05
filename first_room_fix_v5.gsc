@@ -584,8 +584,7 @@ PrintNetworkFrame(len)
 	self.network_hud.hidewheninmenu = 1;
     self.network_hud.label = &"NETWORK FRAME: ^2";
 
-	if (!flag("initial_blackscreen_passed"))
-		flag_wait("initial_blackscreen_passed");
+	flag_wait("initial_blackscreen_passed");
 
 	start_time = int(getTime());
 	wait_network_frame();
@@ -1076,8 +1075,7 @@ PermaPerksSetup()
 
 	DebugPrint("Entered PermaPerksSetup");
 
-	if (!flag("initial_blackscreen_passed"))
-		flag_wait("initial_blackscreen_passed");
+	flag_wait("initial_blackscreen_passed");
 
 	if (isdefined(level.FRFIX_PERMAPERKS) && level.FRFIX_PERMAPERKS)
 	{
@@ -1366,8 +1364,7 @@ Fridge(mode)
 	if (!IsTranzit() && !IsDieRise() && !IsBuried())
 		return;
 
-	if (!flag("initial_blackscreen_passed"))
-		flag_wait("initial_blackscreen_passed");
+	flag_wait("initial_blackscreen_passed");
 
 	self.account_value = 250000;
 	if (isDefined(mode) && mode == "tranzitnp")
@@ -1492,8 +1489,7 @@ FirstBox()
 	if (level.start_round > 1 && !IsTown())
 		return;
 
-	if (!flag("initial_blackscreen_passed"))
-		flag_wait("initial_blackscreen_passed");
+	flag_wait("initial_blackscreen_passed");
 
 	iPrintLn("First Box module: ^2AVAILABLE");
 	self thread WatchForFinishFirstBox();
