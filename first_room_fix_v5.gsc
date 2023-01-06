@@ -37,8 +37,8 @@ init()
 	// Patch Config
 	level.FRFIX_ACTIVE = true;
 	level.FRFIX_VER = 5.6;
-	level.FRFIX_BETA = "BETA";
-	level.FRFIX_DEBUG = true;
+	level.FRFIX_BETA = "";
+	level.FRFIX_DEBUG = false;
 	level.FRFIX_VANILLA = false;
 
 	level thread SetDvars();
@@ -55,14 +55,14 @@ OnGameStart()
 	level.FRFIX_ROUND_ENABLED = false;
 	level.FRFIX_HORDES_ENABLED = true;
 	level.FRFIX_PERMAPERKS = true;
+	level.FRFIX_PERMAPERKS_TRACKING = false;
 	level.FRFIX_HUD_COLOR = (0.9, 0.8, 1);
 	level.FRFIX_YELLOWHOUSE = false;
 	level.FRFIX_NUKETOWN_EYES = false;
 	level.FRFIX_ORIGINSFIX = false;
 	level.FRFIX_PRENADES = true;
 	level.FRFIX_FRIDGE = false;
-	level.FRFIX_FIRSTBOX = true;
-	level.FRFIX_PERMAPERKS_TRACKING = true;
+	level.FRFIX_FIRSTBOX = false;
 
 	level thread OnPlayerJoined();
 
