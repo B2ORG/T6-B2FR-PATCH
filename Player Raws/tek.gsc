@@ -39,7 +39,7 @@ init()
 	level.FRFIX_VER = 5.6;
 	level.FRFIX_BETA = "";
 	level.FRFIX_DEBUG = false;
-	level.FRFIX_VANILLA = false;
+	level.FRFIX_VANILLA = true;
 
 	level thread SetDvars();
 	level thread PermaPerksSetup();
@@ -53,14 +53,14 @@ OnGameStart()
 	// Func Config
 	level.FRFIX_TIMER_ENABLED = true;
 	level.FRFIX_ROUND_ENABLED = false;
-	level.FRFIX_HORDES_ENABLED = false;
+	level.FRFIX_HORDES_ENABLED = true;
 	level.FRFIX_PERMAPERKS = true;
 	level.FRFIX_PERMAPERKS_TRACKING = false;
-	level.FRFIX_HUD_COLOR = (0.26, 0.87, 0.94);
+	level.FRFIX_HUD_COLOR = (0.9, 0.8, 1);
 	level.FRFIX_YELLOWHOUSE = false;
 	level.FRFIX_NUKETOWN_EYES = false;
 	level.FRFIX_ORIGINSFIX = true;
-	level.FRFIX_PRENADES = false;
+	level.FRFIX_PRENADES = true;
 	level.FRFIX_FRIDGE = false;
 	level.FRFIX_FIRSTBOX = false;
 

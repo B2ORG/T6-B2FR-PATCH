@@ -25,7 +25,6 @@ main()
 init()
 {
 	flag_init("dvars_set");
-	flag_init("game_paused");
 	flag_init("cheat_printed_backspeed");
 	flag_init("cheat_printed_noprint");
 	flag_init("cheat_printed_cheats");
@@ -37,21 +36,26 @@ init()
 
 	// Patch Config
 	level.FRFIX_ACTIVE = true;
-	level.FRFIX_VER = 5.5;
+	level.FRFIX_VER = 5.6;
 	level.FRFIX_BETA = "";
 	level.FRFIX_DEBUG = false;
+	level.FRFIX_VANILLA = false;
 
 	level thread SetDvars();
+	level thread PermaPerksSetup();
 	level thread OnGameStart();
 }
 
 OnGameStart()
 {
+	level endon("end_game");
+
 	// Func Config
 	level.FRFIX_TIMER_ENABLED = true;
 	level.FRFIX_ROUND_ENABLED = false;
 	level.FRFIX_HORDES_ENABLED = true;
 	level.FRFIX_PERMAPERKS = true;
+	level.FRFIX_PERMAPERKS_TRACKING = true;
 	level.FRFIX_HUD_COLOR = (0.9, 0.8, 1);
 	level.FRFIX_YELLOWHOUSE = true;
 	level.FRFIX_NUKETOWN_EYES = false;
@@ -59,7 +63,6 @@ OnGameStart()
 	level.FRFIX_PRENADES = true;
 	level.FRFIX_FRIDGE = true;
 	level.FRFIX_FIRSTBOX = true;
-	level.FRFIX_COOP_PAUSE_ACTIVE = false;		// Disabled for 5.1 need more testing
 
 	level thread OnPlayerJoined();
 
@@ -72,16 +75,12 @@ OnGameStart()
 	level thread OriginsFix();
 	level thread EyeChange();
 	level thread DebugGamePrints();
+	level thread AnticheatSafety();
 
 	flag_wait("initial_blackscreen_passed");
 
-	level.FRFIX_START = int(getTime() / 1000);
-	flag_set("game_started");
-
 	// HUD
 	GetHudPosition();
-	level thread GlobalRoundStart();
-	level thread BasicSplitsHud();
 	level thread TimerHud();
 	level thread RoundTimerHud();
 	level thread SplitsTimerHud();
@@ -93,7 +92,6 @@ OnGameStart()
 	RoundSafety();
 	DifficultySafety();
 	DebuggerSafety();
-	level thread CoopPause();
 	level thread NukeMannequins();
 
 	level waittill("end_game");
@@ -101,6 +99,8 @@ OnGameStart()
 
 OnPlayerJoined()
 {
+	level endon("end_game");
+
 	for(;;)
 	{
 		level waittill("connected", player);
@@ -110,7 +110,7 @@ OnPlayerJoined()
 
 OnPlayerSpawned()
 {
-    level endon("game_ended");
+	level endon("end_game");
     self endon("disconnect");
 
 	self.initial_spawn = true;
@@ -129,11 +129,7 @@ OnPlayerSpawned()
 			self thread Fridge("tranzitnp");
 			self thread WelcomePrints();
 			self thread PrintNetworkFrame(6);
-			self thread AwardPermaPerks();
 			self thread VelocityMeter();
-
-			if (IfDebug())
-				self.score = 50000;
 		}
 	}
 
@@ -148,6 +144,36 @@ IfDebug()
 	return false;
 }
 
+DebugPrint(text)
+{
+	if (IfDebug())
+		print("DEBUG: " + text);
+	return;
+}
+
+InfoPrint(text)
+{
+	print("INFO: " + text);
+	return;
+}
+
+DebugPrintPermaPerk(enabled, perk)
+{
+	if (enabled)
+	{
+		if (isDefined(level.FRFIX_PERMAPERKS_TRACKING) && level.FRFIX_PERMAPERKS_TRACKING && flag("initial_blackscreen_passed"))
+			self iPrintLn("Permaperk " + perk + " ^2ENABLED");
+		DebugPrint("Permaperks: " + perk + " enabled");
+	}
+	else if (!enabled)
+	{
+		if (isDefined(level.FRFIX_PERMAPERKS_TRACKING) && level.FRFIX_PERMAPERKS_TRACKING)
+			self iPrintLn("Permaperk " + perk + " ^1DISABLED");
+		DebugPrint("Permaperks: " + perk + " disabled");
+	}
+	return;
+}
+
 GenerateWatermark(text, color, alpha_override)
 {
 	y_offset = 12 * level.FRFIX_WATERMARKS.size;
@@ -155,7 +181,7 @@ GenerateWatermark(text, color, alpha_override)
 		color = level.FRFIX_HUD_COLOR;
 
 	if (!isDefined(alpha_override))
-		alpha_override = 0.2;
+		alpha_override = 0.33;
 
     watermark = createserverfontstring("hudsmall" , 1.2);
 	watermark setPoint("CENTER", "TOP", 0, y_offset - 10);
@@ -209,6 +235,8 @@ ConvertTime(seconds)
 
 PlayerThreadBlackscreenWaiter()
 {
+	level endon("end_game");
+
     while (!flag("game_started"))
         wait 0.05;
     return;
@@ -282,7 +310,7 @@ DidGameJustStarted()
 	if (!isDefined(level.start_round))
 		return true;
 
-	if (IsRound(level.start_round) || IsRound(level.start_round + 1))
+	if (!IsRound(level.start_round + 2))
 		return true;
 
 	return false;
@@ -295,10 +323,16 @@ IsRound(rnd)
 	else
 		is_rnd = false;
 	
-	// if (IfDebug())
-	// 	print("DEBUG: if " + rnd + " <= " + level.round_number +": " + is_rnd);
+	// DebugPrint("if " + rnd + " <= " + level.round_number +": " + is_rnd)
 
 	return is_rnd;
+}
+
+IsVanilla()
+{
+	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+		return true;
+	return false;
 }
 
 // Functions
@@ -323,12 +357,14 @@ GenerateCheat()
 	level.cheat_hud setText("Alright there fuckaroo, quit this cheated sheit and touch grass loser.");
 	level.cheat_hud.alpha = 1;
 	level.cheat_hud.hidewheninmenu = 0;
+
+	level notify("cheat_generated");
+
 	return;
 }
 
 DebugGamePrints()
 {
-	self endon("disconnect");
 	level endon("end_game");
 
 	self thread PowerupOddsWatcher();
@@ -336,27 +372,25 @@ DebugGamePrints()
 	while (true)
 	{
 		level waittill("start_of_round");
-		print("DEBUG: ROUND: " + level.round_number + " level.powerup_drop_count = " + level.powerup_drop_count + " | Should be 0");
-		print("DEBUG: ROUND: " + level.round_number + " size of level.zombie_powerup_array = " + level.zombie_powerup_array.size + " | Should be above 0");
+		InfoPrint("ROUND: " + level.round_number + " level.powerup_drop_count = " + level.powerup_drop_count + " | Should be 0");
+		InfoPrint("ROUND: " + level.round_number + " size of level.zombie_powerup_array = " + level.zombie_powerup_array.size + " | Should be above 0");
 	}
 }
 
 PowerupOddsWatcher()
 {
+	level endon("end_game");
+
 	while (true)
 	{
 		level waittill("powerup_check", chance);
-		print("DEBUG: rand_drop = " + chance);
+		InfoPrint("rand_drop = " + chance);
 	}
 }
 
 SetDvars()
 {
 	level endon("end_game");
-
-	setDvar("fbgun", "select a gun");
-	if (!getDvarFloat("velocity_size"))
-		setDvar("velocity_size", 1.2);
 
 	if (IsMob())
 		level.custom_velocity_behaviour = ::HideInAfterlife;
@@ -387,6 +421,8 @@ SetDvars()
 
 DvarDetector() 
 {
+	level endon("end_game");
+
 	while (true) 
 	{
 		// Waiting on top so it doesn't trigger before initial dvars are set
@@ -496,7 +532,7 @@ HudPosOngameEnd(hudelem)
 
 HudPosSplits(hudelem)
 {
-	hudelem setpoint ("CENTER", "TOP", 0, 0);
+	hudelem setpoint ("CENTER", "TOP", 0, 30);
 }
 
 HudPosZombies(hudelem)
@@ -514,8 +550,30 @@ HudPosSemtexChart(hudelem)
 	hudelem setpoint ("CENTER", "BOTTOM", 0, -95);
 }
 
+DisplaySplit(hudelem, time, length)
+{
+	level endon("end_game");
+
+	display_time = 20;
+	if (isDefined(length))
+		display_time = int(length / 4);
+
+	for (ticks = 0; ticks < display_time; ticks++)
+	{
+		hudelem setTimer(time - 0.1);
+		wait 0.25;
+	}
+	hudelem fadeOverTime(0.25);
+	hudelem.alpha = 0;
+
+	return;
+}
+
 PrintNetworkFrame(len)
 {
+	level endon("end_game");
+	self endon("disconnect");
+
     PlayerThreadBlackscreenWaiter();
 
     self.network_hud = createfontstring("hudsmall" , 1.9);
@@ -525,8 +583,7 @@ PrintNetworkFrame(len)
 	self.network_hud.hidewheninmenu = 1;
     self.network_hud.label = &"NETWORK FRAME: ^2";
 
-	if (!flag("initial_blackscreen_passed"))
-		flag_wait("initial_blackscreen_passed");
+	flag_wait("initial_blackscreen_passed");
 
 	start_time = int(getTime());
 	wait_network_frame();
@@ -556,266 +613,116 @@ PrintNetworkFrame(len)
 	self.network_hud destroy();
 }
 
-BasicSplitsHud()
-{
-    self endon("disconnect");
-    level endon("end_game");
-
-	basegt_hud = createserverfontstring("hudsmall" , 1.5);
-	[[level.hudpos_timer_game]](basegt_hud);
-	basegt_hud.color = level.FRFIX_HUD_COLOR;
-	basegt_hud.alpha = 0;
-	basegt_hud.hidewheninmenu = 1;
-	basegt_hud.label = &"GAME: ";
-
-	basert_hud = createserverfontstring("hudsmall" , 1.5);
-	[[level.hudpos_timer_round]](basert_hud);
-	basert_hud.color = level.FRFIX_HUD_COLOR;
-	basert_hud.alpha = 0;
-	basert_hud.hidewheninmenu = 1;
-	basert_hud.label = &"ROUND: ";
-
-	if (!isdefined(level.FRFIX_TIMER_ENABLED) || !level.FRFIX_TIMER_ENABLED)
-		level.custom_end_screen = ::PrintOnGameEnd;
-
-	while (true)
-	{
-		level waittill("start_of_round");
-
-		level waittill("end_of_round");
-
-		if (level.players.size > 1)
-			basegt_hud.label = &"LOBBY: ";
-
-		if (!isdefined(level.FRFIX_TIMER_ENABLED) || !level.FRFIX_TIMER_ENABLED)
-		{
-			basegt_hud fadeOverTime(0.1);
-			basegt_hud.alpha = 1;
-		}
-		if (!isdefined(level.FRFIX_ROUND_ENABLED) || !level.FRFIX_ROUND_ENABLED)
-		{
-			basert_hud fadeOverTime(0.1);
-			basert_hud.alpha = 1;
-		}
-
-		if (basegt_hud.alpha == 0 && basert_hud.alpha == 0)
-		{
-			basegt_hud destroy();
-			basert_hud destroy();
-			break;
-		}
-
-		gt_freeze = int(getTime() / 1000) - (level.paused_time + level.FRFIX_START);
-		rt_freeze = int(getTime() / 1000) - (level.paused_round + level.round_start);
-
-		basegt_hud setTimer(gt_freeze);
-		basert_hud setTimer(rt_freeze);
-
-		for (ticks = 0; ticks < 100; ticks++)
-		{
-			basegt_hud setTimer(gt_freeze);
-			basert_hud setTimer(rt_freeze);
-			wait 0.05;
-		}
-		basegt_hud fadeOverTime(0.1);
-		basert_hud fadeOverTime(0.1);
-		basegt_hud.alpha = 0;
-		basert_hud.alpha = 0;
-	}
-
-	return;
-}
-
-PrintOnGameEnd()
-{
-	end_hud = createserverfontstring("hudsmall" , 1.4);
-	[[level.hudpos_ongame_end]](end_hud);
-	end_hud.alpha = 0;
-
-	gt = ConvertTime(int(getTime() / 1000) - (level.paused_time + level.FRFIX_START));
-	rt = ConvertTime(int(getTime() / 1000) - (level.paused_round + level.round_start));
-
-	end_hud setText("GAMETIME: " + gt + " / TIME INTO THE ROUND: " + rt);
-	end_hud fadeOverTime(0.25);
-	end_hud.alpha = 1;
-}
-
-CoopPause()
-{
-	self endon("disconnect");
-	level endon("end_game");
-
-	level.paused_time = 0.00;
-
-	if (!isDefined(level.FRFIX_COOP_PAUSE_ACTIVE) || !level.FRFIX_COOP_PAUSE_ACTIVE)
-		return;
-
-	// Wait till next round if it's solo
-	while (level.players.size == 1)
-		level waittill ("start_of_round");
-
-	self thread CoopPauseSwitch();
-	// Don't allow pausing on the 1st round of the game regardless what it is (was causing issues)
-	level.last_paused_round = getgametypesetting("startRound");
-	setDvar("paused", 0);
-
-	while(true)
-	{
-		current_zombies = int(maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total);
-
-		current_time = int(getTime() / 1000) - (level.paused_time + level.FRFIX_START);
-		current_round_time = int(getTime() / 1000) - (level.paused_round + level.round_start);
-
-		while(flag("game_paused"))
-		{
-			// Lil inaccuracy occurs here
-			if (isDefined(level.timer_hud))
-				level.timer_hud setTimer(current_time);
-
-			if (isDefined(level.round_hud))
-				level.round_hud setTimer(current_round_time);
-
-			level.paused_time += 0.05;
-			level.paused_round += 0.05;
-			wait 0.05;
-
-			if (current_zombies != int(maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total))
-				UnpauseGame();
-		}
-
-		wait 0.05;
-	}
-}
-
-CoopPauseSwitch()
-{
-	level waittill("start_of_round");
-
-	while (true)
-	{		
-		while (level.last_paused_round == level.round_number)
-		{
-			level waittill("start_of_round");
-			setDvar("paused", 0);				// To make sure pause doesn't kick in as soon as round starts
-		}
-
-		zombie_count = int(maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total);
-
-		if (zombie_count > 0 && getDvarInt("paused") && !flag("game_paused") && level.players.size > 1)
-			PauseGame();
-		else if ((!getDvarInt("paused") && flag("game_paused")) || (zombie_count <= 0 && flag("game_paused")))
-			UnpauseGame();
-
-		wait 0.05;
-	}
-}
-
-PauseGame()
-{
-	iPrintLn("^2pausing...");
-	flag_set("game_paused");
-	setDvar("paused", 1);
-}
-
-UnpauseGame()
-{
-	iPrintLn("^3unpausing...");
-	flag_clear("game_paused");
-	setDvar("paused", 0);
-	level.last_paused_round = level.round_number;
-
-	reclocked = (int(getTime() / 1000) - (level.paused_time + level.FRFIX_START)) * -1;
-	if (isDefined(level.timer_hud))
-		level.timer_hud setTimerUp(reclocked);
-
-	if (IfDebug())
-	{
-		print("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_time = " + level.paused_time + " level.FIFIX_START = " + level.FRFIX_START);
-		print("Setting the timer to: " + reclocked + " s");
-	}
-
-	rtreclocked = (int(getTime() / 1000) - (level.paused_round + level.round_start)) * -1;
-	if (isDefined(level.round_hud))
-		level.round_hud setTimerUp(rtreclocked);
-
-	if (IfDebug())
-	{
-		print("reclocked consists of: getTime() = " + int(getTime() / 1000) + " level.paused_round = " + level.paused_round + " level.round_start = " + level.round_start);
-		print("Setting the round timer to: " + rtreclocked + " s");
-	}
-}
-
-GlobalRoundStart()
-{
-	level.round_start = level.FRFIX_START;
-	level.paused_round = 0.00;
-
-	while (true)
-	{
-		level waittill("start_of_round");
-		level.round_start = int(getTime() / 1000);
-		level.paused_round = 0.00;
-	}
-}
-
 TimerHud()
 {
-    self endon("disconnect");
     level endon("end_game");
 
-	if (!isdefined(level.FRFIX_TIMER_ENABLED) || !level.FRFIX_TIMER_ENABLED)
-		return;
+    timer_hud = createserverfontstring("hudsmall" , 1.5);
+	[[level.hudpos_timer_game]](timer_hud);
+	timer_hud.color = level.FRFIX_HUD_COLOR;
+	timer_hud.alpha = 0;
+	timer_hud.hidewheninmenu = 1;
 
-    level.timer_hud = createserverfontstring("hudsmall" , 1.5);
-	[[level.hudpos_timer_game]](level.timer_hud);
-	level.timer_hud.color = level.FRFIX_HUD_COLOR;
-	level.timer_hud.alpha = 0;
-	level.timer_hud.hidewheninmenu = 1;
+	level.FRFIX_START = int(getTime() / 1000);
+	flag_set("game_started");
 
-	level.timer_hud setTimerUp(0);
-	level.timer_hud.alpha = 1;
+	skip_split = false;
+	label_time_set = false;
+
+	if (!IsVanilla() && isdefined(level.FRFIX_TIMER_ENABLED) && level.FRFIX_TIMER_ENABLED)
+	{
+		timer_hud setTimerUp(0);
+		timer_hud.alpha = 1;
+		skip_split = true;
+	}
+	else if (!IsVanilla())
+	{
+		timer_hud.label = "TIME: ";
+		label_time_set = true;
+	}
+
+	while (true)
+	{
+		level waittill("end_of_round");
+		split_time = int(GetTime() / 1000) - level.FRFIX_START;
+		InfoPrint("Time at the end of round " + (level.round_number - 1) + ": " + ConvertTime(split_time));
+
+		if (IsVanilla() || skip_split)
+			continue;
+
+		if (level.players.size > 1 && label_time_set)
+		{
+			timer_hud.label = "LOBBY: ";
+			label_time_set = false;
+		}
+
+		timer_hud fadeOverTime(0.25);
+		timer_hud.alpha = 1;
+
+		for (ticks = 0; ticks < 20; ticks++)
+		{
+			timer_hud setTimer(split_time - 0.1);
+			wait 0.25;
+		}
+
+		timer_hud fadeOverTime(0.25);
+		timer_hud.alpha = 0;
+	}
 }
 
 RoundTimerHud()
 {
-    self endon("disconnect");
     level endon("end_game");
 
-	if (!isdefined(level.FRFIX_ROUND_ENABLED) || !level.FRFIX_ROUND_ENABLED)
-		return;
-
-	level.round_hud = createserverfontstring("hudsmall" , 1.5);
-	[[level.hudpos_timer_round]](level.round_hud);
-	level.round_hud.color = level.FRFIX_HUD_COLOR;
-	level.round_hud.alpha = 0;
-	level.round_hud.hidewheninmenu = 1;
+	round_hud = createserverfontstring("hudsmall" , 1.5);
+	[[level.hudpos_timer_round]](round_hud);
+	round_hud.color = level.FRFIX_HUD_COLOR;
+	round_hud.alpha = 0;
+	round_hud.hidewheninmenu = 1;
 
 	while (true)
 	{
 		level waittill("start_of_round");
-		level.round_hud setTimerUp(0);
 
-		level.round_hud FadeOverTime(0.25);
-		level.round_hud.alpha = 1;
+		round_start = int(getTime() / 1000);
+
+		if (!IsVanilla() && isdefined(level.FRFIX_ROUND_ENABLED) && level.FRFIX_ROUND_ENABLED)
+		{
+			round_hud setTimerUp(0);
+			round_hud FadeOverTime(0.25);
+			round_hud.alpha = 1;
+		}
 
 		level waittill("end_of_round");
-		round_end = int(getTime() / 1000);
-		// round_start is now calculated globally for the benefit of coop pause func
-		round_time = round_end - (level.paused_round + level.round_start);
+
+		round_end = int(getTime() / 1000) - round_start;
+		InfoPrint("Round " + (level.round_number - 1) + " time: " + ConvertTime(round_end));
+
+		if (IsVanilla())
+			continue;
+
+		if (!round_hud.alpha)
+		{
+			round_hud FadeOverTime(0.25);
+			round_hud.alpha = 1;
+		}
 
 		for (ticks = 0; ticks < 20; ticks++)
 		{
-			level.round_hud setTimer(round_time - 0.1);
+			round_hud setTimer(round_end - 0.1);
 			wait 0.25;
 		}
-		level.round_hud FadeOverTime(0.25);
-		level.round_hud.alpha = 0;
+
+		round_hud FadeOverTime(0.25);
+		round_hud.alpha = 0;
 	}
 }
 
 SplitsTimerHud()
 {
-    splits_hud = createserverfontstring("hudsmall" , 1.4);
+	level endon("end_game");
+
+    splits_hud = createserverfontstring("hudsmall" , 1.3);
 	[[level.hudpos_splits]](splits_hud);
 	splits_hud.color = level.FRFIX_HUD_COLOR;
 	splits_hud.alpha = 0;
@@ -826,10 +733,13 @@ SplitsTimerHud()
 		level waittill("end_of_round");
 		wait 8.5;	// Perfect round transition
 
-		if (IsRound(15) && (!level.round_number % 5))
+		if (IsRound(15) && !(level.round_number % 5))
 		{
-			time = int(getTime() / 1000);
-			timestamp = ConvertTime(time - (level.FRFIX_START + level.paused_time));
+			timestamp = ConvertTime(int(getTime() / 1000) - level.FRFIX_START);
+			InfoPrint("Split: Round " + (level.round_number - 1) + ": " + timestamp);
+
+			if (IsVanilla())
+				continue;
 
 			splits_hud setText("" + level.round_number + " TIME: " + timestamp);
 			splits_hud fadeOverTime(0.25);
@@ -844,6 +754,11 @@ SplitsTimerHud()
 
 ZombiesHud()
 {
+	level endon("end_game");
+
+	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+		return;
+
 	if (!isdefined(level.FRFIX_HORDES_ENABLED) || !level.FRFIX_HORDES_ENABLED)
 		return;
 
@@ -882,8 +797,10 @@ VelocityMeter()
     self endon("disconnect");
     level endon("end_game");
 
+	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+		return;
+
     PlayerThreadBlackscreenWaiter();
-	vel_size = 0;
 
     self.hud_velocity = createfontstring("hudsmall" , 1.2);
 	[[level.hudpos_velocity]](self.hud_velocity);
@@ -891,6 +808,8 @@ VelocityMeter()
 	self.hud_velocity.color = level.FRFIX_HUD_COLOR;
 	self.hud_velocity.hidewheninmenu = 1;
     // self.hud_velocity.label = &"Velocity: ";
+
+	self thread VelocityMeterSize(self.hud_velocity);
 
     while (true)
     {
@@ -901,11 +820,6 @@ VelocityMeter()
 		GetVelColorScale(velocity, self.hud_velocity);
         self.hud_velocity setValue(velocity);
 
-		if (vel_size != getDvarFloat("velocity_size"))
-		{
-			vel_size = getDvarFloat("velocity_size");
-			self.hud_velocity.fontscale = vel_size;
-		}
         wait 0.05;
     }
 }
@@ -954,10 +868,37 @@ GetVelColorScale(vel, hud)
 	return;
 }
 
+VelocityMeterSize(hud)
+{
+    self endon("disconnect");
+    level endon("end_game");
+
+	while (true)
+	{
+		level waittill("say", message, player, ishidden);
+
+		if (isSubStr(message, "vel") && player.name == self.name)
+		{
+			new_size = string_to_float(getSubStr(message, 4));
+
+			// Fontscale does not accept values outside that range
+			if (new_size < 1 || new_size > 4)
+				continue;
+
+			DebugPrint("Velocity: Current size: " + hud.fontscale + " / New size: " + new_size + " detected for player " + self.name);
+
+			hud.fontscale = new_size;
+		}
+	}
+}
+
 SemtexChart()
 {
-	self endon("disconnect");
+	// self endon("disconnect");
 	level endon("end_game");
+
+	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+		return;
 
 	// Escape if starting round is bigger than 22 since the display is going to be inaccurate
 	if (!isdefined(level.FRFIX_PRENADES) || !level.FRFIX_PRENADES || IsRound(23))
@@ -1002,6 +943,8 @@ SemtexChart()
 
 NukeMannequins()
 {
+	level endon("end_game");
+
 	if (!isdefined(level.FRFIX_YELLOWHOUSE) || !level.FRFIX_YELLOWHOUSE)
 		return;
 
@@ -1118,65 +1061,151 @@ GetPapWeaponReticle ( weapon ) // Override to get rid of rng reticle
 	return self.pack_a_punch_weapon_options[ weapon ];
 }
 
-AwardPermaPerks()
+PermaPerksSetup()
 {
+	level endon("end_game");
+
 	if (!maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active())
 		return;
 
-	if (IsRound(3))		// 2 if ppl don't use minplayers
+	// It tends to crash without this statement lol
+	if (IsMob() || IsOrigins())
 		return;
 
-	if (!isdefined(level.FRFIX_PERMAPERKS) || !level.FRFIX_PERMAPERKS)
-		return;
+	flag_wait("initial_blackscreen_passed");
 
-	if (IsTranzit() || IsDieRise() || IsBuried())
+	if (isdefined(level.FRFIX_PERMAPERKS) && level.FRFIX_PERMAPERKS)
 	{
-		if (!flag("initial_blackscreen_passed"))
-			flag_wait("initial_blackscreen_passed");
-
-		while (!isalive(self))
-			wait 0.05;
-
-		wait 0.5;
-
-		// QR, Deadshot, Tombstone & Boards
-		perks_list = array("revive", "multikill_headshots", "perk_lose", "board");
-
-		// Jugg
-		if (!IsRound(15))
-			perks_list[perks_list.size] = "jugg";
-
-		// Flopper
-		if (IsBuried())
-			perks_list[perks_list.size] = "flopper";
-
-		// RayGun
-		// Handling with array cause it's still subject to change, easier to add stuff to the array later with code if necessary
-		raygun_maps = array("zm_transit", "zm_buried");
-		if (isinarray(raygun_maps, level.script))
-			perks_list[perks_list.size] = "nube";
-
-		// Set permaperks
-		for (i = 0; i < perks_list.size; i++)
+		if (isDefined(level.frfix_metal_boards_func))
 		{
-			name = perks_list[i];
+			InfoPrint("Metal Boards plugin present, if perk is awarded, a restart will be required");
+			[[level.frfix_metal_boards_func]]();
+		}
+		self thread StopPermaPerksSystem();
+		self thread WatchForNewPlayers();
+	}
+}
 
-			for (j = 0; j < level.pers_upgrades[name].stat_names.size; j++)
+StopPermaPerksSystem()
+{
+	level endon("end_game");
+
+	while (DidGameJustStarted())
+		level waittill("end_of_round");
+
+	DebugPrint("Stopping permaperks award");
+	self notify("stop_permaperks_award");
+}
+
+WatchForNewPlayers()
+{
+	level endon("end_game");
+	self endon("stop_permaperks_award");
+
+	// Give perma perks to everyone who is connected at this point
+	foreach(player in level.players)
+	{
+		player thread PermaWatcher();
+		player thread AwardPermaPerks();
+	}
+
+	// And wait for new players
+	while (true)
+	{
+		level waittill("connected", player);
+
+		player thread PermaWatcher();
+		player thread AwardPermaPerks();
+	}
+}
+
+PermaWatcher()
+{
+	level endon("end_game");
+	self endon("disconnect");
+
+	self waittill("initial_permas_awarded");
+
+	self.last_perk_state = array();
+	foreach(perk in level.pers_upgrades_keys)
+		self.last_perk_state[perk] = self.pers_upgrades_awarded[perk];
+
+	while (true)
+	{
+		foreach(perk in level.pers_upgrades_keys)
+		{
+			if (self.pers_upgrades_awarded[perk] != self.last_perk_state[perk])
 			{
-				stat_name = level.pers_upgrades[name].stat_names[j];
-				self set_global_stat(stat_name, level.pers_upgrades[name].stat_desired_values[j]);
-				self.stats_this_frame[stat_name] = 1;
+				self DebugPrintPermaPerk(self.pers_upgrades_awarded[perk], perk);
+				self.last_perk_state[perk] = self.pers_upgrades_awarded[perk];
+				wait 0.1;
 			}
 		}
 
-		playfx(level._effect["upgrade_aquired"], self.origin);
-		self playsoundtoplayer("evt_player_upgrade", self);
+		wait 0.1;
 	}
+}
+
+AwardPermaPerks()
+{
+	level endon("end_game");
+	self endon("disconnect");
+
+	while (!isalive(self))
+		wait 0.05;
+
+	wait 0.5;
+
+	perks_to_award = array("revive", "multikill_headshots", "perk_lose");
+	perks_to_remove = array();
+
+	if (!IsRound(15))
+		perks_to_award[perks_to_award.size] = "jugg";
+
+	if (IsBuried())
+		perks_to_award[perks_to_award.size] = "flopper";
+	else
+		perks_to_remove[perks_to_remove.size] = "box_weapon";
+
+	if (!IsDieRise() && !IsRound(10))
+		perks_to_award[perks_to_award.size] = "nube";
+	else if (IsDieRise())
+		perks_to_remove[perks_to_remove.size] = "nube";
+
+	// Set permaperks
+	foreach(perk in perks_to_award)
+	{
+		for (j = 0; j < level.pers_upgrades[perk].stat_names.size; j++)
+		{
+			stat_name = level.pers_upgrades[perk].stat_names[j];
+			stat_value = level.pers_upgrades[perk].stat_desired_values[j];
+
+			self AwardPermaPerk(stat_name, perk, stat_value);
+			wait 0.05;
+		}
+	}
+
+	foreach(perk in perks_to_remove)
+	{
+		self.pers_upgrades_awarded[perk] = 0;
+		InfoPrint("Perk Removal for " + self.name + ": " + perk);
+	}
+
+	// uploadstats(self);
+	self notify("initial_permas_awarded");
+}
+
+AwardPermaPerk(stat_name, perk_name, stat_value)
+{
+	self.stats_this_frame[stat_name] = 1;
+	self set_global_stat(stat_name, stat_value);
+	// self.pers_upgrades_awarded[perk_name] = 1;
+	InfoPrint("Perk Activation for " + self.name + ": " + perk_name + " -> " + stat_name + " set to: " + stat_value);
+	return;
 }
 
 OriginsFix()
 {
-    self endon("disconnect");
     level endon("end_game");
 	
 	if (!isdefined(level.FRFIX_ORIGINSFIX) || !level.FRFIX_ORIGINSFIX)
@@ -1216,8 +1245,7 @@ RoundSafety()
 	if (IsTown() || IsFarm() || IsDepot() || IsNuketown())
 		maxround = 10;
 
-	if (IfDebug())
-		print("DEBUG: Starting round detected: " + level.start_round);
+	DebugPrint("Starting round detected: " + level.start_round);
 
 	if (level.start_round <= maxround)
 		return;
@@ -1236,8 +1264,24 @@ DifficultySafety()
 DebuggerSafety()
 {
 	if (IfDebug())
+	{
+		foreach(player in level.players)
+			player.score = 333333;
 		GenerateWatermark("DEBUGGER", (0, 0.8, 0));
+	}
 	return;
+}
+
+AnticheatSafety()
+{
+	level endon("end_game");
+
+	level waittill("cheat_generated");
+	while (isDefined(level.cheat_hud))
+		wait 0.1;
+
+	foreach (player in level.players)
+		player doDamage(player.health + 69, player.origin);
 }
 
 TrackedPowerupDrop( drop_point )
@@ -1312,8 +1356,7 @@ Fridge(mode)
 	if (!IsTranzit() && !IsDieRise() && !IsBuried())
 		return;
 
-	if (!flag("initial_blackscreen_passed"))
-		flag_wait("initial_blackscreen_passed");
+	flag_wait("initial_blackscreen_passed");
 
 	self.account_value = 250000;
 	if (isDefined(mode) && mode == "tranzitnp")
@@ -1338,7 +1381,6 @@ Fridge(mode)
 
 FirstBoxHandler()
 {
-    self endon("disconnect");
     level endon("end_game");
 
 	if (!isDefined(level.enable_magic) || !level.enable_magic)
@@ -1348,12 +1390,13 @@ FirstBoxHandler()
 
     level.is_first_box = false;
 
-	if (IfDebug())
-		self thread PrintInitialBoxSize();
+	// Debug func, doesn't do anything in production
+	self thread PrintInitialBoxSize();
 
+	// Scan weapons in the box
 	self thread ScanInBox();
+	// First Box main loop
 	self thread FirstBox();
-	self thread WatchForDomesticFirstBox();
 
 	while (true)
 	{
@@ -1366,15 +1409,6 @@ FirstBoxHandler()
 	GenerateWatermark("FIRST BOX", (0.8, 0, 0));
 }
 
-WatchForDomesticFirstBox()
-{
-    self endon("disconnect");
-    level endon("end_game");
-
-	self waittill("frfix_boxmodule");
-	level.is_first_box = true;
-}
-
 PrintInitialBoxSize()
 {
 	in_box = 0;
@@ -1384,12 +1418,11 @@ PrintInitialBoxSize()
 		if (maps\mp\zombies\_zm_weapons::get_is_in_box(weapon))
 			in_box++;
 	}
-	print("INFO: Size of initial box weapon list: " + in_box);
+	DebugPrint("Size of initial box weapon list: " + in_box);
 }
 
 ScanInBox()
 {
-    self endon("disconnect");
     level endon("end_game");
 
 	// Only town needed
@@ -1422,8 +1455,7 @@ ScanInBox()
                 in_box++;
         }
 
-		// if (IfDebug())
-        // 	print("in_box: " + in_box + " should: " + should_be_in_box);
+		// DebugPrint("in_box: " + in_box + " should: " + should_be_in_box);
 
         if (in_box == should_be_in_box)
 			continue;
@@ -1440,8 +1472,8 @@ ScanInBox()
 
 FirstBox()
 {	
-    self endon("disconnect");
     level endon("end_game");
+	level endon("break_firstbox");
 
 	if (!isDefined(level.FRFIX_FIRSTBOX) || !level.FRFIX_FIRSTBOX)
 		return;
@@ -1449,42 +1481,31 @@ FirstBox()
 	if (level.start_round > 1 && !IsTown())
 		return;
 
-	if (!flag("initial_blackscreen_passed"))
-		flag_wait("initial_blackscreen_passed");
+	flag_wait("initial_blackscreen_passed");
 
 	iPrintLn("First Box module: ^2AVAILABLE");
 	self thread WatchForFinishFirstBox();
 	self.rigged_hits = 0;
 
-	// First Box module stops after round 10
-	while (!IsRound(11))
+	while (true)
 	{
-		while ((getDvar("fbgun") == "select a gun") && (!flag("break_firstbox")))
+		level waittill("say", message, player, ishidden);
+
+		if (isSubStr(message, "fb"))
+			wpn_key = getSubStr(message, 3);
+		else
+			continue;
+
+		self thread RigBox(wpn_key, player);
+		wait_network_frame();
+
+		while (flag("box_rigged"))
 			wait 0.05;
-
-		// To avoid a iprint about wrong weapon key
-		if (flag("break_firstbox"))
-			break;
-
-		fbgun = getDvar("fbgun");
-		self thread RigBox(fbgun);
-
-		wait 0.05;
-		while ((flag("box_rigged")) && (!flag("break_firstbox")))
-			wait 0.05;
-
-		setDvar("fbgun", "select a gun");
 	}
-
-	iPrintLn("First Box module: ^1DISABLED");
-	if (self.rigged_hits)
-		iPrintLn("First box used: ^3" + self.rigged_hits + " ^7times");
-	return;
 }
 
-RigBox(gun)
+RigBox(gun, player)
 {
-    self endon("disconnect");
     level endon("end_game");
 
 	weapon_key = GetWeaponKey(gun);
@@ -1495,8 +1516,8 @@ RigBox(gun)
 	}
 
 	// weapon_name = level.zombie_weapons[weapon_key].name;
-	iPrintLn("Setting box weapon to: ^3" +  WeaponDisplayWrapper(weapon_key));
-	self notify("frfix_boxmodule");
+	iPrintLn("" + player.name + " set box weapon to: ^3" +  WeaponDisplayWrapper(weapon_key));
+	level.is_first_box = true;
 	self.rigged_hits++;
 
 	saved_check = level.special_weapon_magicbox_check;
@@ -1504,8 +1525,7 @@ RigBox(gun)
 	removed_guns = array();
 
 	flag_set("box_rigged");
-	if (IfDebug())
-		print("DEBUG: FIRST BOX: flag('box_rigged'): " + flag("box_rigged"));
+	DebugPrint("FIRST BOX: flag('box_rigged'): " + flag("box_rigged"));
 
 	level.special_weapon_magicbox_check = undefined;
 	foreach(weapon in getarraykeys(level.zombie_weapons))
@@ -1515,8 +1535,7 @@ RigBox(gun)
 			removed_guns[removed_guns.size] = weapon;
 			level.zombie_weapons[weapon].is_in_box = 0;
 
-			if (IfDebug())
-				print("DEBUG: FIRST BOX: setting " + weapon + ".is_in_box to 0");
+			DebugPrint("FIRST BOX: setting " + weapon + ".is_in_box to 0");
 		}
 	}
 
@@ -1524,8 +1543,7 @@ RigBox(gun)
 	{
 		if (IsRound(11))
 		{
-			if (IfDebug())
-				print("DEBUG: FIRST BOX: breaking out of First Box above round 10");
+			DebugPrint("FIRST BOX: breaking out of First Box above round 10");
 			break;
 		}
 		wait 0.05;
@@ -1535,16 +1553,13 @@ RigBox(gun)
 
 	level.special_weapon_magicbox_check = saved_check;
 
-	if (IfDebug())
-		print("DEBUG: FIRST BOX: removed_guns.size " + removed_guns.size);
+	DebugPrint("FIRST BOX: removed_guns.size " + removed_guns.size);
 	if (removed_guns.size > 0)
 	{
 		foreach(rweapon in removed_guns)
 		{
 			level.zombie_weapons[rweapon].is_in_box = 1;
-
-			if (IfDebug())
-				print("DEBUG: FIRST BOX: setting " + rweapon + ".is_in_box to 1");
+			DebugPrint("FIRST BOX: setting " + rweapon + ".is_in_box to 1");
 		}
 	}
 
@@ -1554,16 +1569,20 @@ RigBox(gun)
 
 WatchForFinishFirstBox()
 {
-    self endon("disconnect");
     level endon("end_game");
 
 	while (!IsRound(11))
 		wait 0.1;
 
+	iPrintLn("First Box module: ^1DISABLED");
+	if (self.rigged_hits)
+		iPrintLn("First box used: ^3" + self.rigged_hits + " ^7times");
+
 	level notify("break_firstbox");
 	flag_set("break_firstbox");
-	if (IfDebug())
-		print("DEBUG: FIRST BOX: notifying module to break");
+	DebugPrint("FIRST BOX: notifying module to break");
+
+	return;
 }
 
 GetWeaponKey(weapon_str)
@@ -1729,9 +1748,7 @@ GetWeaponKey(weapon_str)
 			break;
 	}
 
-	if (IfDebug())
-		print("DEBUG: FIRST BOX: weapon_key: " + key);
-
+	DebugPrint("FIRST BOX: weapon_key: " + key);
 	return key;
 }
 
@@ -1754,8 +1771,7 @@ MagicBoxOpensCounter()
 	else
 		level.total_box_hits++;
 
-	if (IfDebug())
-		print("DEBUG: current box hits: " + level.total_box_hits);
+	DebugPrint("current box hits: " + level.total_box_hits);
 
     self setzbarrierpiecestate( 2, "opening" );
 
