@@ -11,15 +11,6 @@
 - Added color coding to velocity meter (from mw2 patch)
 - Added a dvar for changing size of velocity meter
 
-<<<<<<< Updated upstream
-### Version 5.2
-- Fixed Tickrate fix (check README)
-
-### Version 5.3
-- Applied a fix to initial prints for them to display after long loading times
-- Basic splits (when timers are disabled) now also display at the game over screen
-- Created a Vanilla release that doesn't have most of the HUD elements
-=======
 ## Version 5.2
 - Fixed Tickrate fix (check README)
 
@@ -41,4 +32,8 @@
 - Fixed init sequence for DVARs (mainly for fix regarding prepatch recoil)
 
 ## Version 5.6
->>>>>>> Stashed changes
+- Code refactor for some core functions
+- Changed the logic of resizing velocity meter, it can now be done for each player separately via chat command
+- Changed watermarks to be a bit more visible (were blending in on ttv footage)
+- Fixed round splits not showing up
+- Fixed issues related to permaperks |
