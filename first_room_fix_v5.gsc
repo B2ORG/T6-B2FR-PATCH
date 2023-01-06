@@ -33,7 +33,6 @@ init()
 	flag_init("game_started");
 	flag_init("box_rigged");
 	flag_init("break_firstbox");
-	flag_init("permaperks_states_read");
 
 	// Patch Config
 	level.FRFIX_ACTIVE = true;
@@ -311,7 +310,7 @@ DidGameJustStarted()
 	if (!isDefined(level.start_round))
 		return true;
 
-	if (IsRound(level.start_round + 1))
+	if (!IsRound(level.start_round + 2))
 		return true;
 
 	return false;
@@ -1069,16 +1068,19 @@ PermaPerksSetup()
 	if (!maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active())
 		return;
 
-	// It's crashing on those maps for whatever reason
+	// It tends to crash without this statement lol
 	if (IsMob() || IsOrigins())
 		return;
-
-	DebugPrint("Entered PermaPerksSetup");
 
 	flag_wait("initial_blackscreen_passed");
 
 	if (isdefined(level.FRFIX_PERMAPERKS) && level.FRFIX_PERMAPERKS)
 	{
+		if (isDefined(level.frfix_metal_boards_func))
+		{
+			InfoPrint("Metal Boards plugin present, if perk is awarded, a restart will be required");
+			[[level.frfix_metal_boards_func]]();
+		}
 		self thread StopPermaPerksSystem();
 		self thread WatchForNewPlayers();
 	}
@@ -1088,16 +1090,11 @@ StopPermaPerksSystem()
 {
 	level endon("end_game");
 
-	while (true)
-	{
+	while (DidGameJustStarted())
 		level waittill("end_of_round");
-		if (!DidGameJustStarted())
-		{
-			DebugPrint("Stopping permaperks award");
-			self notify("stop_permaperks_award");
-			break;
-		}
-	}
+
+	DebugPrint("Stopping permaperks award");
+	self notify("stop_permaperks_award");
 }
 
 WatchForNewPlayers()
@@ -1127,21 +1124,16 @@ PermaWatcher()
 	level endon("end_game");
 	self endon("disconnect");
 
+	self waittill("initial_permas_awarded");
+
 	self.last_perk_state = array();
-
-	while (!isDefined(self.pers_upgrades_awarded))
-		wait 0.05;
-
 	foreach(perk in level.pers_upgrades_keys)
-		self.last_perk_state[perk] = self.perks_upgrades_awarded[perk];
-
-	flag_set("permaperks_states_read");
+		self.last_perk_state[perk] = self.pers_upgrades_awarded[perk];
 
 	while (true)
 	{
 		foreach(perk in level.pers_upgrades_keys)
 		{
-			// DebugPrint("last_state: " + self.last_perk_state[perk] + " / current_state: " + self.pers_upgrades_awarded[perk]);
 			if (self.pers_upgrades_awarded[perk] != self.last_perk_state[perk])
 			{
 				self DebugPrintPermaPerk(self.pers_upgrades_awarded[perk], perk);
@@ -1164,8 +1156,8 @@ AwardPermaPerks()
 
 	wait 0.5;
 
-	perks_to_award = array("revive", "multikill_headshots", "perk_lose", "board");
-	perks_to_override = array("board", "nube");
+	perks_to_award = array("revive", "multikill_headshots", "perk_lose");
+	perks_to_remove = array("box_weapon");
 
 	if (!IsRound(15))
 		perks_to_award[perks_to_award.size] = "jugg";
@@ -1176,8 +1168,6 @@ AwardPermaPerks()
 	if (!IsDieRise() && !IsRound(10))
 		perks_to_award[perks_to_award.size] = "nube";
 
-	flag_wait("permaperks_states_read");
-
 	// Set permaperks
 	foreach(perk in perks_to_award)
 	{
@@ -1186,30 +1176,28 @@ AwardPermaPerks()
 			stat_name = level.pers_upgrades[perk].stat_names[j];
 			stat_value = level.pers_upgrades[perk].stat_desired_values[j];
 
-			is_perk_override = false;
-			if (isinarray(perks_to_override, perk))
-				is_perk_override = true;
-
-			self AwardPermaPerk(stat_name, perk, stat_value, is_perk_override);
-			wait_network_frame();
+			self AwardPermaPerk(stat_name, perk, stat_value);
+			wait 0.05;
 		}
 	}
+
+	foreach(perk in perks_to_remove)
+	{
+		self.pers_upgrades_awarded[perk] = 0;
+		InfoPrint("Perk Removal for " + self.name + ": " + perk);
+	}
+
+	// uploadstats(self);
+	self notify("initial_permas_awarded");
 }
 
-AwardPermaPerk(stat_name, perk_name, stat_value, override)
+AwardPermaPerk(stat_name, perk_name, stat_value)
 {
-	if (override)
-	{
-		self.pers_upgrades_awarded[perk_name] = 1;
-		InfoPrint("Perk Activation for " + self.name + ": " + perk_name + " with method override");
-	}
-	else
-	{
-		self set_global_stat(stat_name, stat_value);
-		self.stats_this_frame[stat_name] = 1;
-		InfoPrint("Perk Activation for " + self.name + ": " + perk_name + " with method conditions. " + stat_name + " set to: " + stat_value);
-	}
-
+	self.stats_this_frame[stat_name] = 1;
+	self set_global_stat(stat_name, stat_value);
+	// self.pers_upgrades_awarded[perk_name] = 1;
+	InfoPrint("Perk Activation for " + self.name + ": " + perk_name + " -> " + stat_name + " set to: " + stat_value);
+	return;
 }
 
 OriginsFix()
