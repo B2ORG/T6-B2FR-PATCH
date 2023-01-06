@@ -339,6 +339,8 @@ IsVanilla()
 
 WelcomePrints()
 {
+	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+		level.FRFIX_BETA = "Vanilla";
 	wait 0.75;
 	self iPrintLn("^5FIRST ROOM FIX V" + level.FRFIX_VER + " " + level.FRFIX_BETA);
 	wait 0.75;
