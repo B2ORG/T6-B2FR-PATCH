@@ -181,7 +181,7 @@ GenerateWatermark(text, color, alpha_override)
 		color = level.FRFIX_HUD_COLOR;
 
 	if (!isDefined(alpha_override))
-		alpha_override = 0.2;
+		alpha_override = 0.33;
 
     watermark = createserverfontstring("hudsmall" , 1.2);
 	watermark setPoint("CENTER", "TOP", 0, y_offset - 10);
