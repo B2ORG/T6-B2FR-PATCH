@@ -3,7 +3,9 @@
 
 # Launchers
 
-First Room Fix is compatibile with all modern Pluto versions. At this point in time i don't provide release versions for other launchers, however a redacted version is produced. You may download the script file and use it as is, Redacted does not require compiled scripts. I'm yet to make the script work with old (offline) Pluto versions, if you happen to figure out how to do that, please let me know.
+First Room Fix is compatibile with all modern Pluto versions. At this point in time i don't provide release versions for other launchers.
+That being said, a special version for Redacted is present in the repository,
+you may download the script file and use it as is, Redacted does not require compiled scripts. After compilation Redacted script also works with older offline Plutonium versions.
 
 # Pluto Versions
 Compatibility ragarding legitimacy of the game while playing for records
