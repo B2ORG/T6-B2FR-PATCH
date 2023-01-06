@@ -61,7 +61,7 @@ OnGameStart()
 	level.FRFIX_ORIGINSFIX = false;
 	level.FRFIX_PRENADES = true;
 	level.FRFIX_FRIDGE = false;
-	level.FRFIX_FIRSTBOX = false;
+	level.FRFIX_FIRSTBOX = true;
 	level.FRFIX_PERMAPERKS_TRACKING = true;
 
 	level thread OnPlayerJoined();
@@ -532,7 +532,7 @@ HudPosOngameEnd(hudelem)
 
 HudPosSplits(hudelem)
 {
-	hudelem setpoint ("CENTER", "TOP", 0, 0);
+	hudelem setpoint ("CENTER", "TOP", 0, 30);
 }
 
 HudPosZombies(hudelem)
@@ -722,7 +722,7 @@ SplitsTimerHud()
 {
 	level endon("end_game");
 
-    splits_hud = createserverfontstring("hudsmall" , 1.4);
+    splits_hud = createserverfontstring("hudsmall" , 1.3);
 	[[level.hudpos_splits]](splits_hud);
 	splits_hud.color = level.FRFIX_HUD_COLOR;
 	splits_hud.alpha = 0;
@@ -733,7 +733,7 @@ SplitsTimerHud()
 		level waittill("end_of_round");
 		wait 8.5;	// Perfect round transition
 
-		if (IsRound(15) && (!level.round_number % 5))
+		if (IsRound(15) && !(level.round_number % 5))
 		{
 			timestamp = ConvertTime(int(getTime() / 1000) - level.FRFIX_START);
 			InfoPrint("Split: Round " + (level.round_number - 1) + ": " + timestamp);
