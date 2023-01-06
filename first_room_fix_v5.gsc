@@ -368,6 +368,7 @@ DebugGamePrints()
 	level endon("end_game");
 
 	self thread PowerupOddsWatcher();
+	self thread PointDropWatcher();
 
 	while (true)
 	{
@@ -385,6 +386,23 @@ PowerupOddsWatcher()
 	{
 		level waittill("powerup_check", chance);
 		InfoPrint("rand_drop = " + chance);
+	}
+}
+
+PointDropWatcher()
+{
+	level endon("end_game");
+
+	while (true)
+	{
+		wait 0.05;
+
+		if (!level.zombie_vars["zombie_drop_item"])
+			continue;
+
+		while (level.zombie_vars["zombie_drop_item"])
+			wait 0.05;
+		InfoPrint("Point drop");
 	}
 }
 
