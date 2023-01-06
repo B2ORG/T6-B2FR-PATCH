@@ -1,3 +1,4 @@
 /compiled
 *.bat
-gsc-tool.exe
+*.exe
+*.dll

@@ -3,19 +3,14 @@
 
 # Launchers
 
-| Launcher | Compatibile versions |
-| --- | --- |
-| Redacted Lan | First Room Fix Redacted |
-| Redacted Nightly | First Room Fix Redacted |
-| Ancient Pluto | First Room Fix Redacted |
-| New Pluto | First Room Fix, First Room Fix Vanilla |
+First Room Fix is compatibile with all modern Pluto versions. At this point in time i don't provide release versions for other launchers, however a redacted version is produced. You may download the script file and use it as is, Redacted does not require compiled scripts. I'm yet to make the script work with old (offline) Pluto versions, if you happen to figure out how to do that, please let me know.
 
 # Pluto Versions
 Compatibility ragarding legitimacy of the game while playing for records
 
 | Version | V3 | V4 | V5 | V5.2+ | Redacted |
 | --- | --- | --- | --- | --- | --- |
-| Ancient | - | - | - | - | v |
+| Others | - | - | - | - | v |
 | R2905 (solo) | x | v | v | v | x |
 | R2905 (coop) | v | x | x | v | x |
 | R3000+ (solo) | v | v | v | v | x |
@@ -153,7 +148,7 @@ Default settings of First Room Fix
 
 # Tech
 - All versions below 5.4 were Compiled using irony.dll
-- 5.4 onwards is compiled using xensiks [gsc-tool](https://github.com/xensik/gsc-tool)
+- 5.4 onwards normal version is compiled using xensiks [gsc-tool](https://github.com/xensik/gsc-tool)
 
 # Thanks to
 - [JezuzLizard](https://github.com/JezuzLizard)
