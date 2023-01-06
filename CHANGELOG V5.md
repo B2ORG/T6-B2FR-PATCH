@@ -34,6 +34,7 @@
 ## Version 5.6
 - Code refactor for some core functions
 - Changed the logic of resizing velocity meter, it can now be done for each player separately via chat command
+- Changed the logic of First Box module, it can now be used by all players (also works with redacted) as it's operated by chat commands, not dvar
 - Changed watermarks to be a bit more visible (were blending in on ttv footage)
 - Fixed round splits not showing up
-- Fixed issues related to permaperks |
+- Fixed issues related to permaperks
