@@ -1167,6 +1167,8 @@ AwardPermaPerks()
 
 	if (!IsDieRise() && !IsRound(10))
 		perks_to_award[perks_to_award.size] = "nube";
+	else if (IsDieRise())
+		perks_to_remove[perks_to_remove.size] = "nube";
 
 	// Set permaperks
 	foreach(perk in perks_to_award)
