@@ -1157,13 +1157,15 @@ AwardPermaPerks()
 	wait 0.5;
 
 	perks_to_award = array("revive", "multikill_headshots", "perk_lose");
-	perks_to_remove = array("box_weapon");
+	perks_to_remove = array();
 
 	if (!IsRound(15))
 		perks_to_award[perks_to_award.size] = "jugg";
 
 	if (IsBuried())
 		perks_to_award[perks_to_award.size] = "flopper";
+	else
+		perks_to_remove[perks_to_remove.size] = "box_weapon";
 
 	if (!IsDieRise() && !IsRound(10))
 		perks_to_award[perks_to_award.size] = "nube";
