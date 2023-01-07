@@ -1377,15 +1377,19 @@ Fridge(mode)
 	flag_wait("initial_blackscreen_passed");
 
 	self.account_value = 250000;
-	if (isDefined(mode) && mode == "tranzitnp")
+	if (isDefined(mode) && mode == "tranzitnp" && IsTranzit())
 	{
-		if (!IsTranzit())
-			return;
-
 		self clear_stored_weapondata();
 		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "name", "mp5k_upgraded_zm");
 		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "clip", 40);
 		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "stock", 200);
+	}
+	else if (isDefined(mode) && mode == "saloon" && IsBuried())
+	{
+		self clear_stored_weapondata();
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "name", "m32_zm");
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "clip", 6);
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "stock", 18);
 	}
 	else
 	{
