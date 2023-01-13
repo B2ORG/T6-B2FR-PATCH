@@ -1115,6 +1115,7 @@ StopPermaPerksSystem()
 	self notify("stop_permaperks_award");
 }
 
+// Make watcher usable after reconnecting any round
 WatchForNewPlayers()
 {
 	level endon("end_game");
@@ -1368,15 +1369,16 @@ Fridge(mode)
 	if (!isDefined(level.FRFIX_FRIDGE) || !level.FRFIX_FRIDGE)
 		return;
 
-	if (!DidGameJustStarted())
-		return;
-
 	if (!IsTranzit() && !IsDieRise() && !IsBuried())
 		return;
 
 	flag_wait("initial_blackscreen_passed");
 
-	self.account_value = 250000;
+	self.account_value = 200000;
+
+	if (!DidGameJustStarted())
+		return;
+
 	if (isDefined(mode) && mode == "tranzitnp" && IsTranzit())
 	{
 		self clear_stored_weapondata();
