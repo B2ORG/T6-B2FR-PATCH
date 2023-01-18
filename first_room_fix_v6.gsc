@@ -457,11 +457,11 @@ DvarDetector()
 {
 	level endon("end_game");
 
+	// Waiting on top so it doesn't trigger before initial dvars are set
+	flag_wait("dvars_set");
+
 	while (true) 
 	{
-		// Waiting on top so it doesn't trigger before initial dvars are set
-		flag_wait("dvars_set");
-
 		// Backspeed
 		if (getDvar("player_strafeSpeedScale") != "0.8" || getDvar("player_backSpeedScale") != "0.7") 
 		{
@@ -477,9 +477,7 @@ DvarDetector()
 		}
 
 		// Noprint
-		if (getDvar("con_gameMsgWindow0LineCount") != "4" || getDvar("con_gameMsgWindow0MsgTime") != "5"
-		|| getDvar("con_gameMsgWindow0FadeInTime") != "0.25" || getDvar("con_gameMsgWindow0FadeOutTime") != "0.5"
-		|| getDvar("con_gameMsgWindow0Filter") != "gamenotify obituary") 
+		if (getDvarInt("con_gameMsgWindow0LineCount") < 1 || getDvarInt("con_gameMsgWindow0MsgTime") < 1 || getDvar("con_gameMsgWindow0Filter") != "gamenotify obituary") 
 		{
 			GenerateCheat();
 
@@ -493,7 +491,7 @@ DvarDetector()
 		} 
 		
 		// Cheats
-		if (getDvar("sv_cheats") != "0") 
+		if (getDvarInt("sv_cheats")) 
 		{
 			GenerateCheat();
 			
@@ -507,7 +505,7 @@ DvarDetector()
 		}
 
 		// Gspeed
-		if (getDvar("g_speed") != "190") 
+		if (getDvarInt("g_speed") != 190) 
 		{
 			GenerateCheat();
 			
