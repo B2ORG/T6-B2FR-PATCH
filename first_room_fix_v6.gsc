@@ -37,7 +37,7 @@ init()
 	level.FRFIX_ACTIVE = true;
 	level.FRFIX_VER = 5.6;
 	level.FRFIX_BETA = "";
-	level.FRFIX_DEBUG = false;
+	level.FRFIX_DEBUG = true;
 	level.FRFIX_VANILLA = false;
 
 	level thread SetDvars();
@@ -75,6 +75,8 @@ OnGameStart()
 	level thread EyeChange();
 	level thread DebugGamePrints();
 	level thread AnticheatSafety();
+	if (IfDebug() && isDefined(level.FRFIX_TESTING_PLUGIN))
+		level thread [[level.FRFIX_TESTING_PLUGIN]]();
 
 	flag_wait("initial_blackscreen_passed");
 
