@@ -345,6 +345,13 @@ IsVanilla()
 	return false;
 }
 
+HasMagic()
+{
+    if (isDefined(level.enable_magic) && level.enable_magic)
+        return true;
+    return false;
+}   
+
 // Functions
 
 WelcomePrints()
@@ -932,7 +939,7 @@ SemtexChart()
 	if (!isdefined(level.FRFIX_PRENADES) || !level.FRFIX_PRENADES || IsRound(23))
 		return;
 
-	if (IsTown() && !level.enable_magic)
+	if (IsTown() && !HasMagic())
 	{
 		// Starts on r22 and goes onwards
 		chart = array(1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 17, 19, 22, 24, 28, 29, 34, 39, 42, 46, 52, 57, 61, 69, 78, 86, 96, 103);
