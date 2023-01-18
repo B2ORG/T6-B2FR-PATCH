@@ -19,7 +19,6 @@ main()
 
 	replaceFunc(maps\mp\zombies\_zm_weapons::get_pack_a_punch_weapon_options, ::GetPapWeaponReticle);
 	replaceFunc(maps\mp\zombies\_zm_powerups::powerup_drop, ::TrackedPowerupDrop);
-	replaceFunc(maps\mp\zombies\_zm_magicbox::magic_box_opens, ::MagicBoxOpensCounter);
 }
 
 init()
@@ -1424,7 +1423,7 @@ FirstBoxHandler()
 {
     level endon("end_game");
 
-	if (!isDefined(level.enable_magic) || !level.enable_magic)
+	if (!HasMagic())
 		return;
 
 	flag_wait("initial_blackscreen_passed");
@@ -1434,6 +1433,8 @@ FirstBoxHandler()
 	// Debug func, doesn't do anything in production
 	self thread PrintInitialBoxSize();
 
+	// Init threads watching the status of boxes
+	self thread InitiateBoxStatusWatchers();
 	// Scan weapons in the box
 	self thread ScanInBox();
 	// First Box main loop
@@ -1460,6 +1461,36 @@ PrintInitialBoxSize()
 			in_box++;
 	}
 	DebugPrint("Size of initial box weapon list: " + in_box);
+}
+
+InitiateBoxStatusWatchers()
+{
+    level endon("end_game");
+
+	level.total_box_hits = 0;
+
+	while (!isDefined(level.chests))
+		wait 0.05;
+	
+	foreach(chest in level.chests)
+		chest thread WatchBoxState();
+}
+
+WatchBoxState()
+{
+    level endon("end_game");
+
+    while (!isDefined(self.zbarrier))
+        wait 0.05;
+
+	while (true)
+	{
+        while (self.zbarrier getzbarrierpiecestate(2) != "opening")
+            wait 0.05;
+		level.total_box_hits++;
+        while (self.zbarrier getzbarrierpiecestate(2) == "opening")
+            wait 0.05;
+	}
 }
 
 ScanInBox()
@@ -1801,25 +1832,6 @@ WeaponDisplayWrapper(weapon_key)
 		return "Cymbal Monkey";
 	
 	return get_weapon_display_name(weapon_key);
-}
-
-MagicBoxOpensCounter()
-{
-	level notify("chest_opened");
-
-	if (!isDefined(level.total_box_hits))
-		level.total_box_hits = 1;
-	else
-		level.total_box_hits++;
-
-	DebugPrint("current box hits: " + level.total_box_hits);
-
-    self setzbarrierpiecestate( 2, "opening" );
-
-    while ( self getzbarrierpiecestate( 2 ) == "opening" )
-        wait 0.1;
-
-    self notify( "opened" );
 }
 
 HideInAfterlife(hud)
