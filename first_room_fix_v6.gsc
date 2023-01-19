@@ -38,7 +38,7 @@ init()
 	level.FRFIX_VER = 6;
 	level.FRFIX_BETA = "BETA";
 	level.FRFIX_DEBUG = true;
-	level.FRFIX_VANILLA = false;
+	level.FRFIX_VANILLA = GetVanillaSetting();
 
 	level thread SetDvars();
 	level thread PermaPerksSetup();
@@ -521,6 +521,16 @@ DvarDetector()
 		}
 		wait 0.1;
 	}
+}
+
+GetVanillaSetting(override)
+{
+	if (isDefined(override))
+		return override;
+
+	if (getDvar("frfix_vanilla") == "0")
+		return false;
+	return true;
 }
 
 FixNetworkFrame()
