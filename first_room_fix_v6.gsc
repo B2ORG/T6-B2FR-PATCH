@@ -131,6 +131,7 @@ OnPlayerSpawned()
 			self thread WelcomePrints();
 			self thread PrintNetworkFrame(6);
 			self thread VelocityMeter();
+			self thread SetCharacter();
 		}
 	}
 
@@ -430,6 +431,9 @@ SetDvars()
 
 	if (IsMob())
 		level.custom_velocity_behaviour = ::HideInAfterlife;
+
+	// if (!getDvar("frfix_player0_character"))
+	// 	setDvar("frfix_player0_character", randomInt(3));
 
 	while (true)
 	{
@@ -1852,245 +1856,197 @@ HideInAfterlife(hud)
 		hud.alpha = 1;
 }
 
-// SetCharacters()
-// {
-// 	if (isdefined(level.char_survival) && level.char_survival && !is_classic())
-// 	{
-// 		ciaviewmodel = "c_zom_suit_viewhands";
-// 		cdcviewmodel = "c_zom_hazmat_viewhands";
-// 		if (level.script == "zm_nuked")
-// 		{
-// 			cdcviewmodel = "c_zom_hazmat_viewhands_light";
-// 		}
-		
-// 		// Get properties
-// 		if (self.clientid == 0 || self.clientid == 4)
-// 		{
-// 			preset_player = level.survival1;
-// 		}
-// 		else if (self.clientid == 1 || self.clientid == 5)
-// 		{
-// 			preset_player = level.survival2;
-// 		}
-// 		else if (self.clientid == 2 || self.clientid == 6)
-// 		{
-// 			preset_player = level.survival3;
-// 		}	
-// 		else if (self.clientid == 3 || self.clientid == 7)
-// 		{
-// 			preset_player = level.survival4;
-// 		}		
-		
-// 		// Set characters
-// 		if (preset_player == "cdc")
-// 		{
-// 			self setmodel("c_zom_player_cdc_fb");
-// 			self setviewmodel(cdcviewmodel);
-// 			self.characterindex = 1;		
-// 		}
-// 		else if (preset_player == "cia")
-// 		{
-// 			self setmodel("c_zom_player_cia_fb");
-// 			self setviewmodel(ciaviewmodel);
-// 			self.characterindex = 0;
-// 		}
-// 	}
-// 	else if (isdefined(level.char_victis) && level.char_victis)
-// 	{
-// 		if (level.script == "zm_transit" || level.script == "zm_highrise" || level.script == "zm_buried")	// Cause compiler sucks
-// 		{
-// 			// Get properties
-// 			if (self.clientid == 0 || self.clientid == 4)
-// 			{
-// 				preset_player = level.victis1;
-// 			}
-// 			else if (self.clientid == 1 || self.clientid == 5)
-// 			{
-// 				preset_player = level.victis2;
-// 			}
-// 			else if (self.clientid == 2 || self.clientid == 6)
-// 			{
-// 				preset_player = level.victis3;
-// 			}	
-// 			else if (self.clientid == 3 || self.clientid == 7)
-// 			{
-// 				preset_player = level.victis4;
-// 			}		
-			
-// 			// Set characters
-// 			if (preset_player == "misty")
-// 			{
-// 				self setmodel("c_zom_player_farmgirl_fb");
-// 				self setviewmodel("c_zom_farmgirl_viewhands");
-// 				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "rottweil72_zm";
-// 				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "870mcs_zm";
-// 				self set_player_is_female(1);
-// 				self.characterindex = 2;
-// 				if (level.script == "zm_highrise")
-// 				{
-// 					self setmodel("c_zom_player_farmgirl_dlc1_fb");
-// 					self.whos_who_shader = "c_zom_player_farmgirl_dlc1_fb";
-// 				}
-// 			}
-// 			else if (preset_player == "russman")
-// 			{
-// 				self setmodel("c_zom_player_oldman_fb");
-// 				self setviewmodel("c_zom_oldman_viewhands");
-// 				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "frag_grenade_zm";
-// 				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "claymore_zm";
-// 				self set_player_is_female(0);
-// 				self.characterindex = 0;
-// 				if (level.script == "zm_highrise")
-// 				{
-// 					self setmodel("c_zom_player_oldman_dlc1_fb");
-// 					self.whos_who_shader = "c_zom_player_oldman_dlc1_fb";
-// 				}
-// 			}
-// 			else if (preset_player == "marlton")
-// 			{
-// 				self setmodel("c_zom_player_engineer_fb");
-// 				self setviewmodel("c_zom_engineer_viewhands");
-// 				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "m14_zm";
-// 				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "m16_zm";
-// 				self set_player_is_female(0);
-// 				self.characterindex = 3;
-// 				if (level.script == "zm_highrise")
-// 				{
-// 					self setmodel("c_zom_player_engineer_dlc1_fb");
-// 					self.whos_who_shader = "c_zom_player_engineer_dlc1_fb";
-// 				}
-// 			}
-// 			else if (preset_player == "stuhlinger")
-// 			{
-// 				self setmodel("c_zom_player_reporter_fb");
-// 				self setviewmodel("c_zom_reporter_viewhands");
-// 				self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "beretta93r_zm";
-// 				self.talks_in_danger = 1;
-// 				level.rich_sq_player = self;
-// 				self set_player_is_female(0);
-// 				self.characterindex = 1;
-// 				if (level.script == "zm_highrise")
-// 				{
-// 					self setmodel("c_zom_player_reporter_dlc1_fb");
-// 					self.whos_who_shader = "c_zom_player_reporter_dlc1_fb";
-// 				}
-// 			}
-// 		}
-// 	}
+PullPreset(character_index)
+{
+	preset = array();
+	preset["model"] = undefined;
+	preset["viewmodel"] = undefined;
+	preset["favourite_wall_weapons"] = undefined;
+	preset["whos_who_shader"] = undefined;
+	preset["talks_in_danger"] = undefined;
+	preset["rich_sq_player"] = undefined;
+	preset["character_name"] = undefined;
+	preset["has_weasel"] = undefined;
+	preset["voice"] = undefined;
+	preset["is_female"] = 0;
 
-// 	else if (isdefined(level.char_mob) && level.char_mob && level.script == "zm_prison")
-// 	{
-// 		// Get properties
-// 		if (self.clientid == 0 || self.clientid == 4)
-// 		{
-// 			preset_player = level.mob1;
-// 		}
-// 		else if (self.clientid == 1 || self.clientid == 5)
-// 		{
-// 			preset_player = level.mob2;
-// 		}
-// 		else if (self.clientid == 2 || self.clientid == 6)
-// 		{
-// 			preset_player = level.mob3;
-// 		}	
-// 		else if (self.clientid == 3 || self.clientid == 7)
-// 		{
-// 			preset_player = level.mob4;
-// 		}		
-		
-// 		// Set characters
-// 		if (preset_player == "weasel")
-// 		{
-// 			self setmodel("c_zom_player_arlington_fb");
-// 			self setviewmodel("c_zom_arlington_coat_viewhands");
-// 			self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "ray_gun_zm";
-// 			self set_player_is_female(0);
-// 			self.characterindex = 3;
-// 			self.character_name = "Arlington";
-// 			level.has_weasel = 1;
-// 		}
-// 		else if (preset_player == "finn")
-// 		{
-// 			self setmodel("c_zom_player_oleary_fb");
-// 			self setviewmodel("c_zom_oleary_shortsleeve_viewhands");
-// 			self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "judge_zm";
-// 			self set_player_is_female(0);
-// 			self.characterindex = 0;
-// 			self.character_name = "Finn";
-// 		}
-// 		else if (preset_player == "sal")
-// 		{
-// 			self setmodel("c_zom_player_deluca_fb");
-// 			self setviewmodel("c_zom_deluca_longsleeve_viewhands");
-// 			self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "thompson_zm";
-// 			self set_player_is_female(0);
-// 			self.characterindex = 1;
-// 			self.character_name = "Sal";
-// 		}
-// 		else if (preset_player == "billy")
-// 		{
-// 			self setmodel("c_zom_player_handsome_fb");
-// 			self setviewmodel("c_zom_handsome_sleeveless_viewhands");
-// 			self.favorite_wall_weapons_list[self.favorite_wall_weapons_list.size] = "blundergat_zm";
-// 			self set_player_is_female(0);
-// 			self.characterindex = 2;
-// 			self.character_name = "Billy";
-// 		}
-// 	}
+	if (IsTranzit() || IsDieRise() || IsBuried())
+	{
+		if (character_index == 0)
+		{
+			preset["model"] = "c_zom_player_oldman_fb";
+			preset["viewmodel"] = "c_zom_oldman_viewhands";
+			preset["favourite_wall_weapons"] = array("frag_grenade_zm", "claymore_zm");
+			preset["whos_who_shader"] = "c_zom_player_oldman_dlc1_fb";
+			preset["character_name"] = "Russman";
 
-// 	else if (isdefined(level.char_origins) && level.char_origins && level.script == "zm_tomb")
-// 	{
-// 		// Get properties
-// 		if (self.clientid == 0 || self.clientid == 4)
-// 		{
-// 			preset_player = level.origins1;
-// 		}
-// 		else if (self.clientid == 1 || self.clientid == 5)
-// 		{
-// 			preset_player = level.origins2;
-// 		}
-// 		else if (self.clientid == 2 || self.clientid == 6)
-// 		{
-// 			preset_player = level.origins3;
-// 		}	
-// 		else if (self.clientid == 3 || self.clientid == 7)
-// 		{
-// 			preset_player = level.origins4;
-// 		}		
-		
-// 		// Set characters
-// 		if (preset_player == "dempsey")
-// 		{
-// 			self setmodel("c_zom_tomb_dempsey_fb");
-// 			self setviewmodel("c_zom_dempsey_viewhands");
-// 			self set_player_is_female(0);
-// 			self.characterindex = 0;
-// 			self.character_name = "Dempsey";
-// 		}
-// 		else if (preset_player == "nikolai")
-// 		{
-// 			self setmodel("c_zom_tomb_nikolai_fb");
-// 			self setviewmodel("c_zom_nikolai_viewhands");
-// 			self.voice = "russian";
-// 			self set_player_is_female(0);
-// 			self.characterindex = 1;
-// 			self.character_name = "Nikolai";
-// 		}
-// 		else if (preset_player == "takeo")
-// 		{
-// 			self setmodel("c_zom_tomb_takeo_fb");
-// 			self setviewmodel("c_zom_takeo_viewhands");
-// 			self set_player_is_female(0);
-// 			self.characterindex = 3;
-// 			self.character_name = "Takeo";
-// 		}
-// 		else if (preset_player == "richtofen")
-// 		{
-// 			self setmodel("c_zom_tomb_richtofen_fb");
-// 			self setviewmodel("c_zom_richtofen_viewhands");
-// 			self set_player_is_female(0);
-// 			self.characterindex = 2;
-// 			self.character_name = "Richtofen";
-// 		}
-// 	}
-// }
+			if (IsDieRise())
+				preset["model"] = "c_zom_player_oldman_dlc1_fb";
+		}
+
+		else if (character_index == 1)
+		{
+			preset["model"] = "c_zom_player_reporter_fb";
+			preset["viewmodel"] = "c_zom_reporter_viewhands";
+			preset["favourite_wall_weapons"] = array("beretta93r_zm");
+			preset["whos_who_shader"] = "c_zom_player_reporter_dlc1_fb";
+			preset["talks_in_danger"] = 1;
+			preset["rich_sq_player"] = 1;
+			preset["character_name"] = "Stuhlinger";
+
+			if (IsDieRise())
+				preset["model"] = "c_zom_player_reporter_dlc1_fb";
+		}
+
+		else if (character_index == 2)
+		{
+			preset["model"] = "c_zom_player_farmgirl_fb";
+			preset["viewmodel"] = "c_zom_farmgirl_viewhands";
+			preset["is_female"] = 1;
+			preset["favourite_wall_weapons"] = array("rottweil72_zm", "870mcs_zm");
+			preset["whos_who_shader"] = "c_zom_player_farmgirl_dlc1_fb";
+			preset["character_name"] = "Misty";
+
+			if (IsDieRise())
+				preset["model"] = "c_zom_player_farmgirl_dlc1_fb";
+		}
+
+		else if (character_index == 3)
+		{
+			preset["model"] = "c_zom_player_engineer_fb";
+			preset["viewmodel"] = "c_zom_engineer_viewhands";
+			preset["favourite_wall_weapons"] = array("m14_zm", "m16_zm");
+			preset["whos_who_shader"] = "c_zom_player_engineer_dlc1_fb";
+			preset["character_name"] = "Marlton";
+
+			if (IsDieRise())
+				preset["model"] = "c_zom_player_engineer_dlc1_fb";
+		}
+	}
+
+	else if (IsTown() || IsFarm() || IsDepot() || IsNuketown())
+	{
+		if (character_index == 0)
+		{
+			preset["model"] = "c_zom_player_cia_fb";
+			preset["viewmodel"] = "c_zom_suit_viewhands";
+		}
+
+		else if (character_index == 1)
+		{
+			preset["model"] = "c_zom_player_cdc_fb";
+			preset["viewmodel"] = "c_zom_hazmat_viewhands";
+
+			if (IsNuketown())
+				preset["viewmodel"] = "c_zom_hazmat_viewhands_light";
+		}
+	}
+
+	else if (IsMob())
+	{
+		if (character_index == 0)
+		{
+			preset["model"] = "c_zom_player_oleary_fb";
+			preset["viewmodel"] = "c_zom_oleary_shortsleeve_viewhands";
+			preset["favourite_wall_weapons"] = array("judge_zm");
+			preset["character_name"] = "Finn";
+		}
+
+		else if (character_index == 1)
+		{
+			preset["model"] = "c_zom_player_deluca_fb";
+			preset["viewmodel"] = "c_zom_deluca_longsleeve_viewhands";
+			preset["favourite_wall_weapons"] = array("thompson_zm");
+			preset["character_name"] = "Sal";
+		}
+
+		else if (character_index == 2)
+		{
+			preset["model"] = "c_zom_player_handsome_fb";
+			preset["viewmodel"] = "c_zom_handsome_sleeveless_viewhands";
+			preset["favourite_wall_weapons"] = array("blundergat_zm");
+			preset["character_name"] = "Billy";
+		}
+
+		else if (character_index == 3)
+		{
+			preset["model"] = "c_zom_player_arlington_fb";
+			preset["viewmodel"] = "c_zom_arlington_coat_viewhands";
+			preset["favourite_wall_weapons"] = array("ray_gun_zm");
+			preset["character_name"] = "Arlington";
+			preset["has_weasel"] = 1;
+		}
+	}
+
+	else if (IsOrigins())
+	{
+		if (character_index == 0)
+		{
+			preset["model"] = "c_zom_tomb_dempsey_fb";
+			preset["viewmodel"] = "c_zom_dempsey_viewhands";
+			preset["character_name"] = "Dempsey";
+		}
+
+		else if (character_index == 1)
+		{
+			preset["model"] = "c_zom_tomb_nikolai_fb";
+			preset["viewmodel"] = "c_zom_nikolai_viewhands";
+			preset["character_name"] = "Nikolai";
+			preset["voice"] = "russian";
+		}
+
+		else if (character_index == 2)
+		{
+			preset["model"] = "c_zom_tomb_richtofen_fb";
+			preset["viewmodel"] = "c_zom_richtofen_viewhands";
+			preset["character_name"] = "Richtofen";
+		}
+
+		else if (character_index == 3)
+		{
+			preset["model"] = "c_zom_tomb_takeo_fb";
+			preset["viewmodel"] = "c_zom_takeo_viewhands";
+			preset["character_name"] = "Nikolai";
+		}
+	}
+
+	return preset;
+}
+
+SetCharacter()
+{
+	level endon("end_game");
+	self endon("disconnect");
+
+	player_id = self.clientid;
+	if (player_id > 3)
+		player_id -= 4;
+
+	dvar = "frfix_player" + player_id + "_character";
+	if (isDefined(getDvar(dvar)) && getDvar(dvar))
+	{
+		prop = PullPreset(getDvarInt(dvar));
+
+		self setmodel(prop["model"]);
+		self setviewmodel(prop["viewmodel"]);
+		self set_player_is_female(prop["is_female"]);
+		self.characterindex = getDvarInt(dvar);
+
+		if (isDefined(prop["favourite_wall_weapons"]))
+			self.favorite_wall_weapons_list = prop["favourite_wall_weapons"];
+		if (isDefined(prop["whos_who_shader"]))
+			self.whos_who_shader = prop["whos_who_shader"];
+		if (isDefined(prop["talks_in_danger"]))
+			self.talks_in_danger = prop["talks_in_danger"];
+		if (isDefined(prop["rich_sq_player"]))
+			level.rich_sq_player = self;
+		if (isDefined(prop["character_name"]))
+			self.character_name = prop["character_name"];
+		if (isDefined(prop["has_weasel"]))
+			level.has_weasel = prop["has_weasel"];
+		if (isDefined(prop["voice"]))
+			self.voice = prop["voice"];
+
+		DebugPrint("Read value '" + getDvar(dvar) + "' from dvar '" + dvar + "' for player '" + self.name + "' with ID '" + self.clientid + "' Set character '" + prop["model"] + "'");
+	}
+}
