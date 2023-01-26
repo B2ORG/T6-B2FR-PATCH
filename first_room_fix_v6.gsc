@@ -102,7 +102,7 @@ OnPlayerJoined()
 {
 	level endon("end_game");
 
-	for(;;)
+	while(true)
 	{
 		level waittill("connected", player);
 		player thread OnPlayerSpawned();
@@ -116,7 +116,7 @@ OnPlayerSpawned()
 
 	self.initial_spawn = true;
 
-	for(;;)
+	while(true)
 	{
 		self waittill("spawned_player");
 
