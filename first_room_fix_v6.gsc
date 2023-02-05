@@ -32,7 +32,6 @@ init()
 	flag_init("game_started");
 	flag_init("box_rigged");
 	flag_init("break_firstbox");
-	flag_init("initial_permas_awarded");
 
 	level thread FrFixActiveBackwardsCompatibile();
 
@@ -78,7 +77,6 @@ OnGameStart()
 	level thread EyeChange();
 	level thread DebugGamePrints();
 	level thread AnticheatSafety();
-	level thread StopPermaPerksAwardWatcher();
 	if (IfDebug() && isDefined(level.FRFIX_TESTING_PLUGIN))
 		level thread [[level.FRFIX_TESTING_PLUGIN]]();
 
@@ -1212,8 +1210,6 @@ PermaWatcher()
 {
 	level endon("end_game");
 	self endon("disconnect");
-
-	DebugPrint("PermaWatcher received 'initial_permas_awarded' signal");
 
 	self.last_perk_state = array();
 	foreach(perk in level.pers_upgrades_keys)
