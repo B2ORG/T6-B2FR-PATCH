@@ -33,12 +33,14 @@ init()
 	flag_init("box_rigged");
 	flag_init("break_firstbox");
 
+	level thread FrFixActiveBackwardsCompatibile();
+
 	// Patch Config
-	level.FRFIX_ACTIVE = true;
-	level.FRFIX_VER = 6;
-	level.FRFIX_BETA = "BETA";
-	level.FRFIX_DEBUG = true;
-	level.FRFIX_VANILLA = GetVanillaSetting();
+	level.FRFIX_CONFIG = array();
+	level.FRFIX_CONFIG["version"] = 6;
+	level.FRFIX_CONFIG["beta"] = "BETA";
+	level.FRFIX_CONFIG["debug"] = true;
+	level.FRFIX_CONFIG["vanilla"] = GetVanillaSetting();
 
 	level thread SetDvars();
 	level thread PermaPerksSetup();
@@ -50,18 +52,18 @@ OnGameStart()
 	level endon("end_game");
 
 	// Func Config
-	level.FRFIX_TIMER_ENABLED = true;
-	level.FRFIX_ROUND_ENABLED = false;
-	level.FRFIX_HORDES_ENABLED = true;
-	level.FRFIX_PERMAPERKS = true;
-	level.FRFIX_PERMAPERKS_TRACKING = false;
-	level.FRFIX_HUD_COLOR = (0.9, 0.8, 1);
-	level.FRFIX_YELLOWHOUSE = false;
-	level.FRFIX_NUKETOWN_EYES = false;
-	level.FRFIX_ORIGINSFIX = false;
-	level.FRFIX_PRENADES = true;
-	level.FRFIX_FRIDGE = false;
-	level.FRFIX_FIRSTBOX = false;
+	level.FRFIX_CONFIG["hud_color"] = (0.9, 0.8, 1);
+	level.FRFIX_CONFIG["const_timer"] = true;
+	level.FRFIX_CONFIG["const_round_timer"] = false;
+	level.FRFIX_CONFIG["show_hordes"] = true;
+	level.FRFIX_CONFIG["give_permaperks"] = true;
+	level.FRFIX_CONFIG["track_permaperks"] = false;
+	level.FRFIX_CONFIG["mannequins"] = false;
+	level.FRFIX_CONFIG["nuketown_25_ee"] = false;
+	level.FRFIX_CONFIG["forever_solo_game_fix"] = false;
+	level.FRFIX_CONFIG["semtex_prenades"] = true;
+	level.FRFIX_CONFIG["fridge"] = false;
+	level.FRFIX_CONFIG["first_box_module"] = false;
 
 	level thread OnPlayerJoined();
 
@@ -114,27 +116,22 @@ OnPlayerSpawned()
 	level endon("end_game");
     self endon("disconnect");
 
-	self.initial_spawn = true;
+	self waittill("spawned_player");
 
-	while(true)
-	{
-		self waittill("spawned_player");
+	// Perhaps a redundand safety check, but doesn't hurt
+	while (!flag("initial_players_connected"))
+		wait 0.05;
 
-		while (!flag("initial_players_connected"))
-			wait 0.05;
+	self thread Fridge("tranzitnp");
+	self thread WelcomePrints();
+	self thread PrintNetworkFrame(6);
+	self thread VelocityMeter();
+	self thread SetCharacter();
 
-		if (self.initial_spawn)
-		{
-			self.initial_spawn = false;
+	// while(true)
+	// {
 
-			self thread Fridge("tranzitnp");
-			self thread WelcomePrints();
-			self thread PrintNetworkFrame(6);
-			self thread VelocityMeter();
-			self thread SetCharacter();
-		}
-	}
-
+	// }
 }
 
 // Stubs
@@ -151,7 +148,7 @@ print(arg1)
 
 IfDebug()
 {
-	if (isDefined(level.FRFIX_DEBUG) && level.FRFIX_DEBUG)
+	if (isDefined(level.FRFIX_CONFIG["debug"]) && level.FRFIX_CONFIG["debug"])
 		return true;
 	return false;
 }
@@ -173,13 +170,13 @@ DebugPrintPermaPerk(enabled, perk)
 {
 	if (enabled)
 	{
-		if (isDefined(level.FRFIX_PERMAPERKS_TRACKING) && level.FRFIX_PERMAPERKS_TRACKING && flag("initial_blackscreen_passed"))
+		if (isDefined(level.FRFIX_CONFIG["track_permaperks"]) && level.FRFIX_CONFIG["track_permaperks"] && flag("initial_blackscreen_passed"))
 			self iPrintLn("Permaperk " + perk + " ^2ENABLED");
 		DebugPrint("Permaperks: " + perk + " enabled");
 	}
 	else if (!enabled)
 	{
-		if (isDefined(level.FRFIX_PERMAPERKS_TRACKING) && level.FRFIX_PERMAPERKS_TRACKING)
+		if (isDefined(level.FRFIX_CONFIG["track_permaperks"]) && level.FRFIX_CONFIG["track_permaperks"])
 			self iPrintLn("Permaperk " + perk + " ^1DISABLED");
 		DebugPrint("Permaperks: " + perk + " disabled");
 	}
@@ -190,7 +187,7 @@ GenerateWatermark(text, color, alpha_override)
 {
 	y_offset = 12 * level.FRFIX_WATERMARKS.size;
 	if (!isDefined(color))
-		color = level.FRFIX_HUD_COLOR;
+		color = GetHudColor();
 
 	if (!isDefined(alpha_override))
 		alpha_override = 0.33;
@@ -342,7 +339,7 @@ IsRound(rnd)
 
 IsVanilla()
 {
-	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+	if (isDefined(level.FRFIX_CONFIG["vanilla"]) && level.FRFIX_CONFIG["vanilla"])
 		return true;
 	return false;
 }
@@ -352,14 +349,38 @@ HasMagic()
     if (isDefined(level.enable_magic) && level.enable_magic)
         return true;
     return false;
-}   
+}
+
+GetHudColor(fallback)
+{
+	if (isDefined(level.FRFIX_HUD_COLOR_PLUGIN))
+		return level.FRFIX_HUD_COLOR_PLUGIN;
+
+	if (isDefined(level.FRFIX_CONFIG["hud_color"]))
+		return level.FRFIX_CONFIG["hud_color"];
+
+	if (isDefined(fallback))
+		return fallback;
+
+	return (1, 1, 1);
+}
 
 // Functions
+
+//Song patch looks for this variable in safety function, so it needs to be active temporarily
+FrFixActiveBackwardsCompatibile()
+{
+	level endon("end_game");
+
+	level.FRFIX_ACTIVE = true;
+	wait 60;
+	level.FRFIX_ACTIVE = undefined;
+}
 
 WelcomePrints()
 {
 	wait 0.75;
-	self iPrintLn("^5FIRST ROOM FIX V" + level.FRFIX_VER + " " + level.FRFIX_BETA);
+	self iPrintLn("^5FIRST ROOM FIX V" + level.FRFIX_CONFIG["version"] + " " + level.FRFIX_CONFIG["beta"]);
 	wait 0.75;
 	self iPrintLn("Source: github.com/Zi0MIX/T6-FIRST-ROOM-FIX");
 }
@@ -667,7 +688,7 @@ TimerHud()
 
     timer_hud = createserverfontstring("hudsmall" , 1.5);
 	[[level.hudpos_timer_game]](timer_hud);
-	timer_hud.color = level.FRFIX_HUD_COLOR;
+	timer_hud.color = GetHudColor();
 	timer_hud.alpha = 0;
 	timer_hud.hidewheninmenu = 1;
 
@@ -677,7 +698,7 @@ TimerHud()
 	skip_split = false;
 	label_time_set = false;
 
-	if (!IsVanilla() && isdefined(level.FRFIX_TIMER_ENABLED) && level.FRFIX_TIMER_ENABLED)
+	if (!IsVanilla() && isdefined(level.FRFIX_CONFIG["const_timer"]) && level.FRFIX_CONFIG["const_timer"])
 	{
 		timer_hud setTimerUp(0);
 		timer_hud.alpha = 1;
@@ -698,10 +719,10 @@ TimerHud()
 		if (IsVanilla() || skip_split)
 			continue;
 
-		if (level.players.size > 1 && label_time_set)
+		if (level.players.size > 1 && isDefined(label_time_set) && label_time_set)
 		{
 			timer_hud.label = "LOBBY: ";
-			label_time_set = false;
+			label_time_set = undefined;
 		}
 
 		timer_hud fadeOverTime(0.25);
@@ -715,6 +736,8 @@ TimerHud()
 
 		timer_hud fadeOverTime(0.25);
 		timer_hud.alpha = 0;
+
+		split_time = undefined;
 	}
 }
 
@@ -724,7 +747,7 @@ RoundTimerHud()
 
 	round_hud = createserverfontstring("hudsmall" , 1.5);
 	[[level.hudpos_timer_round]](round_hud);
-	round_hud.color = level.FRFIX_HUD_COLOR;
+	round_hud.color = GetHudColor();
 	round_hud.alpha = 0;
 	round_hud.hidewheninmenu = 1;
 
@@ -734,7 +757,7 @@ RoundTimerHud()
 
 		round_start = int(getTime() / 1000);
 
-		if (!IsVanilla() && isdefined(level.FRFIX_ROUND_ENABLED) && level.FRFIX_ROUND_ENABLED)
+		if (!IsVanilla() && isdefined(level.FRFIX_CONFIG["const_round_timer"]) && level.FRFIX_CONFIG["const_round_timer"])
 		{
 			round_hud setTimerUp(0);
 			round_hud FadeOverTime(0.25);
@@ -745,6 +768,8 @@ RoundTimerHud()
 
 		round_end = int(getTime() / 1000) - round_start;
 		InfoPrint("Round " + (level.round_number - 1) + " time: " + ConvertTime(round_end));
+
+		round_start = undefined;
 
 		if (IsVanilla())
 			continue;
@@ -770,12 +795,6 @@ SplitsTimerHud()
 {
 	level endon("end_game");
 
-    splits_hud = createserverfontstring("hudsmall" , 1.3);
-	[[level.hudpos_splits]](splits_hud);
-	splits_hud.color = level.FRFIX_HUD_COLOR;
-	splits_hud.alpha = 0;
-	splits_hud.hidewheninmenu = 1;
-
 	while (true)
 	{
 		level waittill("end_of_round");
@@ -783,6 +802,12 @@ SplitsTimerHud()
 
 		if (IsRound(15) && !(level.round_number % 5))
 		{
+			splits_hud = createserverfontstring("hudsmall" , 1.3);
+			[[level.hudpos_splits]](splits_hud);
+			splits_hud.color = GetHudColor();
+			splits_hud.alpha = 0;
+			splits_hud.hidewheninmenu = 1;
+
 			timestamp = ConvertTime(int(getTime() / 1000) - level.FRFIX_START);
 			InfoPrint("Split: Round " + (level.round_number - 1) + ": " + timestamp);
 
@@ -796,6 +821,10 @@ SplitsTimerHud()
 
 			splits_hud fadeOverTime(0.25);
 			splits_hud.alpha = 0;
+
+			splits_hud destroy();
+			timestamp = undefined;
+			splits_hud = undefined;
 		}
 	}
 }
@@ -804,18 +833,11 @@ ZombiesHud()
 {
 	level endon("end_game");
 
-	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+	if (IsVanilla())
 		return;
 
-	if (!isdefined(level.FRFIX_HORDES_ENABLED) || !level.FRFIX_HORDES_ENABLED)
+	if (!isdefined(level.FRFIX_CONFIG["show_hordes"]) || !level.FRFIX_CONFIG["show_hordes"])
 		return;
-
-    zombies_hud = createserverfontstring("hudsmall" , 1.4);
-	[[level.hudpos_zombies]](zombies_hud);
-	zombies_hud.color = level.FRFIX_HUD_COLOR;
-	zombies_hud.alpha = 0;
-	zombies_hud.hidewheninmenu = 1;
-	zombies_hud.label = &"Hordes this round: ";
 
 	while (true)
 	{
@@ -823,6 +845,13 @@ ZombiesHud()
 		wait 0.1;
 		if (isDefined(flag("dog_round")) && !flag("dog_round") && IsRound(20))
 		{
+			zombies_hud = createserverfontstring("hudsmall" , 1.4);
+			[[level.hudpos_zombies]](zombies_hud);
+			zombies_hud.color = GetHudColor();
+			zombies_hud.alpha = 0;
+			zombies_hud.hidewheninmenu = 1;
+			zombies_hud.label = &"Hordes this round: ";
+
 			label = "HORDES ON " + level.round_number + ": ";
 			zombies_hud.label = istring(label);
 
@@ -836,6 +865,11 @@ ZombiesHud()
 
 			zombies_hud fadeOverTime(0.25);
 			zombies_hud.alpha = 0;
+
+			zombies_hud destroy();
+			zombies_hud = undefined;
+			label = undefined;
+			zombies_value = undefined;
 		}
 	}
 }
@@ -845,7 +879,7 @@ VelocityMeter()
     self endon("disconnect");
     level endon("end_game");
 
-	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+	if (IsVanilla())
 		return;
 
     PlayerThreadBlackscreenWaiter();
@@ -853,7 +887,7 @@ VelocityMeter()
     self.hud_velocity = createfontstring("hudsmall" , 1.2);
 	[[level.hudpos_velocity]](self.hud_velocity);
 	self.hud_velocity.alpha = 0.75;
-	self.hud_velocity.color = level.FRFIX_HUD_COLOR;
+	self.hud_velocity.color = GetHudColor();
 	self.hud_velocity.hidewheninmenu = 1;
     // self.hud_velocity.label = &"Velocity: ";
 
@@ -936,56 +970,59 @@ VelocityMeterSize(hud)
 			DebugPrint("Velocity: Current size: " + hud.fontscale + " / New size: " + new_size + " detected for player " + self.name);
 
 			hud.fontscale = new_size;
+			
+			new_size = undefined;
 		}
 	}
 }
 
 SemtexChart()
 {
-	// self endon("disconnect");
 	level endon("end_game");
 
-	if (isDefined(level.FRFIX_VANILLA) && level.FRFIX_VANILLA)
+	if (IsVanilla() || HasMagic() || !IsTown())
 		return;
 
 	// Escape if starting round is bigger than 22 since the display is going to be inaccurate
-	if (!isdefined(level.FRFIX_PRENADES) || !level.FRFIX_PRENADES || IsRound(23))
+	if (!isdefined(level.FRFIX_CONFIG["semtex_prenades"]) || !level.FRFIX_CONFIG["semtex_prenades"] || IsRound(23))
 		return;
 
-	if (IsTown() && !HasMagic())
+	// Starts on r22 and goes onwards
+	chart = array(1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 17, 19, 22, 24, 28, 29, 34, 39, 42, 46, 52, 57, 61, 69, 78, 86, 96, 103);
+
+	while (!IsRound(22))
+		level waittill("between_round_over");
+
+	foreach(semtex in chart)
 	{
-		// Starts on r22 and goes onwards
-		chart = array(1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 17, 19, 22, 24, 28, 29, 34, 39, 42, 46, 52, 57, 61, 69, 78, 86, 96, 103);
+		level waittill("start_of_round");
+		wait 0.1;
 
 		semtex_hud = createserverfontstring("hudsmall" , 1.4);
 		[[level.hudpos_semtex_chart]](semtex_hud);
-		semtex_hud.color = level.FRFIX_HUD_COLOR;
+		semtex_hud.color = GetHudColor();
 		semtex_hud.alpha = 0;
 		semtex_hud.hidewheninmenu = 1;
 		semtex_hud.label = &"Prenades this round: ";
 
-		while (!IsRound(22))
-			level waittill("between_round_over");
+		label = "PRENADES ON " + level.round_number + ": ";
+		semtex_hud.label = istring(label);
 
-		foreach(semtex in chart)
-		{
-			level waittill("start_of_round");
-			wait 0.1;
+		semtex_hud setValue(semtex);
 
-			label = "PRENADES ON " + level.round_number + ": ";
-			semtex_hud.label = istring(label);
+		semtex_hud fadeOverTime(0.25);
+		semtex_hud.alpha = 1;
 
-			semtex_hud setValue(semtex);
+		wait 5;
 
-			semtex_hud fadeOverTime(0.25);
-			semtex_hud.alpha = 1;
+		semtex_hud fadeOverTime(0.25);
+		semtex_hud.alpha = 0;
 
-			wait 5;
-
-			semtex_hud fadeOverTime(0.25);
-			semtex_hud.alpha = 0;
-		}
+		semtex_hud destroy();
+		label = undefined;
+		semtex_hud = undefined;
 	}
+
 	return;
 }
 
@@ -993,7 +1030,7 @@ NukeMannequins()
 {
 	level endon("end_game");
 
-	if (!isdefined(level.FRFIX_YELLOWHOUSE) || !level.FRFIX_YELLOWHOUSE)
+	if (!isdefined(level.FRFIX_CONFIG["mannequins"]) || !level.FRFIX_CONFIG["mannequins"])
 		return;
 
 	if (!IsNuketown())
@@ -1003,7 +1040,7 @@ NukeMannequins()
     destructibles = getentarray("destructible", "targetname");
     foreach (mannequin in destructibles)
     {
-		if (isdefined(level.enable_magic) && !level.enable_magic)
+		if (!HasMagic())
 		{
 			if (mannequin.origin == (1058.2, 387.3, -57))
 				mannequin delete();
@@ -1031,7 +1068,7 @@ NukeMannequins()
 
 EyeChange()
 {
-	if (!isdefined(level.FRFIX_NUKETOWN_EYES) || !level.FRFIX_NUKETOWN_EYES)
+	if (!isdefined(level.FRFIX_CONFIG["nuketown_25_ee"]) || !level.FRFIX_CONFIG["nuketown_25_ee"])
 		return;
 
 	if (!IsNuketown())
@@ -1122,7 +1159,7 @@ PermaPerksSetup()
 
 	flag_wait("initial_blackscreen_passed");
 
-	if (isdefined(level.FRFIX_PERMAPERKS) && level.FRFIX_PERMAPERKS)
+	if (isdefined(level.FRFIX_CONFIG["give_permaperks"]) && level.FRFIX_CONFIG["give_permaperks"])
 	{
 		if (isDefined(level.frfix_metal_boards_func))
 		{
@@ -1174,6 +1211,7 @@ PermaWatcher()
 	self endon("disconnect");
 
 	self waittill("initial_permas_awarded");
+	DebugPrint("PermaWatcher received 'initial_permas_awarded' signal");
 
 	self.last_perk_state = array();
 	foreach(perk in level.pers_upgrades_keys)
@@ -1257,7 +1295,7 @@ OriginsFix()
 {
     level endon("end_game");
 	
-	if (!isdefined(level.FRFIX_ORIGINSFIX) || !level.FRFIX_ORIGINSFIX)
+	if (!isdefined(level.FRFIX_CONFIG["forever_solo_game_fix"]) || !level.FRFIX_CONFIG["forever_solo_game_fix"])
 		return;
 
 	flag_wait("start_zombie_round_logic");
@@ -1396,7 +1434,7 @@ TrackedPowerupDrop( drop_point )
 
 Fridge(mode)
 {
-	if (!isDefined(level.FRFIX_FRIDGE) || !level.FRFIX_FRIDGE)
+	if (!isDefined(level.FRFIX_CONFIG["fridge"]) || !level.FRFIX_CONFIG["fridge"])
 		return;
 
 	if (!IsTranzit() && !IsDieRise() && !IsBuried())
@@ -1561,7 +1599,7 @@ FirstBox()
     level endon("end_game");
 	level endon("break_firstbox");
 
-	if (!isDefined(level.FRFIX_FIRSTBOX) || !level.FRFIX_FIRSTBOX)
+	if (!isDefined(level.FRFIX_CONFIG["first_box_module"]) || !level.FRFIX_CONFIG["first_box_module"])
 		return;
 
 	if (level.start_round > 1 && !IsTown())
@@ -1584,6 +1622,8 @@ FirstBox()
 
 		self thread RigBox(wpn_key, player);
 		wait_network_frame();
+
+		wpn_key = undefined;
 
 		while (flag("box_rigged"))
 			wait 0.05;
