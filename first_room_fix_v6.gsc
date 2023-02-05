@@ -32,6 +32,7 @@ init()
 	flag_init("game_started");
 	flag_init("box_rigged");
 	flag_init("break_firstbox");
+	flag_init("initial_permas_awarded");
 
 	level thread FrFixActiveBackwardsCompatibile();
 
@@ -77,6 +78,7 @@ OnGameStart()
 	level thread EyeChange();
 	level thread DebugGamePrints();
 	level thread AnticheatSafety();
+	level thread StopPermaPerksAwardWatcher();
 	if (IfDebug() && isDefined(level.FRFIX_TESTING_PLUGIN))
 		level thread [[level.FRFIX_TESTING_PLUGIN]]();
 
@@ -127,6 +129,7 @@ OnPlayerSpawned()
 	self thread PrintNetworkFrame(6);
 	self thread VelocityMeter();
 	self thread SetCharacter();
+	self thread PermaWatcher();
 
 	// while(true)
 	// {
@@ -170,16 +173,18 @@ DebugPrintPermaPerk(enabled, perk)
 {
 	if (enabled)
 	{
-		if (isDefined(level.FRFIX_CONFIG["track_permaperks"]) && level.FRFIX_CONFIG["track_permaperks"] && flag("initial_blackscreen_passed"))
-			self iPrintLn("Permaperk " + perk + " ^2ENABLED");
-		DebugPrint("Permaperks: " + perk + " enabled");
+		print_player = "^2ENABLED";
+		print_cli = "enabled";
 	}
-	else if (!enabled)
+	else
 	{
-		if (isDefined(level.FRFIX_CONFIG["track_permaperks"]) && level.FRFIX_CONFIG["track_permaperks"])
-			self iPrintLn("Permaperk " + perk + " ^1DISABLED");
-		DebugPrint("Permaperks: " + perk + " disabled");
+		print_player = "^1DISABLED";
+		print_cli = "disabled";
 	}
+
+	if (isDefined(level.FRFIX_CONFIG["track_permaperks"]) && level.FRFIX_CONFIG["track_permaperks"])
+		self iPrintLn("Permaperk " + perk + ": " + print_player);
+	DebugPrint("Permaperks: " + perk + " " + print_cli);
 	return;
 }
 
@@ -1191,7 +1196,6 @@ WatchForNewPlayers()
 	// Give perma perks to everyone who is connected at this point
 	foreach(player in level.players)
 	{
-		player thread PermaWatcher();
 		player thread AwardPermaPerks();
 	}
 
@@ -1200,7 +1204,6 @@ WatchForNewPlayers()
 	{
 		level waittill("connected", player);
 
-		player thread PermaWatcher();
 		player thread AwardPermaPerks();
 	}
 }
@@ -1210,7 +1213,6 @@ PermaWatcher()
 	level endon("end_game");
 	self endon("disconnect");
 
-	self waittill("initial_permas_awarded");
 	DebugPrint("PermaWatcher received 'initial_permas_awarded' signal");
 
 	self.last_perk_state = array();
@@ -1223,7 +1225,8 @@ PermaWatcher()
 		{
 			if (self.pers_upgrades_awarded[perk] != self.last_perk_state[perk])
 			{
-				self DebugPrintPermaPerk(self.pers_upgrades_awarded[perk], perk);
+				if (!isDefined(self.frfix_awarding_permaperks))
+					self DebugPrintPermaPerk(self.pers_upgrades_awarded[perk], perk);
 				self.last_perk_state[perk] = self.pers_upgrades_awarded[perk];
 				wait 0.1;
 			}
@@ -1260,6 +1263,7 @@ AwardPermaPerks()
 		perks_to_remove[perks_to_remove.size] = "nube";
 
 	// Set permaperks
+	self.frfix_awarding_permaperks = true;
 	foreach(perk in perks_to_award)
 	{
 		for (j = 0; j < level.pers_upgrades[perk].stat_names.size; j++)
@@ -1277,9 +1281,7 @@ AwardPermaPerks()
 		self.pers_upgrades_awarded[perk] = 0;
 		InfoPrint("Perk Removal for " + self.name + ": " + perk);
 	}
-
-	// uploadstats(self);
-	self notify("initial_permas_awarded");
+	self.frfix_awarding_permaperks = undefined;
 }
 
 AwardPermaPerk(stat_name, perk_name, stat_value)
