@@ -33,8 +33,6 @@ init()
 	flag_init("box_rigged");
 	flag_init("break_firstbox");
 
-	level thread fr_fix_variable_backwards_compatibility();
-
 	// Patch Config
 	level.FRFIX_CONFIG = array();
 	level.FRFIX_CONFIG["version"] = 6;
@@ -369,16 +367,6 @@ get_hud_color(fallback)
 }
 
 // Functions
-
-//Song patch looks for this variable in safety function, so it needs to be active temporarily
-fr_fix_variable_backwards_compatibility()
-{
-	level endon("end_game");
-
-	level.FRFIX_ACTIVE = true;
-	wait 60;
-	level.FRFIX_ACTIVE = undefined;
-}
 
 welcome_prints()
 {
