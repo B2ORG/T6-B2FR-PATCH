@@ -71,6 +71,7 @@ on_game_start()
 	// Initial game settings
 	level thread dvar_detector();
 	level thread first_box_handler();
+	level thread fridge_handler();
 	level thread origins_fix();
 	level thread eye_change();
 	level thread debug_game_prints();
@@ -120,7 +121,6 @@ on_player_spawned()
 	while (!flag("initial_players_connected"))
 		wait 0.05;
 
-	self thread fridge("tranzitnp");
 	self thread welcome_prints();
 	self thread print_network_frame(6);
 	self thread velocity_meter();
@@ -1418,43 +1418,97 @@ powerup_drop_tracking( drop_point )
     level notify( "powerup_dropped", powerup );
 }
 
-fridge(mode)
+fridge_handler()
+// Fill up the README
 {
-	if (!isDefined(level.FRFIX_CONFIG["fridge"]) || !level.FRFIX_CONFIG["fridge"])
-		return;
+	level endon("end_game");
 
 	if (!is_tranzit() && !is_die_rise() && !is_buried())
 		return;
 
-	flag_wait("initial_blackscreen_passed");
-
-	self.account_value = 200000;
-
-	if (!did_game_just_start())
+	if (!isDefined(level.FRFIX_CONFIG["fridge"]) || !level.FRFIX_CONFIG["fridge"])
 		return;
 
-	if (isDefined(mode) && mode == "tranzitnp" && is_tranzit())
+	self thread fridge();
+	self thread fridge_state_watcher();
+
+	// Cleanup
+	level waittill("terminate_fridge_process", player_name);
+	info_print("FRIDGE: Player " + player_name + " obtained his weapon. Fridge module no longer available");
+
+	foreach(player in level.players)
 	{
-		self clear_stored_weapondata();
-		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "name", "mp5k_upgraded_zm");
-		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "clip", 40);
-		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "stock", 200);
+		if (isDefined(player.fridge_state))
+			player.fridge_state = undefined;
 	}
-	else if (isDefined(mode) && mode == "saloon" && is_buried())
+}
+
+fridge()
+{
+	level endon("end_game");
+	level endon("terminate_fridge_process");
+
+	// Use plugin to set initial fridge weapons, only for players connected from r1
+	if (isDefined(level.frfix_fridge_plugin))
+		self thread [[level.frfix_fridge_plugin]](::player_rig_fridge);
+
+	while (true)
 	{
-		self clear_stored_weapondata();
-		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "name", "m32_zm");
-		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "clip", 6);
-		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "stock", 18);
+		level waittill("say", message, player, ishidden);
+
+		if (isSubStr(message, "fridge all") && player ishost())
+			rig_fridge(getSubStr(message, 11));
+		else if (isSubStr(message, "fridge"))
+			rig_fridge(getSubStr(message, 7), player);
 	}
+}
+
+rig_fridge(key, player)
+{
+	if (isSubStr(key), "+")
+		weapon = get_weapon_key(getSubStr(key, 2), ::verify_weapon_key_fridge_pap);
+	else
+		weapon = get_weapon_key(key, ::verify_weapon_key_fridge);
+
+	if (!weapon)
+		return;
+
+	if (isDefined(player))
+		player player_rig_fridge(weapon);
 	else
 	{
-		self clear_stored_weapondata();
-		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "name", "an94_upgraded_zm+mms");
-		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "clip", 50);
-		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "stock", 600);
+		foreach(player in level.players)
+			player player_rig_fridge(weapon);
 	}
-	return;
+}
+
+player_rig_fridge(weapon)
+{
+	self clear_stored_weapondata();
+	self set_map_weaponlocker_stat("name", weapon);
+	self set_map_weaponlocker_stat("clip", weaponClipSize(weapon));
+	self set_map_weaponlocker_stat("stock", weaponMaxAmmo(weapon));
+
+	debug_print("FRIDGE: " + self.name + "s Fridge has been rigged with weapon '" + weapon + "'");
+}
+
+fridge_state_watcher()
+{
+	level endon("end_game");
+	level endon("terminate_fridge_process");
+
+	while (true)
+	{
+		foreach(player in level.players)
+		{
+			if (isDefined(player.fridge_state) && player.fridge_state != get_map_weaponlocker_stat("name"))
+				level notify("terminate_fridge_process", player.name);
+			else if (!isDefined(player.fridge_state))
+				player.fridge_state = get_map_weaponlocker_stat("name");
+		}
+
+		wait 0.25;
+	}
 }
 
 first_box_handler()
@@ -1620,7 +1674,7 @@ rig_box(gun, player)
 {
     level endon("end_game");
 
-	weapon_key = get_weapon_key(gun);
+	weapon_key = get_weapon_key(gun, ::verify_weapon_key_box);
 	if (weapon_key == "")
 	{
 		iPrintLn("Wrong weapon key: ^1" + gun);
@@ -1697,7 +1751,7 @@ watch_for_finish_firstbox()
 	return;
 }
 
-get_weapon_key(weapon_str)
+get_weapon_key(weapon_str, verifier)
 {
 	key = "";
 
@@ -1710,51 +1764,57 @@ get_weapon_key(weapon_str)
 			key = "raygun_mark2_zm";
 			break;
 		case "monk":
-			if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried() || is_origins())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried() || is_origins())
 				key = "cymbal_monkey_zm";
 			break;
 		case "emp":
-			if (is_town() || is_farm() || is_depot() || is_tranzit())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit())
 				key = "emp_grenade_zm";
 			break;
 		case "time":
-			if (is_buried())
+			// if (is_buried())
 				key = "time_bomb_zm";
 			break;
 		case "sliq":
-			if (is_die_rise())
+			// if (is_die_rise())
 				key = "slipgun_zm";
 			break;
 		case "blunder":
-			if (is_mob())
+			// if (is_mob())
 				key = "blundergat_zm";
 			break;
 		case "paralyzer":
-			if (is_buried())
+			// if (is_buried())
 				key = "slowgun_zm";
 			break;
 
 		case "ak47":
-			if (is_mob())
+			// if (is_mob())
 				key = "ak47_zm";
 			break;
+		case "an94":
+			key = "an94_zm";
+			break;
 		case "barret":
-			if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_mob() || is_buried())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_mob() || is_buried())
 				key = "barretm82_zm";
 			break;
-		case "b23":
-			if (is_origins())
+		case "b23r":
+			key = "beretta93r_zm";
+			break;
+		case "b23re"
+			// if (is_origins())
 				key = "beretta93r_extclip_zm";
 			break;
 		case "dsr":
 			key = "dsr50_zm";
 			break;
 		case "evo":
-			if (is_origins())
+			// if (is_origins())
 				key = "evoskorpion_zm";
 			break;
 		case "57":
-			if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried())
 				key = "fiveseven_zm";
 			break;
 		case "257":
@@ -1767,11 +1827,11 @@ get_weapon_key(weapon_str)
 			key = "galil_zm";
 			break;
 		case "mtar":
-			if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_mob() || is_buried())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_mob() || is_buried())
 				key = "tar21_zm";
 			break;
 		case "hamr":
-			if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried() || is_origins())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried() || is_origins())
 				key = "hamr_zm";
 			break;
 		case "m27":
@@ -1779,89 +1839,138 @@ get_weapon_key(weapon_str)
 				key = "hk416_zm";
 			break;
 		case "exe":
-			if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_mob() || is_buried())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_mob() || is_buried())
 				key = "judge_zm";
 			break;
 		case "kap":
 			key = "kard_zm";
 			break;
 		case "bk":
-			if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried())
 				key = "knife_ballistic_zm";
 			break;
 		case "ksg":
-			if (is_origins())
+			// if (is_origins())
 				key = "ksg_zm";
 			break;
 		case "wm":
-			if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried() || is_origins())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried() || is_origins())
 				key = "m32_zm";
 			break;
 		case "mg":
-		case "lsat":
-			if (is_origins())
+			// if (is_origins())
 				key = "mg08_zm";
-			else if (is_nuketown() || is_mob())
+			break;
+		case "lsat":
+			// if (is_nuketown() || is_mob())
 				key = "lsat_zm";
 			break;
 		case "dm":
-			if (is_mob())
+			// if (is_mob())
 				key = "minigun_alcatraz_zm";
 		case "mp40":
-			if (is_origins())
+			// if (is_origins())
 				key = "mp40_stalker_zm";
 			break;
 		case "pdw":
-			if (is_mob() || is_origins())
+			// if (is_mob() || is_origins())
 				key = "pdw57_zm";
 			break;
 		case "pyt":
-		case "rnma":
-			if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_origins())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_origins())
 				key = "python_zm";
-			else if (is_buried())
+			break;
+		case "rnma":
+			// if (is_buried())
 				key = "rnma_zm";
 			break;
 		case "type":
-			if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_origins())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_origins())
 				key = "type95_zm";
 			break;
 		case "rpd":
-			if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise())
 				key = "rpd_zm";
 			break;
 		case "s12":
-			if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_mob() || is_buried())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_mob() || is_buried())
 				key = "saiga12_zm";
 			break;
 		case "scar":
-			if (is_origins())
+			// if (is_origins())
 				key = "scar_zm";
 			break;
 		case "m1216":
-			if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried() || is_origins())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried() || is_origins())
 				key = "srm1216_zm";
 			break;
 		case "tommy":
-			if (is_mob())
+			// if (is_mob())
 				key = "thompson_zm";
 			break;
 		case "chic":
-			if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_origins())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_origins())
 				key = "qcw05_zm";
 			break;
 		case "rpg":
-			if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_mob() || is_buried())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_mob() || is_buried())
 				key = "usrpg_zm";
 			break;
 		case "m8":
-			if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise())
+			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise())
 				key = "xm8_zm";
+			break;
+		case "m16":
+			key = "m16_zm";
+			break;
+		case "remington":
+			key = "870mcs_zm";
+			break;
+		case "oly":
+		case "olympia":
+			key = "rottweil72_zm";
+			break;
+		case "mp5":
+			key = "mp5k_zm";
+			break;
+		case "ak74":
+			key = "ak74u_zm";
 			break;
 	}
 
+	if (isDefined(verifier))
+		key = [[verifier]](key);
+
 	debug_print("FIRST BOX: weapon_key: " + key);
 	return key;
+}
+
+verify_weapon_key_box(weapon_key)
+{
+	if (isDefined(level.zombie_weapons[weapon_key]) && level.zombie_weapons[weapon_key].is_in_box)
+		return weapon_key;
+	return "";
+}
+
+verify_weapon_key_fridge(weapon_key)
+{
+    weapon_key = get_base_weapon_name(weapon_key, 1);
+
+    if (!is_weapon_included(weapon_key))
+        return "";
+
+    if (is_offhand_weapon(weapon_key) || is_limited_weapon(weapon_key))
+        return "";
+
+    return weapon_key;
+}
+
+verify_weapon_key_fridge_pap()
+{
+    weapon_key = verify_weapon_key_fridge(weapon_key);
+	if (weapon_key)
+		return level.zombie_weapons[weapon_key].upgrade_name;
+	return "";
 }
 
 weapon_display_wrapper(weapon_key)

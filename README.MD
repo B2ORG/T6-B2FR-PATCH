@@ -98,7 +98,7 @@ If First Box is used, a watermark will be generated on the screen, this ensures 
 | Sliquifier | sliq | x | x | v | x | x | x |
 | Time Bomb | time | x | x | x | x | v | x |
 | AK47 | ak47 | x | x | x | v | x | x |
-| B23R | b23 | x | x | x | x | x | v |
+| B23R | b23re | x | x | x | x | x | v |
 | Chicom CQB | chic | v | v | v | x | x | v |
 | Death Machine | dm | x | x | x | v | x | x |
 | DSR50 | dsr | v | v | v | v | v | v |
