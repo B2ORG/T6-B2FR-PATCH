@@ -74,8 +74,10 @@ on_game_start()
 	level thread fridge_handler();
 	level thread origins_fix();
 	level thread eye_change();
-	level thread debug_game_prints();
 	level thread safety_anticheat();
+	level thread powerup_point_drop_watcher();
+	level thread powerup_odds_watcher();
+	level thread powerup_vars_controller();
 
 	if (is_debug() && isDefined(level.FRFIX_TESTING_PLUGIN))
 		level thread [[level.FRFIX_TESTING_PLUGIN]]();
@@ -402,18 +404,20 @@ generate_cheat()
 	return;
 }
 
-debug_game_prints()
+powerup_vars_controller()
 {
 	level endon("end_game");
-
-	self thread powerup_odds_watcher();
-	self thread point_drop_watcher();
 
 	while (true)
 	{
 		level waittill("start_of_round");
-		info_print("ROUND: " + level.round_number + " level.powerup_drop_count = " + level.powerup_drop_count + " | Should be 0");
-		info_print("ROUND: " + level.round_number + " size of level.zombie_powerup_array = " + level.zombie_powerup_array.size + " | Should be above 0");
+
+		if (level.powerup_drop_count != 0 || level.zombie_powerup_array.size < 1)
+		{
+			info_print("Possible issue with powerup related variables\nlevel.powerup_drop_count=" + level.powerup_drop_count + " level.zombie_powerup_array.size=" + level.zombie_powerup_array.size + ".\nPlease send screenshot of the console to Zi0#1063");
+			iPrintLn("^1WARNING^7: Possible issue with powerups");
+			iPrintLn("Check console for details");
+		}
 	}
 }
 
@@ -425,16 +429,23 @@ powerup_odds_watcher()
 	{
 		level waittill("powerup_check", chance);
 		info_print("rand_drop = " + chance);
+		chance = undefined;
 	}
 }
 
-point_drop_watcher()
+powerup_point_drop_watcher()
 {
 	level endon("end_game");
 
 	while (true)
 	{
 		wait 0.05;
+
+		if (is_round(50))
+		{
+			info_print("Stopping point drop watcher");
+			break;
+		}
 
 		if (!level.zombie_vars["zombie_drop_item"])
 			continue;
@@ -1360,20 +1371,20 @@ safety_anticheat()
 		player doDamage(player.health + 69, player.origin);
 }
 
-powerup_drop_tracking( drop_point )
+powerup_drop_tracking(drop_point)
 {
-    if ( level.powerup_drop_count >= level.zombie_vars["zombie_powerup_drop_max_per_round"] )
+    if (level.powerup_drop_count >= level.zombie_vars["zombie_powerup_drop_max_per_round"])
         return;
 
-    if ( !isdefined( level.zombie_include_powerups ) || level.zombie_include_powerups.size == 0 )
+    if (!isdefined(level.zombie_include_powerups) || level.zombie_include_powerups.size == 0)
         return;
 
-    rand_drop = randomint( 100 );
+    rand_drop = randomint(100);
 	level notify("powerup_check", rand_drop);
 
-    if ( rand_drop > 2 )
+    if (rand_drop > 2)
     {
-        if ( !level.zombie_vars["zombie_drop_item"] )
+        if (!level.zombie_vars["zombie_drop_item"])
             return;
 
         debug = "score";
@@ -1381,29 +1392,29 @@ powerup_drop_tracking( drop_point )
     else
         debug = "random";
 
-    playable_area = getentarray( "player_volume", "script_noteworthy" );
+    playable_area = getentarray("player_volume", "script_noteworthy");
     level.powerup_drop_count++;
-    powerup = maps\mp\zombies\_zm_net::network_safe_spawn( "powerup", 1, "script_model", drop_point + vectorscale( ( 0, 0, 1 ), 40.0 ) );
+    powerup = maps\mp\zombies\_zm_net::network_safe_spawn("powerup", 1, "script_model", drop_point + vectorscale((0, 0, 1), 40.0));
     valid_drop = 0;
 
-    for ( i = 0; i < playable_area.size; i++ )
+    for (i = 0; i < playable_area.size; i++)
     {
-        if ( powerup istouching( playable_area[i] ) )
+        if (powerup istouching(playable_area[i]))
             valid_drop = 1;
     }
 
-    if ( valid_drop && level.rare_powerups_active )
+    if (valid_drop && level.rare_powerups_active)
     {
-        pos = ( drop_point[0], drop_point[1], drop_point[2] + 42 );
+        pos = (drop_point[0], drop_point[1], drop_point[2] + 42);
 
-        if ( check_for_rare_drop_override( pos ) )
+        if (check_for_rare_drop_override(pos))
         {
             level.zombie_vars["zombie_drop_item"] = 0;
             valid_drop = 0;
         }
     }
 
-    if ( !valid_drop )
+    if (!valid_drop)
     {
         level.powerup_drop_count--;
         powerup delete();
@@ -1411,14 +1422,14 @@ powerup_drop_tracking( drop_point )
     }
 
     powerup powerup_setup();
-    print_powerup_drop( powerup.powerup_name, debug );
+    print_powerup_drop(powerup.powerup_name, debug);
     powerup thread powerup_timeout();
     powerup thread powerup_wobble();
     powerup thread powerup_grab();
     powerup thread powerup_move();
     powerup thread powerup_emp();
     level.zombie_vars["zombie_drop_item"] = 0;
-    level notify( "powerup_dropped", powerup );
+    level notify("powerup_dropped", powerup);
 }
 
 fridge_handler()
