@@ -1035,7 +1035,7 @@ eye_change()
 	sndswitchannouncervox("richtofen");
 }
 
-get_pap_weapon_options_set_reticle ( weapon ) // Override to get rid of rng reticle
+get_pap_weapon_options_set_reticle ( weapon )
 {
 	if ( !isDefined( self.pack_a_punch_weapon_options ) )
 	{
@@ -1139,7 +1139,6 @@ stop_permaperks_module()
 	self notify("stop_permaperks_award");
 }
 
-// Make watcher usable after reconnecting any round
 watch_for_new_players()
 {
 	level endon("end_game");
