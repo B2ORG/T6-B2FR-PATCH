@@ -1,47 +1,120 @@
-#include maps\mp\gametypes_zm\_hud_util;
+#include common_scripts\utility;
 
 init()
 {
-    level.hudpos_timer_game = ::OverrideHudTimerGame;
-    level.hudpos_timer_round = ::OverrideHudTimerRound;
-    level.hudpos_ongame_end = ::OverrideHudOngameEnd;
-    level.hudpos_splits = ::OverrideHudSplits;
-    level.hudpos_zombies = ::OverrideHudZombies;
-    level.hudpos_velocity = ::OverrideHudVelocity;
-    level.hudpos_semtex_chart = ::OverrideHudSemtexChart;
+    level.FRFIX_HUD_POS_PLUGIN = array();
+    level.FRFIX_HUD_POS_PLUGIN["timer_hud"] = get_timer_hud();
+    level.FRFIX_HUD_POS_PLUGIN["round_hud"] = get_round_hud();
+    level.FRFIX_HUD_POS_PLUGIN["hordes_hud"] = get_hordes_hud();
+    level.FRFIX_HUD_POS_PLUGIN["splits_hud"] = get_splits_hud();
+    level.FRFIX_HUD_POS_PLUGIN["hud_velocity"] = get_velocity_hud();
+    level.FRFIX_HUD_POS_PLUGIN["semtex_hud"] = get_semtex_hud();
 }
 
-OverrideHudTimerGame(hudelem)
+get_timer_hud(active)
 {
-	hudelem setpoint("TOPRIGHT", "TOPRIGHT", -8, 0);
+    if (isDefined(active) && active)
+    {
+        data = array();
+        data["x_align"] = "TOPRIGHT";
+        data["y_align"] = "TOPRIGHT";
+        data["x_pos"] = -8;
+        data["y_pos"] = 0;
+    }
+    else
+    {
+        data = undefined;
+    }
+
+    return data;
 }
 
-OverrideHudTimerRound(hudelem)
+get_round_hud(active)
 {
-	hudelem setpoint ("TOPRIGHT", "TOPRIGHT", -8, 17);
+    if (isDefined(active) && active)
+    {
+        data = array();
+        data["x_align"] = "TOPRIGHT";
+        data["y_align"] = "TOPRIGHT";
+        data["x_pos"] = -8;
+        data["y_pos"] = 17;
+    }
+    else
+    {
+        data = undefined;
+    }
+
+    return data;
 }
 
-OverrideHudOngameEnd(hudelem)
+get_splits_hud(active)
 {
-	hudelem setpoint ("CENTER", "MIDDLE", 0, -75);
+    if (isDefined(active) && active)
+    {
+        data = array();
+        data["x_align"] = "CENTER";
+        data["y_align"] = "TOP";
+        data["x_pos"] = 0;
+        data["y_pos"] = 30;
+    }
+    else
+    {
+        data = undefined;
+    }
+
+    return data;
 }
 
-OverrideHudSplits(hudelem)
+get_hordes_hud(active)
 {
-	hudelem setpoint ("CENTER", "TOP", 0, 0);
+    if (isDefined(active) && active)
+    {
+        data = array();
+        data["x_align"] = "CENTER";
+        data["y_align"] = "BOTTOM";
+        data["x_pos"] = 0;
+        data["y_pos"] = -75;
+    }
+    else
+    {
+        data = undefined;
+    }
+
+    return data;
 }
 
-OverrideHudZombies(hudelem)
+get_velocity_hud(active)
 {
-	hudelem setpoint ("CENTER", "BOTTOM", 0, -75);
+    if (isDefined(active) && active)
+    {
+        data = array();
+        data["x_align"] = "CENTER";
+        data["y_align"] = "CENTER";
+        data["x_pos"] = "CENTER";
+        data["y_pos"] = 200;
+    }
+    else
+    {
+        data = undefined;
+    }
+
+    return data;
 }
 
-OverrideHudVelocity(hudelem)
+get_semtex_hud(active)
 {
-	hudelem setpoint ("CENTER", "CENTER", "CENTER", 200);
-}
+    if (isDefined(active) && active)
+    {
+        data = array();
+        data["x_align"] = "CENTER";
+        data["y_align"] = "BOTTOM";
+        data["x_pos"] = 0;
+        data["y_pos"] = -95;
+    }
+    else
+    {
+        data = undefined;
+    }
 
-OverrideHudSemtexChart(hudelem)
-{
-	hudelem setpoint ("CENTER", "BOTTOM", 0, -95);
+    return data;
 }

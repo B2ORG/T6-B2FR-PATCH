@@ -85,7 +85,6 @@ on_game_start()
 	flag_wait("initial_blackscreen_passed");
 
 	// HUD
-	get_hud_position();
 	level thread timer_hud();
 	level thread round_timer_hud();
 	level thread splits_timer_hud();
@@ -348,6 +347,19 @@ has_magic()
     return false;
 }
 
+set_hud_position(hud_key, x_align, y_align, x_pos, y_pos)
+{
+	if (isDefined(level.FRFIX_HUD_POS_PLUGIN[hud_key]))
+	{
+		x_align = level.FRFIX_HUD_POS_PLUGIN[hud_key]["x_align"];
+		y_align = level.FRFIX_HUD_POS_PLUGIN[hud_key]["y_align"];
+		x_pos = level.FRFIX_HUD_POS_PLUGIN[hud_key]["x_pos"];
+		y_pos = level.FRFIX_HUD_POS_PLUGIN[hud_key]["y_pos"];
+	}
+
+	self setpoint(x_align, y_align, x_pos, y_pos);
+}
+
 get_hud_color(fallback)
 {
 	if (isDefined(level.FRFIX_HUD_COLOR_PLUGIN))
@@ -553,59 +565,6 @@ fixed_wait_network_frame()
 		wait 0.05;
 }
 
-get_hud_position()
-{
-	if (!isDefined(level.hudpos_timer_game))
-		level.hudpos_timer_game = ::hudpos_game_time;
-	if (!isDefined(level.hudpos_timer_round))
-		level.hudpos_timer_round = ::hudpos_round_time;
-	if (!isDefined(level.hudpos_ongame_end))
-		level.hudpos_ongame_end = ::hudpos_end_screen;
-	if (!isDefined(level.hudpos_splits))
-		level.hudpos_splits = ::hudpos_splits;
-	if (!isDefined(level.hudpos_zombies))
-		level.hudpos_zombies = ::hudpos_hordes;
-	if (!isDefined(level.hudpos_velocity))
-		level.hudpos_velocity = ::hudpos_velocity;
-	if (!isDefined(level.hudpos_semtex_chart))
-		level.hudpos_semtex_chart = ::hudpos_semtex;
-}
-
-hudpos_game_time(hudelem)
-{
-	hudelem setpoint("TOPRIGHT", "TOPRIGHT", -8, 0);
-}
-
-hudpos_round_time(hudelem)
-{
-	hudelem setpoint ("TOPRIGHT", "TOPRIGHT", -8, 17);
-}
-
-hudpos_end_screen(hudelem)
-{
-	hudelem setpoint ("CENTER", "MIDDLE", 0, -75);
-}
-
-hudpos_splits(hudelem)
-{
-	hudelem setpoint ("CENTER", "TOP", 0, 30);
-}
-
-hudpos_hordes(hudelem)
-{
-	hudelem setpoint ("CENTER", "BOTTOM", 0, -75);
-}
-
-hudpos_velocity(hudelem)
-{
-	hudelem setpoint ("CENTER", "CENTER", "CENTER", 200);
-}
-
-hudpos_semtex(hudelem)
-{
-	hudelem setpoint ("CENTER", "BOTTOM", 0, -95);
-}
-
 display_split(hudelem, time, length)
 {
 	level endon("end_game");
@@ -674,7 +633,7 @@ timer_hud()
     level endon("end_game");
 
     timer_hud = createserverfontstring("hudsmall" , 1.5);
-	[[level.hudpos_timer_game]](timer_hud);
+	timer_hud set_hud_position("timer_hud", "TOPRIGHT", "TOPRIGHT", -8, 0);
 	timer_hud.color = get_hud_color();
 	timer_hud.alpha = 0;
 	timer_hud.hidewheninmenu = 1;
@@ -733,7 +692,7 @@ round_timer_hud()
     level endon("end_game");
 
 	round_hud = createserverfontstring("hudsmall" , 1.5);
-	[[level.hudpos_timer_round]](round_hud);
+	round_hud set_hud_position("round_hud", "TOPRIGHT", "TOPRIGHT", -8, 17);
 	round_hud.color = get_hud_color();
 	round_hud.alpha = 0;
 	round_hud.hidewheninmenu = 1;
@@ -790,7 +749,7 @@ splits_timer_hud()
 		if (is_round(15) && !(level.round_number % 5))
 		{
 			splits_hud = createserverfontstring("hudsmall" , 1.3);
-			[[level.hudpos_splits]](splits_hud);
+			splits_hud set_hud_position("splits_hud", "CENTER", "TOP", 0, 30);
 			splits_hud.color = get_hud_color();
 			splits_hud.alpha = 0;
 			splits_hud.hidewheninmenu = 1;
@@ -832,29 +791,29 @@ hordes_hud()
 		wait 0.1;
 		if (isDefined(flag("dog_round")) && !flag("dog_round") && is_round(20))
 		{
-			zombies_hud = createserverfontstring("hudsmall" , 1.4);
-			[[level.hudpos_zombies]](zombies_hud);
-			zombies_hud.color = get_hud_color();
-			zombies_hud.alpha = 0;
-			zombies_hud.hidewheninmenu = 1;
-			zombies_hud.label = &"Hordes this round: ";
+			hordes_hud = createserverfontstring("hudsmall" , 1.4);
+			hordes_hud set_hud_position("hordes_hud", "CENTER", "BOTTOM", 0, -75);
+			hordes_hud.color = get_hud_color();
+			hordes_hud.alpha = 0;
+			hordes_hud.hidewheninmenu = 1;
+			hordes_hud.label = &"Hordes this round: ";
 
 			label = "HORDES ON " + level.round_number + ": ";
-			zombies_hud.label = istring(label);
+			hordes_hud.label = istring(label);
 
 			zombies_value = int(((maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total) / 24) * 100);
-			zombies_hud setValue(zombies_value / 100);
+			hordes_hud setValue(zombies_value / 100);
 
-			zombies_hud fadeOverTime(0.25);
-			zombies_hud.alpha = 1;
+			hordes_hud fadeOverTime(0.25);
+			hordes_hud.alpha = 1;
 
 			wait 5;
 
-			zombies_hud fadeOverTime(0.25);
-			zombies_hud.alpha = 0;
+			hordes_hud fadeOverTime(0.25);
+			hordes_hud.alpha = 0;
 
-			zombies_hud destroy();
-			zombies_hud = undefined;
+			hordes_hud destroy();
+			hordes_hud = undefined;
 			label = undefined;
 			zombies_value = undefined;
 		}
@@ -872,7 +831,7 @@ velocity_meter()
     player_wait_for_initial_blackscreen();
 
     self.hud_velocity = createfontstring("hudsmall" , 1.2);
-	[[level.hudpos_velocity]](self.hud_velocity);
+	self.hud_velocity set_hud_position("hud_velocity", "CENTER", "CENTER", "CENTER", 0);
 	self.hud_velocity.alpha = 0.75;
 	self.hud_velocity.color = get_hud_color();
 	self.hud_velocity.hidewheninmenu = 1;
@@ -986,7 +945,7 @@ semtex_hud()
 		wait 0.1;
 
 		semtex_hud = createserverfontstring("hudsmall" , 1.4);
-		[[level.hudpos_semtex_chart]](semtex_hud);
+		semtex_hud set_hud_position("semtex_hud", "CENTER", "BOTTOM", 0, -95);
 		semtex_hud.color = get_hud_color();
 		semtex_hud.alpha = 0;
 		semtex_hud.hidewheninmenu = 1;
