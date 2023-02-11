@@ -76,8 +76,11 @@ on_game_start()
 	level thread eye_change();
 	level thread debug_game_prints();
 	level thread safety_anticheat();
+
 	if (is_debug() && isDefined(level.FRFIX_TESTING_PLUGIN))
 		level thread [[level.FRFIX_TESTING_PLUGIN]]();
+	if (is_debug() && isDefined(level.FRFIX_PLUGIN_PERMAPERKS_DEBUG))
+		level thread [[level.FRFIX_PLUGIN_PERMAPERKS_DEBUG]]();
 
 	flag_wait("initial_blackscreen_passed");
 
@@ -179,7 +182,7 @@ print_permaperk_state(enabled, perk)
 	}
 
 	if (isDefined(level.FRFIX_CONFIG["track_permaperks"]) && level.FRFIX_CONFIG["track_permaperks"])
-		self iPrintLn("Permaperk " + perk + ": " + print_player);
+		self iPrintLn("Permaperk " + permaperk_name(perk) + ": " + print_player);
 	debug_print("Permaperks: " + perk + " " + print_cli);
 	return;
 }
@@ -1152,10 +1155,10 @@ perma_perks_setup()
 
 	if (isdefined(level.FRFIX_CONFIG["give_permaperks"]) && level.FRFIX_CONFIG["give_permaperks"])
 	{
-		if (isDefined(level.frfix_metal_boards_func))
+		if (isDefined(level.FRFIX_METALBOARDS_PLUGIN))
 		{
 			info_print("Metal Boards plugin present, if perk is awarded, a restart will be required");
-			[[level.frfix_metal_boards_func]]();
+			[[level.FRFIX_METALBOARDS_PLUGIN]]();
 		}
 		self thread stop_permaperks_module();
 		self thread watch_for_new_players();
@@ -1262,19 +1265,67 @@ award_permaperks()
 
 	foreach(perk in perks_to_remove)
 	{
-		self.pers_upgrades_awarded[perk] = 0;
 		info_print("Perk Removal for " + self.name + ": " + perk);
+		self.pers_upgrades_awarded[perk] = 0;
+		wait 0.05;
 	}
 	self.frfix_awarding_permaperks = undefined;
+	self uploadstatssoon();
 }
 
 award_permaperk(stat_name, perk_name, stat_value)
 {
-	self.stats_this_frame[stat_name] = 1;
-	self set_global_stat(stat_name, stat_value);
-	// self.pers_upgrades_awarded[perk_name] = 1;
-	info_print("Perk Activation for " + self.name + ": " + perk_name + " -> " + stat_name + " set to: " + stat_value);
+	perk_name = permaperk_name(perk_name);
+
+	if (self get_global_stat(stat_name) != stat_value)
+	{
+		self.stats_this_frame[stat_name] = 1;
+		self set_global_stat(stat_name, stat_value);
+		// self.pers_upgrades_awarded[perk_name] = 1;
+		info_print("Perk Activation for " + self.name + ": " + perk_name + " -> " + stat_name + " set to: " + stat_value);
+	}
+	else
+	{
+		info_print("Skipped Perk Activation for " + self.name + ": requirements already met for perk " + perk_name);
+	}
 	return;
+}
+
+permaperk_name()
+{
+	switch (perk)
+	{
+		case "revive":
+			return "Quick Revive";
+		case "multikill_headshots":
+			return "Extra Headshot Damage";
+		case "perk_lose";
+			return "Tombstone";
+		case "jugg":
+			return "Juggernog";
+		case "flopper":
+			return "Flopper";
+		case "box_weapon":
+			return "Better Mystery Box";
+		case "nube":
+			return "Nube";
+		case "board":
+			return "Metal Boards";
+		case "carpenter":
+			return "Metal Carpenter Boards";
+		case "insta_kill":
+			return "Insta-Kill Pro";
+		case "cash_back":
+			return "Perk Refund";
+		case "pistol_points":
+			return "Double Pistol Points";
+		case "double_points":
+			return "Half-Off";
+		case "sniper":
+			return "Sniper Points";
+		default:
+			return perk;
+	}
 }
 
 origins_fix()

@@ -2,7 +2,7 @@
 
 init()
 {
-    level.frfix_metal_boards_func = ::MetalBoardsMain;
+    level.FRFIX_METALBOARDS_PLUGIN = ::MetalBoardsMain;
 }
 
 MetalBoardsMain()
@@ -31,9 +31,12 @@ MetalBoardsMain()
     if (boards_awarded)
     {
         foreach (player in level.players)
+        {
             player freezeControls(1);
+	        player thread uploadstatssoon();
+        }
         iPrintLn("^1RESTART REQUIRED");
-        level notify("end_game");
+        wait 2.5;
+        map_restart(false);
     }
-    return;
 }
