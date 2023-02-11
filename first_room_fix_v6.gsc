@@ -98,8 +98,6 @@ on_game_start()
 	safety_difficulty();
 	safety_debugger();
 	level thread mannequinn_manager();
-
-	level waittill("end_game");
 }
 
 on_player_joined()
@@ -129,11 +127,6 @@ on_player_spawned()
 	self thread velocity_meter();
 	self thread set_characters();
 	self thread permaperks_watcher();
-
-	// while(true)
-	// {
-
-	// }
 }
 
 // Stubs
