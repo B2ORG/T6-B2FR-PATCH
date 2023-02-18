@@ -143,7 +143,7 @@ print(arg1)
 
 is_debug()
 {
-	if (isDefined(level.FRFIX_CONFIG["debug"]) && level.FRFIX_CONFIG["debug"])
+	if (first_room_fix_config("debug"))
 		return true;
 	return false;
 }
@@ -174,7 +174,7 @@ print_permaperk_state(enabled, perk)
 		print_cli = "disabled";
 	}
 
-	if (isDefined(level.FRFIX_CONFIG["track_permaperks"]) && level.FRFIX_CONFIG["track_permaperks"])
+	if (first_room_fix_config("track_permaperks"))
 		self iPrintLn("Permaperk " + permaperk_name(perk) + ": " + print_player);
 	debug_print("Permaperks: " + perk + " " + print_cli);
 	return;
@@ -336,7 +336,7 @@ is_round(rnd)
 
 is_vanilla()
 {
-	if (isDefined(level.FRFIX_CONFIG["vanilla"]) && level.FRFIX_CONFIG["vanilla"])
+	if (first_room_fix_config("vanilla"))
 		return true;
 	return false;
 }
@@ -352,6 +352,13 @@ has_permaperks_system()
 {
 	// Refer to init_persistent_abilities()
 	if (isDefined(level.pers_upgrade_boards))
+		return true;
+	return false;
+}
+
+first_room_fix_config(key)
+{
+	if (isDefined(level.FRFIX_CONFIG[key]) && level.FRFIX_CONFIG[key])
 		return true;
 	return false;
 }
@@ -662,7 +669,7 @@ timer_hud()
 	skip_split = false;
 	label_time_set = false;
 
-	if (!is_vanilla() && isdefined(level.FRFIX_CONFIG["const_timer"]) && level.FRFIX_CONFIG["const_timer"])
+	if (!is_vanilla() && first_room_fix_config("const_timer"))
 	{
 		timer_hud setTimerUp(0);
 		timer_hud.alpha = 1;
@@ -721,7 +728,7 @@ round_timer_hud()
 
 		round_start = int(getTime() / 1000);
 
-		if (!is_vanilla() && isdefined(level.FRFIX_CONFIG["const_round_timer"]) && level.FRFIX_CONFIG["const_round_timer"])
+		if (!is_vanilla() && first_room_fix_config("const_round_timer"))
 		{
 			round_hud setTimerUp(0);
 			round_hud FadeOverTime(0.25);
@@ -800,7 +807,7 @@ hordes_hud()
 	if (is_vanilla())
 		return;
 
-	if (!isdefined(level.FRFIX_CONFIG["show_hordes"]) || !level.FRFIX_CONFIG["show_hordes"])
+	if (!first_room_fix_config("show_hordes"))
 		return;
 
 	while (true)
@@ -948,7 +955,7 @@ semtex_hud()
 		return;
 
 	// Escape if starting round is bigger than 22 since the display is going to be inaccurate
-	if (!isdefined(level.FRFIX_CONFIG["semtex_prenades"]) || !level.FRFIX_CONFIG["semtex_prenades"] || is_round(23))
+	if (!first_room_fix_config("semtex_prenades") || is_round(23))
 		return;
 
 	// Starts on r22 and goes onwards
@@ -994,10 +1001,7 @@ mannequinn_manager()
 {
 	level endon("end_game");
 
-	if (!isdefined(level.FRFIX_CONFIG["mannequins"]) || !level.FRFIX_CONFIG["mannequins"])
-		return;
-
-	if (!is_nuketown())
+	if (!first_room_fix_config("mannequins") || !is_nuketown())
 		return;
 
 	wait 1;
@@ -1032,10 +1036,7 @@ mannequinn_manager()
 
 eye_change()
 {
-	if (!isdefined(level.FRFIX_CONFIG["nuketown_25_ee"]) || !level.FRFIX_CONFIG["nuketown_25_ee"])
-		return;
-
-	if (!is_nuketown())
+	if (!first_room_fix_config("nuketown_25_ee") || !is_nuketown())
 		return;
 
 	level setclientfield("zombie_eye_change", 1);
@@ -1080,7 +1081,7 @@ perma_perks_setup()
 		return;
 
 	// Metalboards plugin handler
-	if (isdefined(level.FRFIX_CONFIG["give_permaperks"]) && level.FRFIX_CONFIG["give_permaperks"] && isDefined(level.FRFIX_METALBOARDS_PLUGIN))
+	if (first_room_fix_config("give_permaperks") && isDefined(level.FRFIX_METALBOARDS_PLUGIN))
 	{
 		info_print("Metal Boards plugin present, if perk is awarded, a restart will be required");
 		[[level.FRFIX_METALBOARDS_PLUGIN]]();
@@ -1134,7 +1135,7 @@ award_permaperks()
 	level endon("end_game");
 	self endon("disconnect");
 
-	if (!level.FRFIX_CONFIG["give_permaperks"] || !did_game_just_start())
+	if (!first_room_fix_config("give_permaperks") || !did_game_just_start())
 		return;
 
 	while (!isalive(self))
@@ -1271,7 +1272,7 @@ origins_fix()
 {
     level endon("end_game");
 	
-	if (!isdefined(level.FRFIX_CONFIG["forever_solo_game_fix"]) || !level.FRFIX_CONFIG["forever_solo_game_fix"])
+	if (!first_room_fix_config("forever_solo_game_fix"))
 		return;
 
 	flag_wait("start_zombie_round_logic");
@@ -1416,7 +1417,7 @@ fridge_handler()
 	if (!is_tranzit() && !is_die_rise() && !is_buried())
 		return;
 
-	if (!isDefined(level.FRFIX_CONFIG["fridge"]) || !level.FRFIX_CONFIG["fridge"])
+	if (!first_room_fix_config("fridge"))
 		return;
 
 	self thread fridge();
@@ -1629,7 +1630,7 @@ first_box()
     level endon("end_game");
 	level endon("break_firstbox");
 
-	if (!isDefined(level.FRFIX_CONFIG["first_box_module"]) || !level.FRFIX_CONFIG["first_box_module"])
+	if (!first_room_fix_config("first_box_module"))
 		return;
 
 	if (level.start_round > 1 && !is_town())
