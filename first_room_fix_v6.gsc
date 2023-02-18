@@ -1043,7 +1043,7 @@ eye_change()
 	sndswitchannouncervox("richtofen");
 }
 
-get_pack_a_punch_weapon_options(weapon)
+get_pap_weapon_options_set_reticle(weapon)
 {
     if (!isdefined(self.pack_a_punch_weapon_options))
         self.pack_a_punch_weapon_options = [];
