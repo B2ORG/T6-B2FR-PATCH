@@ -54,8 +54,8 @@ OnGameStart()
 	level.FRFIX_TIMER_ENABLED = true;
 	level.FRFIX_ROUND_ENABLED = false;
 	level.FRFIX_HORDES_ENABLED = false;
-	level.FRFIX_PERMAPERKS = true;
-	level.FRFIX_PERMAPERKS_TRACKING = false;
+	level.FRFIX_PERMAPERKS = false;
+	level.FRFIX_PERMAPERKS_TRACKING = true;
 	level.FRFIX_HUD_COLOR = (0.26, 0.87, 0.94);
 	level.FRFIX_YELLOWHOUSE = false;
 	level.FRFIX_NUKETOWN_EYES = false;
