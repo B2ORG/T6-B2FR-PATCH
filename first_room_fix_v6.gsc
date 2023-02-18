@@ -856,7 +856,7 @@ velocity_meter()
     player_wait_for_initial_blackscreen();
 
     self.hud_velocity = createfontstring("hudsmall" , 1.2);
-	self.hud_velocity set_hud_position("hud_velocity", "CENTER", "CENTER", "CENTER", 0);
+	self.hud_velocity set_hud_position("hud_velocity", "CENTER", "CENTER", "CENTER", 200);
 	self.hud_velocity.alpha = 0.75;
 	self.hud_velocity.color = get_hud_color();
 	self.hud_velocity.hidewheninmenu = 1;
