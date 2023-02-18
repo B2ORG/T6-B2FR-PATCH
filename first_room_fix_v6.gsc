@@ -36,12 +36,11 @@ init()
 	// Patch Config
 	level.FRFIX_CONFIG = array();
 	level.FRFIX_CONFIG["version"] = 6;
-	level.FRFIX_CONFIG["beta"] = "BETA";
+	level.FRFIX_CONFIG["beta"] = "ALPHA";
 	level.FRFIX_CONFIG["debug"] = true;
 	level.FRFIX_CONFIG["vanilla"] = get_vanilla_setting();
 
 	level thread set_dvars();
-	level thread perma_perks_setup();
 	level thread on_game_start();
 }
 
@@ -99,6 +98,7 @@ on_game_start()
 	safety_difficulty();
 	safety_debugger();
 	level thread mannequinn_manager();
+	level thread perma_perks_setup();
 }
 
 on_player_joined()
@@ -127,7 +127,6 @@ on_player_spawned()
 	self thread print_network_frame(6);
 	self thread velocity_meter();
 	self thread set_characters();
-	self thread permaperks_watcher();
 }
 
 // Stubs
@@ -347,6 +346,14 @@ has_magic()
     if (isDefined(level.enable_magic) && level.enable_magic)
         return true;
     return false;
+}
+
+has_permaperks_system()
+{
+	// Refer to init_persistent_abilities()
+	if (isDefined(level.pers_upgrade_boards))
+		return true;
+	return false;
 }
 
 set_hud_position(hud_key, x_align, y_align, x_pos, y_pos)
@@ -1069,55 +1076,30 @@ perma_perks_setup()
 {
 	level endon("end_game");
 
-	if (!maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active())
+	if (!has_permaperks_system())
 		return;
 
-	// It tends to crash without this statement lol
-	if (is_mob() || is_origins())
-		return;
-
-	flag_wait("initial_blackscreen_passed");
-
-	if (isdefined(level.FRFIX_CONFIG["give_permaperks"]) && level.FRFIX_CONFIG["give_permaperks"])
+	// Metalboards plugin handler
+	if (isdefined(level.FRFIX_CONFIG["give_permaperks"]) && level.FRFIX_CONFIG["give_permaperks"] && isDefined(level.FRFIX_METALBOARDS_PLUGIN))
 	{
-		if (isDefined(level.FRFIX_METALBOARDS_PLUGIN))
-		{
-			info_print("Metal Boards plugin present, if perk is awarded, a restart will be required");
-			[[level.FRFIX_METALBOARDS_PLUGIN]]();
-		}
-		self thread stop_permaperks_module();
-		self thread watch_for_new_players();
+		info_print("Metal Boards plugin present, if perk is awarded, a restart will be required");
+		[[level.FRFIX_METALBOARDS_PLUGIN]]();
 	}
-}
 
-stop_permaperks_module()
-{
-	level endon("end_game");
-
-	while (did_game_just_start())
-		level waittill("end_of_round");
-
-	debug_print("Stopping permaperks award");
-	self notify("stop_permaperks_award");
-}
-
-watch_for_new_players()
-{
-	level endon("end_game");
-	self endon("stop_permaperks_award");
-
-	// Give perma perks to everyone who is connected at this point
-	foreach(player in level.players)
+	foreach (player in level.players)
 	{
+		player thread permaperks_watcher();
 		player thread award_permaperks();
+		player thread permaperk_failsafe();
 	}
 
-	// And wait for new players
 	while (true)
 	{
 		level waittill("connected", player);
 
+		player thread permaperks_watcher();
 		player thread award_permaperks();
+		player thread permaperk_failsafe();
 	}
 }
 
@@ -1152,6 +1134,9 @@ award_permaperks()
 	level endon("end_game");
 	self endon("disconnect");
 
+	if (!level.FRFIX_CONFIG["give_permaperks"] || !did_game_just_start())
+		return;
+
 	while (!isalive(self))
 		wait 0.05;
 
@@ -1179,18 +1164,18 @@ award_permaperks()
 	{
 		for (j = 0; j < level.pers_upgrades[perk].stat_names.size; j++)
 		{
-			stat_name = level.pers_upgrades[perk].stat_names[j];
-			stat_value = level.pers_upgrades[perk].stat_desired_values[j];
+			// stat_name = level.pers_upgrades[perk].stat_names[j];
+			// stat_value = level.pers_upgrades[perk].stat_desired_values[j];
 
-			self award_permaperk(stat_name, perk, stat_value);
+			// self award_permaperk(stat_name, perk, stat_value);
+			self award_permaperk2(perk);
 			wait 0.05;
 		}
 	}
 
 	foreach(perk in perks_to_remove)
 	{
-		info_print("Perk Removal for " + self.name + ": " + perk);
-		self.pers_upgrades_awarded[perk] = 0;
+		self remove_permaperk(perk);
 		wait 0.05;
 	}
 	self.frfix_awarding_permaperks = undefined;
@@ -1205,14 +1190,44 @@ award_permaperk(stat_name, perk_name, stat_value)
 	{
 		self.stats_this_frame[stat_name] = 1;
 		self set_global_stat(stat_name, stat_value);
-		// self.pers_upgrades_awarded[perk_name] = 1;
 		info_print("Perk Activation for " + self.name + ": " + perk_name + " -> " + stat_name + " set to: " + stat_value);
 	}
 	else
 	{
 		info_print("Skipped Perk Activation for " + self.name + ": requirements already met for perk " + perk_name);
 	}
-	return;
+}
+
+award_permaperk2(perk)
+{
+	perk_name = permaperk_name(perk);
+
+	info_print("Perk Activation for " + self.name + ": " + perk_name);
+	self.pers_upgrades_awarded[perk] = 1;
+}
+
+remove_permaperk(perk)
+{
+	perk_name = permaperk_name(perk_name);
+	info_print("Perk Removal for " + self.name + ": " + perk_name);
+	self.pers_upgrades_awarded[perk] = 0;
+}
+
+permaperk_failsafe()
+{
+	level endon("end_game");
+	self endon("disconnect");
+
+	while (true)
+	{
+		level waittill("start_of_round");
+
+		if (is_round(11) && self.pers_upgrades_awarded["nube"])
+			self remove_permaperk("nube");
+
+		if (is_round(16) && self.pers_upgrades_awarded["jugg"])
+			self remove_permaperk("jugg");
+	}
 }
 
 permaperk_name()
