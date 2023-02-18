@@ -1231,7 +1231,7 @@ permaperk_failsafe()
 	}
 }
 
-permaperk_name()
+permaperk_name(perk)
 {
 	switch (perk)
 	{
@@ -1239,7 +1239,7 @@ permaperk_name()
 			return "Quick Revive";
 		case "multikill_headshots":
 			return "Extra Headshot Damage";
-		case "perk_lose";
+		case "perk_lose":
 			return "Tombstone";
 		case "jugg":
 			return "Juggernog";
@@ -1456,7 +1456,7 @@ fridge()
 
 rig_fridge(key, player)
 {
-	if (isSubStr(key), "+")
+	if (isSubStr(key, "+"))
 		weapon = get_weapon_key(getSubStr(key, 2), ::verify_weapon_key_fridge_pap);
 	else
 		weapon = get_weapon_key(key, ::verify_weapon_key_fridge);
@@ -1793,7 +1793,7 @@ get_weapon_key(weapon_str, verifier)
 		case "b23r":
 			key = "beretta93r_zm";
 			break;
-		case "b23re"
+		case "b23re":
 			// if (is_origins())
 				key = "beretta93r_extclip_zm";
 			break;
