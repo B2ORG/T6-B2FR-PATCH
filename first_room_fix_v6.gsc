@@ -54,7 +54,7 @@ on_game_start()
 	level.FRFIX_CONFIG["const_round_timer"] = false;
 	level.FRFIX_CONFIG["show_hordes"] = true;
 	level.FRFIX_CONFIG["give_permaperks"] = true;
-	level.FRFIX_CONFIG["track_permaperks"] = false;
+	level.FRFIX_CONFIG["track_permaperks"] = true;
 	level.FRFIX_CONFIG["mannequins"] = false;
 	level.FRFIX_CONFIG["nuketown_25_ee"] = false;
 	level.FRFIX_CONFIG["forever_solo_game_fix"] = false;
@@ -1130,6 +1130,29 @@ permaperks_watcher()
 	}
 }
 
+permaperk_struct(current_array, code, award, take, to_round, maps_exclude, map_unique)
+{
+	if (!isDefined(maps_exclude))
+		maps_exclude = array();
+	if (!isDefined(to_round))
+		to_round = 255;
+	if (!isDefined(map_unique))
+		map_unique = undefined;
+
+	permaperk = spawnStruct();
+	permaperk.code = code;
+	permaperk.to_round = to_round;
+	permaperk.award = award;
+	permaperk.take = take;
+	permaperk.maps_to_exclude = maps_exclude;
+	permaperk.map_unique = map_unique;
+
+	debug_print("generating permaperk struct | data: code=" + code + " to_round=" + to_round + " award=" + award + " take=" + take + " map_unique=" + map_unique + " | size of current: " + current_array.size);
+
+	current_array[current_array.size] = permaperk;
+	return current_array;
+}
+
 award_permaperks()
 {
 	level endon("end_game");
@@ -1143,44 +1166,69 @@ award_permaperks()
 
 	wait 0.5;
 
-	perks_to_award = array("revive", "multikill_headshots", "perk_lose");
-	perks_to_remove = array();
+	perks_to_process = array();
+	perks_to_process = permaperk_struct(perks_to_process, "revive", true, false);
+	perks_to_process = permaperk_struct(perks_to_process, "multikill_headshots", true, false);
+	perks_to_process = permaperk_struct(perks_to_process, "perk_lose", true, false);
+	perks_to_process = permaperk_struct(perks_to_process, "jugg", true, false, 15);
+	perks_to_process = permaperk_struct(perks_to_process, "flopper", true, false, 255, array(), "zm_buried");
+	perks_to_process = permaperk_struct(perks_to_process, "box_weapon", false, true, 255, array("zm_buried"));
+	perks_to_process = permaperk_struct(perks_to_process, "nube", true, true, 10, array("zm_highrise"));
 
-	if (!is_round(15))
-		perks_to_award[perks_to_award.size] = "jugg";
-
-	if (is_buried())
-		perks_to_award[perks_to_award.size] = "flopper";
-	else
-		perks_to_remove[perks_to_remove.size] = "box_weapon";
-
-	if (!is_die_rise() && !is_round(10))
-		perks_to_award[perks_to_award.size] = "nube";
-	else if (is_die_rise())
-		perks_to_remove[perks_to_remove.size] = "nube";
-
-	// Set permaperks
 	self.frfix_awarding_permaperks = true;
-	foreach(perk in perks_to_award)
-	{
-		for (j = 0; j < level.pers_upgrades[perk].stat_names.size; j++)
-		{
-			// stat_name = level.pers_upgrades[perk].stat_names[j];
-			// stat_value = level.pers_upgrades[perk].stat_desired_values[j];
 
-			// self award_permaperk(stat_name, perk, stat_value);
-			self award_permaperk2(perk);
-			wait 0.05;
+	foreach (perk in perks_to_process)
+	{
+		wait 0.05;
+
+		if (isDefined(perk.map_unique) && perk.map_unique != level.script)
+			continue;
+
+		perk_code = perk.code;
+		debug_print("processing: " + perk_code);
+
+		// If award and take are both set, it means maps specified in 'maps_to_exclude' are the maps on which perk needs to be taken away
+		if (perk.award && perk.take && isinarray(perk.maps_to_exclude, level.script))
+		{
+			self remove_permaperk(perk_code);
+			wait_network_frame();
+		}
+		// Else if take is specified, take
+		else if (!perk.award && perk.take && !isinarray(perk.maps_to_exclude, level.script))
+		{
+			self remove_permaperk(perk_code);
+			wait_network_frame();
+		}
+
+		for (j = 0; j < level.pers_upgrades[perk_code].stat_names.size; j++)
+		{
+			stat_name = level.pers_upgrades[perk_code].stat_names[j];
+			stat_value = level.pers_upgrades[perk_code].stat_desired_values[j];
+
+			self reset_permaperk(stat_name, perk_code);
+			wait_network_frame();
+
+			// Award perk if all conditions match
+			if (perk.award && !is_round(perk.to_round) && !isinarray(perk.maps_to_exclude, level.script))
+			{
+				self award_permaperk(stat_name, perk_code, stat_value);
+				wait_network_frame();
+			}
 		}
 	}
 
-	foreach(perk in perks_to_remove)
-	{
-		self remove_permaperk(perk);
-		wait 0.05;
-	}
+	wait 0.5;
 	self.frfix_awarding_permaperks = undefined;
 	self uploadstatssoon();
+}
+
+reset_permaperk(stat_name, perk_name)
+{
+	perk_name = permaperk_name(perk_name);
+
+	self.stats_this_frame[stat_name] = 1;
+	self set_global_stat(stat_name, 0);
+	info_print(self.name + ": Permaperk '" + perk_name + "' resetting -> " + stat_name + " set to: 0");
 }
 
 award_permaperk(stat_name, perk_name, stat_value)
@@ -1191,11 +1239,11 @@ award_permaperk(stat_name, perk_name, stat_value)
 	{
 		self.stats_this_frame[stat_name] = 1;
 		self set_global_stat(stat_name, stat_value);
-		info_print("Perk Activation for " + self.name + ": " + perk_name + " -> " + stat_name + " set to: " + stat_value);
+		info_print(self.name + ": Permaperk '" + perk_name + "' activation [stats] -> " + stat_name + " set to: " + stat_value);
 	}
 	else
 	{
-		info_print("Skipped Perk Activation for " + self.name + ": requirements already met for perk " + perk_name);
+		info_print(self.name + ": Permaperk '" + perk_name + "' activation [stats] -> Requirements already met");
 	}
 }
 
@@ -1203,8 +1251,15 @@ award_permaperk2(perk)
 {
 	perk_name = permaperk_name(perk);
 
-	info_print("Perk Activation for " + self.name + ": " + perk_name);
-	self.pers_upgrades_awarded[perk] = 1;
+	if (!self.pers_upgrades_awarded[perk])
+	{
+		info_print(self.name + ": Permaperk '" + perk_name + "' activation [force] -> Enabling");
+		self.pers_upgrades_awarded[perk] = 1;
+	}
+	else
+	{
+		info_print(self.name + ": Permaperk '" + perk_name + "' activation [force] -> Skipping, perk already active");
+	}
 }
 
 remove_permaperk(perk)
@@ -1224,10 +1279,16 @@ permaperk_failsafe()
 		level waittill("start_of_round");
 
 		if (is_round(11) && self.pers_upgrades_awarded["nube"])
+		{
+			debug_print("permaperk_failsafe(): Removing 'nube'");
 			self remove_permaperk("nube");
+		}
 
 		if (is_round(16) && self.pers_upgrades_awarded["jugg"])
+		{
+			debug_print("permaperk_failsafe(): Removing 'jugg'");
 			self remove_permaperk("jugg");
+		}
 	}
 }
 
