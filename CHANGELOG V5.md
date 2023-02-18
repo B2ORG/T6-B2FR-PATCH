@@ -38,3 +38,6 @@
 - Changed watermarks to be a bit more visible (were blending in on ttv footage)
 - Fixed round splits not showing up
 - Fixed issues related to permaperks
+
+## Version 5.7
+- Completely disabled PermaPerk functionalities, until issues are resolved (most likely version 6.0)

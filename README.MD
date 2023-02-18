@@ -47,7 +47,11 @@ Table of features lists all the basic functions the patch does. This is not abso
 
 ## Permaperks
 
-Permaperks have been more or less broken in versions before 5.6, some perks would not go away even tho the conditions for them to go away have been met. Version 5.6 introduces a fix to that, and also there is a special treatment to Metal Boards, as this perk was particulary difficult to work with, it's been made into separate gsc script, put that script alongside First Room Fix in your scripts folder. What it'll do, is it'll award metal boards and then end the game, in that case either fast restart, or just launch into the map again (no need to remove the script), and metal boards will work correctly. The script will always end the game after awarding metal boards, and it'll only award if one (or more) player don't have them.
+**CURRENTLY DISABLED!!!!**
+
+Due to inifnite amount of issues, permaperks have been disabled in 5.7, please use either stat file or mod menu to award yourself permaperks until issues are resolved. Fixes from version 5.6 should make it safe to play solo, however games in coop may not be legit. I apologize for taking so long to fix it, permaperks are not the simplest system to work with lol.
+
+~~Permaperks have been more or less broken in versions before 5.6, some perks would not go away even tho the conditions for them to go away have been met. Version 5.6 introduces a fix to that, and also there is a special treatment to Metal Boards, as this perk was particulary difficult to work with, it's been made into separate gsc script, put that script alongside First Room Fix in your scripts folder. What it'll do, is it'll award metal boards and then end the game, in that case either fast restart, or just launch into the map again (no need to remove the script), and metal boards will work correctly. The script will always end the game after awarding metal boards, and it'll only award if one (or more) player don't have them.~~
 
 Awarded permaperks:
 
