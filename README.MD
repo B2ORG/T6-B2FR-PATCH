@@ -47,7 +47,10 @@ Table of features lists all the basic functions the patch does. This is not abso
 
 ## Permaperks
 
-Permaperks have been more or less broken in versions before 5.6, some perks would not go away even tho the conditions for them to go away have been met. Version 5.6 introduces a fix to that, and also there is a special treatment to Metal Boards, as this perk was particulary difficult to work with, it's been made into separate gsc script, put that script alongside First Room Fix in your scripts folder. What it'll do, is it'll award metal boards and then end the game, in that case either fast restart, or just launch into the map again (no need to remove the script), and metal boards will work correctly. The script will always end the game after awarding metal boards, and it'll only award if one (or more) player don't have them.
+Permaperks system is tricky. All versions of First Room Fix V4 and V5 were having issues related to it. Version 6 not only has the system rebuilt but also built in safety measures to prevent accidents.
+Testing indicates that most issues happen because of `fast_restart` and `map_restart` after losing certain perk, so avoiding that on Perma Perks map will decrease chances of stuff going wrong.
+Jug and Nube have a built in safety, if they won't be lose on the right rounds, the patch will force remove them.
+Metal Boards require the use of a plugin, but because you need to restart after awarding them, i recommend just skipping that unless you really need it from the start of the game.
 
 Awarded permaperks:
 

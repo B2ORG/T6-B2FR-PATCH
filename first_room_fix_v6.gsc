@@ -1222,51 +1222,36 @@ award_permaperks()
 	self uploadstatssoon();
 }
 
-reset_permaperk(stat_name, perk_name)
+reset_permaperk(stat_name, perk_code)
 {
-	perk_name = permaperk_name(perk_name);
+	perk_name = permaperk_name(perk_code);
 
 	self.stats_this_frame[stat_name] = 1;
 	self set_global_stat(stat_name, 0);
 	info_print(self.name + ": Permaperk '" + perk_name + "' resetting -> " + stat_name + " set to: 0");
 }
 
-award_permaperk(stat_name, perk_name, stat_value)
+award_permaperk(stat_name, perk_code, stat_value)
 {
-	perk_name = permaperk_name(perk_name);
+	perk_name = permaperk_name(perk_code);
 
 	if (self get_global_stat(stat_name) != stat_value)
 	{
 		self.stats_this_frame[stat_name] = 1;
 		self set_global_stat(stat_name, stat_value);
-		info_print(self.name + ": Permaperk '" + perk_name + "' activation [stats] -> " + stat_name + " set to: " + stat_value);
+		info_print(self.name + ": Permaperk '" + perk_name + "' activation -> " + stat_name + " set to: " + stat_value);
 	}
 	else
 	{
-		info_print(self.name + ": Permaperk '" + perk_name + "' activation [stats] -> Requirements already met");
+		info_print(self.name + ": Permaperk '" + perk_name + "' activation -> Requirements already met");
 	}
 }
 
-award_permaperk2(perk)
+remove_permaperk(perk_code)
 {
-	perk_name = permaperk_name(perk);
-
-	if (!self.pers_upgrades_awarded[perk])
-	{
-		info_print(self.name + ": Permaperk '" + perk_name + "' activation [force] -> Enabling");
-		self.pers_upgrades_awarded[perk] = 1;
-	}
-	else
-	{
-		info_print(self.name + ": Permaperk '" + perk_name + "' activation [force] -> Skipping, perk already active");
-	}
-}
-
-remove_permaperk(perk)
-{
-	perk_name = permaperk_name(perk_name);
+	perk_name = permaperk_name(perk_code);
 	info_print("Perk Removal for " + self.name + ": " + perk_name);
-	self.pers_upgrades_awarded[perk] = 0;
+	self.pers_upgrades_awarded[perk_code] = 0;
 }
 
 permaperk_failsafe()
@@ -1277,17 +1262,20 @@ permaperk_failsafe()
 	while (true)
 	{
 		level waittill("start_of_round");
+		wait 5;
 
-		if (is_round(11) && self.pers_upgrades_awarded["nube"])
+		if (is_round(10) && self.pers_upgrades_awarded["nube"])
 		{
-			debug_print("permaperk_failsafe(): Removing 'nube'");
+			info_print("permaperk_failsafe(): Removing 'nube'");
 			self remove_permaperk("nube");
+			self playsoundtoplayer("evt_player_downgrade", self);
 		}
 
-		if (is_round(16) && self.pers_upgrades_awarded["jugg"])
+		if (is_round(15) && self.pers_upgrades_awarded["jugg"])
 		{
-			debug_print("permaperk_failsafe(): Removing 'jugg'");
+			info_print("permaperk_failsafe(): Removing 'jugg'");
 			self remove_permaperk("jugg");
+			self playsoundtoplayer("evt_player_downgrade", self);
 		}
 	}
 }
