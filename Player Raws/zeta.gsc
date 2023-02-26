@@ -52,7 +52,7 @@ OnGameStart()
 
 	// Func Config
 	level.FRFIX_TIMER_ENABLED = true;
-	level.FRFIX_ROUND_ENABLED = false;
+	level.FRFIX_ROUND_ENABLED = true;
 	level.FRFIX_HORDES_ENABLED = true;
 	level.FRFIX_PERMAPERKS = true;
 	level.FRFIX_PERMAPERKS_TRACKING = false;

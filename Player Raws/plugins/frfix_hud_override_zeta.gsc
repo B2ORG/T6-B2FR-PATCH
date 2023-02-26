@@ -38,7 +38,7 @@ OverrideHudZombies(hudelem)
 
 OverrideHudVelocity(hudelem)
 {
-	hudelem setpoint ("CENTER", "CENTER", "CENTER", 200);
+	hudelem setpoint ("TOPLEFT", "TOPLEFT", -60, -32);
 }
 
 OverrideHudSemtexChart(hudelem)
