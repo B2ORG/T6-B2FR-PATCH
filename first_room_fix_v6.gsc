@@ -356,6 +356,17 @@ has_permaperks_system()
 	return false;
 }
 
+is_special_round()
+{
+	if (isDefined(flag("dog_round")) && flag("dog_round"))
+		return true;
+
+	if (isDefined(flag("leaper_round")) && flag("leaper_round"))
+		return true;
+
+	return false;
+}
+
 first_room_fix_config(key)
 {
 	if (isDefined(level.FRFIX_CONFIG[key]) && level.FRFIX_CONFIG[key])
@@ -790,7 +801,8 @@ hordes_hud()
 	{
 		level waittill("start_of_round");
 		wait 0.1;
-		if (isDefined(flag("dog_round")) && !flag("dog_round") && is_round(20))
+
+		if (!is_special_round() && is_round(20))
 		{
 			hordes_hud = createserverfontstring("hudsmall" , 1.4);
 			hordes_hud set_hud_position("hordes_hud", "CENTER", "BOTTOM", 0, -75);
