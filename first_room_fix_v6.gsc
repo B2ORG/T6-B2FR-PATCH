@@ -511,63 +511,39 @@ dvar_detector()
 	// Waiting on top so it doesn't trigger before initial dvars are set
 	flag_wait("dvars_set");
 
+	red_color = (0.8, 0, 0);
+	dvar_definitions = array();
+	dvar_definitions["dvar_name"] = array("player_strafeSpeedScale", "player_backSpeedScale", "con_gameMsgWindow0Filter", "sv_cheats", "g_speed");
+	dvar_definitions["dvar_values"] = array("0.8", "0.7", "gamenotify obituary", "0", "190");
+	dvar_definitions["dvar_watermark"] = array("BACKSPEED", "BACKSPEED", "NOPRINT", "CHEATS", "GSPEED");
+	dvar_definitions["watermark_color"] = array(red_color, red_color, red_color, red_color, red_color);
+	dvar_definitions["is_cheat"] = array(true, true, true, true, true);
+
+	dvar_detections = array();
+
 	while (true) 
 	{
-		// Backspeed
-		if (getDvar("player_strafeSpeedScale") != "0.8" || getDvar("player_backSpeedScale") != "0.7") 
+		for (i = 0; i < dvar_definitions.size; i++)
 		{
-			generate_cheat();
+			detection_key = "cheat_" + dvar_definitions["dvar_name"][i];
 
-			if (!flag("cheat_printed_backspeed"))
+			if (getDvar(dvar_definitions["dvar_name"][i]) != dvar_definitions["dvar_values"][i])
 			{
-				generate_watermark("BACKSPEED", (0.8, 0, 0));
-				flag_set("cheat_printed_backspeed");
+				debug_print("Detected " + dvar_definitions["dvar_name"][i]);
+
+				if (dvar_definitions["is_cheat"][i])
+					generate_cheat();
+
+				if (!isinarray(dvar_detections, detection_key))
+				{
+					generate_watermark(dvar_definitions["dvar_watermark"][i], dvar_definitions["watermark_color"][i]);
+					dvar_detections[dvar_detections.size] = detection_key;
+				}
+
+				level notify("reset_dvars");
 			}
-			
-			level notify("reset_dvars");
 		}
 
-		// Noprint
-		if (getDvarInt("con_gameMsgWindow0LineCount") < 1 || getDvarInt("con_gameMsgWindow0MsgTime") < 1 || getDvar("con_gameMsgWindow0Filter") != "gamenotify obituary") 
-		{
-			generate_cheat();
-
-			if (!flag("cheat_printed_noprint"))
-			{
-				generate_watermark("NOPRINT", (0.8, 0, 0));
-				flag_set("cheat_printed_noprint");
-			}
-
-			level notify("reset_dvars");
-		} 
-		
-		// Cheats
-		if (getDvarInt("sv_cheats")) 
-		{
-			generate_cheat();
-			
-			if (!flag("cheat_printed_cheats"))
-			{
-				generate_watermark("SV_CHEATS", (0.8, 0, 0));
-				flag_set("cheat_printed_cheats");
-			}
-
-			level notify("reset_dvars");
-		}
-
-		// Gspeed
-		if (getDvarInt("g_speed") != 190) 
-		{
-			generate_cheat();
-			
-			if (!flag("cheat_printed_gspeed"))
-			{
-				generate_watermark("GSPEED", (0.8, 0, 0));
-				flag_set("cheat_printed_gspeed");
-			}
-
-			level notify("reset_dvars");
-		}
 		wait 0.1;
 	}
 }
