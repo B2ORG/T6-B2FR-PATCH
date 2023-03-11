@@ -49,7 +49,7 @@ on_game_start()
 	level endon("end_game");
 
 	// Func Config
-	level.FRFIX_CONFIG["hud_color"] = (0.9, 0.8, 1);
+	level.FRFIX_CONFIG["hud_color"] = (0, 1, 0.5);
 	level.FRFIX_CONFIG["const_timer"] = true;
 	level.FRFIX_CONFIG["const_round_timer"] = false;
 	level.FRFIX_CONFIG["show_hordes"] = true;
@@ -363,6 +363,14 @@ is_vanilla()
 	return false;
 }
 
+is_plutonium()
+{
+	// Returns true for Pluto versions r2693 and above
+	if (getDvar("cg_weaponCycleDelay") == "")
+		return false;
+	return true;
+}
+
 has_magic()
 {
     if (isDefined(level.enable_magic) && level.enable_magic)
@@ -671,8 +679,10 @@ timer_hud()
 {
     level endon("end_game");
 
-    timer_hud = createserverfontstring("hudsmall" , 1.5);
-	timer_hud set_hud_position("timer_hud", "TOPRIGHT", "TOPRIGHT", -8, 0);
+    timer_hud = createserverfontstring("big" , 1.6);
+	timer_hud set_hud_position("timer_hud", "TOPRIGHT", "TOPRIGHT", 60, -26);
+	if (!is_plutonium())
+		timer_hud set_hud_position("round_hud", "TOPLEFT", "TOPLEFT", -55, -22);
 	timer_hud.color = get_hud_color();
 	timer_hud.alpha = 0;
 	timer_hud.hidewheninmenu = 1;
@@ -691,7 +701,7 @@ timer_hud()
 	}
 	else if (!is_vanilla())
 	{
-		timer_hud.label = "TIME: ";
+		timer_hud.label = istring("TIME: ");
 		label_time_set = true;
 	}
 
@@ -706,7 +716,7 @@ timer_hud()
 
 		if (level.players.size > 1 && isDefined(label_time_set) && label_time_set)
 		{
-			timer_hud.label = "LOBBY: ";
+			timer_hud.label = istring("LOBBY: ");
 			label_time_set = undefined;
 		}
 
@@ -730,8 +740,10 @@ round_timer_hud()
 {
     level endon("end_game");
 
-	round_hud = createserverfontstring("hudsmall" , 1.5);
-	round_hud set_hud_position("round_hud", "TOPRIGHT", "TOPRIGHT", -8, 17);
+	round_hud = createserverfontstring("big" , 1.6);
+	round_hud set_hud_position("round_hud", "TOPRIGHT", "TOPRIGHT", 60, -9);
+	if (!is_plutonium())
+		round_hud set_hud_position("round_hud", "TOPLEFT", "TOPLEFT", -55, -7);
 	round_hud.color = get_hud_color();
 	round_hud.alpha = 0;
 	round_hud.hidewheninmenu = 1;
@@ -855,7 +867,7 @@ velocity_meter()
 
     player_wait_for_initial_blackscreen();
 
-    self.hud_velocity = createfontstring("hudsmall" , 1.2);
+    self.hud_velocity = createfontstring("default" , 1.2);
 	self.hud_velocity set_hud_position("hud_velocity", "CENTER", "CENTER", "CENTER", 200);
 	self.hud_velocity.alpha = 0.75;
 	self.hud_velocity.color = get_hud_color();
