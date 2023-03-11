@@ -840,6 +840,8 @@ hordes_hud_on_demand(label, horde_count)
 			self thread print_scheduler(label, horde_count);
 			wait_for_message_end();
 		}
+
+		text = undefined;
 	}
 }
 
@@ -926,7 +928,9 @@ velocity_meter_size(hud)
 
 	while (true)
 	{
-		level waittill("say", message, player, ishidden);
+		message = undefined;
+
+		level waittill("say", message, player);
 
 		if (isSubStr(message, "vel") && player.name == self.name)
 		{
@@ -987,11 +991,13 @@ semtex_hud_on_demand(label, prenades)
 	{
 		level waittill("say", text, player);
 
-		if (text == "prenades" || test == "p")
+		if (text == "prenades" || text == "p")
 		{
 			self thread print_scheduler(label, prenades);
 			wait_for_message_end();
 		}
+
+		text = undefined;
 	}
 }
 
@@ -1570,12 +1576,14 @@ fridge()
 
 	while (true)
 	{
-		level waittill("say", message, player, ishidden);
+		level waittill("say", message, player);
 
 		if (isSubStr(message, "fridge all") && player ishost())
 			rig_fridge(getSubStr(message, 11));
 		else if (isSubStr(message, "fridge"))
 			rig_fridge(getSubStr(message, 7), player);
+
+		message = undefined;
 	}
 }
 
@@ -1769,7 +1777,9 @@ first_box()
 
 	while (true)
 	{
-		level waittill("say", message, player, ishidden);
+		message = undefined;
+
+		level waittill("say", message, player);
 
 		if (isSubStr(message, "fb"))
 			wpn_key = getSubStr(message, 3);
