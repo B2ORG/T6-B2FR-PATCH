@@ -73,7 +73,6 @@ on_game_start()
 	level thread first_box_handler();
 	level thread fridge_handler();
 	level thread origins_fix();
-	level thread eye_change();
 	level thread safety_anticheat();
 	level thread powerup_point_drop_watcher();
 	level thread powerup_odds_watcher();
@@ -99,8 +98,8 @@ on_game_start()
 	safety_difficulty();
 	safety_debugger();
 	safety_beta();
-	level thread mannequinn_manager();
 	level thread perma_perks_setup();
+	level thread nuketown_handler();
 }
 
 on_player_joined()
@@ -129,6 +128,8 @@ on_player_spawned()
 	self thread print_network_frame(6);
 	self thread velocity_meter();
 	self thread set_characters();
+	if (isDefined(level.FRFIX_PLUGIN_ZONES))
+		self thread [[level.FRFIX_PLUGIN_ZONES]]();
 }
 
 // Stubs
@@ -452,7 +453,7 @@ get_host_name(lowercase)
 
 welcome_prints()
 {
-	self iPrintLn("FIRST ROOM FIX V^3" + level.FRFIX_CONFIG["version"]);
+	self iPrintLn("FIRST ROOM FIX ^3V" + level.FRFIX_CONFIG["version"]);
 	wait 0.75;
 	if (level.FRFIX_CONFIG["for_player"] != "")
 	{
@@ -1105,62 +1106,6 @@ notify_about_prenade_switch()
 
 	self waittill("changed_prenade_type", prenade_type);
 	self thread print_scheduler("Prenade values generation is now: ^3", prenade_type);
-}
-
-mannequinn_manager()
-{
-	level endon("end_game");
-
-	if (!first_room_fix_config("mannequins") || !is_nuketown())
-		return;
-
-	if (is_debug())
-		wait 4;
-	wait 1;
-
-	yellow_house_mannequinns = array((1058.2, 387.3, -57), (609.28, 315.9, -53.89), (872.48, 461.88, -56.8), (851.1, 156.6, -51), (808, 140.5, -51), (602.53, 281.09, -55));
-
-	// Yellow house mannequins
-	if (!has_magic())
-	{
-		for(i = 0; i < yellow_house_mannequinns.size; i++)
-		{
-			debug_print("Trying to remove mannequin at origin: " + yellow_house_mannequinns[i]);
-			remove_mannequin(yellow_house_mannequinns[i]);
-		}
-	}
-
-	// Bus mannequin
-	if (level.start_round >= 10)
-		remove_mannequin((-30, 13.9031, -47.0411));
-}
-
-remove_mannequin(origin)
-{
-	all_mannequins = maps\mp\zm_nuked::nuked_mannequin_filter(getentarray("destructible", "targetname"));
-
-	foreach (mannequin in all_mannequins)
-	{
-		if (mannequin.origin == origin)
-		{
-			// Delete collision
-			getent(mannequin.target, "targetname") delete();
-			// Delete model
-			mannequin delete();
-
-			debug_print("Removed mannequin on origin: " + origin);
-			break;
-		}
-	}
-}
-
-eye_change()
-{
-	if (!first_room_fix_config("nuketown_25_ee") || !is_nuketown())
-		return;
-
-	level setclientfield("zombie_eye_change", 1);
-	sndswitchannouncervox("richtofen");
 }
 
 get_pap_weapon_options_set_reticle(weapon)
@@ -2352,4 +2297,96 @@ set_characters()
 
 		debug_print("Read value '" + getDvar(dvar) + "' from dvar '" + dvar + "' for player '" + self.name + "' with ID '" + self.clientid + "' Set character '" + prop["model"] + "'");
 	}
+}
+
+nuketown_handler()
+{
+	level endon("end_game");
+
+	if (!is_nuketown())
+		return;
+
+	if (first_room_fix_config("nuketown_25_ee"))
+		nuketown_switch_eyes();
+
+	// Bus mannequin
+	/* This is bad for highrounds, if this mannequin happens to exist, it'll remove one entity that's otherwise not removable */
+	if (first_room_fix_config("mannequins"))
+		thread remove_mannequin((-30, 13.9031, -47.0411), 1);
+
+	// Yellow House
+	if (!has_magic() && level.start_round >= 5)
+		thread yellowhouse_controller();
+}
+
+yellowhouse_controller()
+{
+	level endon("end_game");
+
+	wait 8;
+
+	allowed_zones = array("openhouse2_backyard_zone", "openhouse2_f1_zone");
+
+	foreach (player in level.players)
+	{
+		if (!isinarray(allowed_zones, player get_current_zone()))
+		{
+			debug_print("exiting yellowhouse_controller cause zone: '" + player get_current_zone() + "'");
+			return;
+		}
+	}
+
+	self thread print_scheduler("Yellow House Challenge: " + "^2ACTIVE");
+
+	if (first_room_fix_config("mannequins"))
+	{
+		yellow_house_mannequins = array((1058.2, 387.3, -57), (609.28, 315.9, -53.89), (872.48, 461.88, -56.8), (851.1, 156.6, -51), (808, 140.5, -51), (602.53, 281.09, -55));
+		foreach (origin in yellow_house_mannequins)
+			remove_mannequin(origin);
+	}
+
+	while (true)
+	{
+		foreach (player in level.players)
+		{
+			if (!isinarray(allowed_zones, player get_current_zone()))
+			{
+				self thread print_scheduler("Yellow House Challenge: ^1", player.name + " LEFT YELLOWHOUSE ZONE!");
+				info_print(player.name + " left zone 'openhouse2_f1_zone' at " + convert_time(int(GetTime() / 1000) - level.FRFIX_START));
+				return;
+			}
+		}
+
+		wait 0.05;
+	}
+}
+
+remove_mannequin(origin, extra_delay)
+{
+	level endon("end_game");
+
+	if (isDefined(extra_delay))
+		wait extra_delay;
+
+	all_mannequins = maps\mp\zm_nuked::nuked_mannequin_filter(getentarray("destructible", "targetname"));
+
+	foreach (mannequin in all_mannequins)
+	{
+		if (mannequin.origin == origin)
+		{
+			// Delete collision
+			getent(mannequin.target, "targetname") delete();
+			// Delete model
+			mannequin delete();
+
+			debug_print("Removed mannequin on origin: " + origin);
+			break;
+		}
+	}
+}
+
+nuketown_switch_eyes()
+{
+	level setclientfield("zombie_eye_change", 1);
+	sndswitchannouncervox("richtofen");
 }
