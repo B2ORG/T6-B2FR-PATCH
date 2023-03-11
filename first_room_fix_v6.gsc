@@ -767,7 +767,7 @@ splits_timer_hud()
 			splits_hud.hidewheninmenu = 1;
 
 			timestamp = convert_time(int(getTime() / 1000) - level.FRFIX_START);
-			info_print("Split: Round " + (level.round_number - 1) + ": " + timestamp);
+			info_print("Split: Round " + level.round_number + ": " + timestamp);
 
 			if (is_vanilla())
 				continue;
