@@ -453,6 +453,7 @@ get_host_name(lowercase)
 
 welcome_prints()
 {
+	wait 0.75;
 	self iPrintLn("FIRST ROOM FIX ^3V" + level.FRFIX_CONFIG["version"]);
 	wait 0.75;
 	if (level.FRFIX_CONFIG["for_player"] != "")
@@ -2301,7 +2302,7 @@ yellowhouse_controller()
 {
 	level endon("end_game");
 
-	wait 8;
+	level waittill("start_of_round");
 
 	allowed_zones = array("openhouse2_backyard_zone", "openhouse2_f1_zone");
 
