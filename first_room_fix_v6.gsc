@@ -55,7 +55,7 @@ on_game_start()
 	level.FRFIX_CONFIG["show_hordes"] = true;
 	level.FRFIX_CONFIG["give_permaperks"] = true;
 	level.FRFIX_CONFIG["track_permaperks"] = true;
-	level.FRFIX_CONFIG["mannequins"] = false;
+	level.FRFIX_CONFIG["mannequins"] = true;
 	level.FRFIX_CONFIG["nuketown_25_ee"] = false;
 	level.FRFIX_CONFIG["forever_solo_game_fix"] = false;
 	level.FRFIX_CONFIG["semtex_prenades"] = true;
@@ -1086,34 +1086,44 @@ mannequinn_manager()
 	if (!first_room_fix_config("mannequins") || !is_nuketown())
 		return;
 
+	if (is_debug())
+		wait 4;
 	wait 1;
-    destructibles = getentarray("destructible", "targetname");
-    foreach (mannequin in destructibles)
-    {
-		if (!has_magic())
+
+	yellow_house_mannequinns = array((1058.2, 387.3, -57), (609.28, 315.9, -53.89), (872.48, 461.88, -56.8), (851.1, 156.6, -51), (808, 140.5, -51), (602.53, 281.09, -55));
+
+	// Yellow house mannequins
+	if (!has_magic())
+	{
+		for(i = 0; i < yellow_house_mannequinns.size; i++)
 		{
-			if (mannequin.origin == (1058.2, 387.3, -57))
-				mannequin delete();
-
-			if (mannequin.origin == (609.28, 315.9, -53.89))
-				mannequin delete();
-
-			if (mannequin.origin == (872.48, 461.88, -56.8))
-				mannequin delete();
-
-			if (mannequin.origin == (851.1, 156.6, -51))
-				mannequin delete();
-
-			if (mannequin.origin == (808, 140.5, -51))
-				mannequin delete();
-
-			if (mannequin.origin == (602.53, 281.09, -55))
-				mannequin delete();
+			debug_print("Trying to remove mannequin at origin: " + yellow_house_mannequinns[i]);
+			remove_mannequin(yellow_house_mannequinns[i]);
 		}
-		// FR bus mannequin
-		if (mannequin.origin == (-30, 13.9031, -47.0411))
+	}
+
+	// Bus mannequin
+	if (level.start_round >= 10)
+		remove_mannequin((-30, 13.9031, -47.0411));
+}
+
+remove_mannequin(origin)
+{
+	all_mannequins = maps\mp\zm_nuked::nuked_mannequin_filter(getentarray("destructible", "targetname"));
+
+	foreach (mannequin in all_mannequins)
+	{
+		if (mannequin.origin == origin)
+		{
+			// Delete collision
+			getent(mannequin.target, "targetname") delete();
+			// Delete model
 			mannequin delete();
-    }
+
+			debug_print("Removed mannequin on origin: " + origin);
+			break;
+		}
+	}
 }
 
 eye_change()
