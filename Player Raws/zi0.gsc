@@ -57,7 +57,7 @@ OnGameStart()
 	level.FRFIX_PERMAPERKS = true;
 	level.FRFIX_PERMAPERKS_TRACKING = true;
 	level.FRFIX_HUD_COLOR = (0.9, 0.8, 1);
-	level.FRFIX_YELLOWHOUSE = true;
+	level.FRFIX_YELLOWHOUSE = false;
 	level.FRFIX_NUKETOWN_EYES = false;
 	level.FRFIX_ORIGINSFIX = true;
 	level.FRFIX_PRENADES = true;
