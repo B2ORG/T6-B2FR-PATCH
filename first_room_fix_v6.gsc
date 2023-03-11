@@ -1577,9 +1577,9 @@ fridge()
 rig_fridge(key, player)
 {
 	if (isSubStr(key, "+"))
-		weapon = get_weapon_key(getSubStr(key, 2), ::verify_weapon_key_fridge_pap);
+		weapon = get_weapon_key(getSubStr(key, 2), ::fridge_pap_weapon_verification);
 	else
-		weapon = get_weapon_key(key, ::verify_weapon_key_fridge);
+		weapon = get_weapon_key(key, ::fridge_weapon_verification);
 
 	if (!weapon)
 		return;
@@ -1787,7 +1787,7 @@ rig_box(gun, player)
 {
     level endon("end_game");
 
-	weapon_key = get_weapon_key(gun, ::verify_weapon_key_box);
+	weapon_key = get_weapon_key(gun, ::box_weapon_verification);
 	if (weapon_key == "")
 	{
 		self thread print_scheduler("Wrong weapon key: ^1",  gun);
@@ -1866,8 +1866,6 @@ watch_for_finish_firstbox()
 
 get_weapon_key(weapon_str, verifier)
 {
-	key = "";
-
 	switch(weapon_str)
 	{
 		case "mk1":
@@ -1877,58 +1875,47 @@ get_weapon_key(weapon_str, verifier)
 			key = "raygun_mark2_zm";
 			break;
 		case "monk":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried() || is_origins())
-				key = "cymbal_monkey_zm";
+			key = "cymbal_monkey_zm";
 			break;
 		case "emp":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit())
-				key = "emp_grenade_zm";
+			key = "emp_grenade_zm";
 			break;
 		case "time":
-			// if (is_buried())
-				key = "time_bomb_zm";
+			key = "time_bomb_zm";
 			break;
 		case "sliq":
-			// if (is_die_rise())
-				key = "slipgun_zm";
+			key = "slipgun_zm";
 			break;
 		case "blunder":
-			// if (is_mob())
-				key = "blundergat_zm";
+			key = "blundergat_zm";
 			break;
 		case "paralyzer":
-			// if (is_buried())
-				key = "slowgun_zm";
+			key = "slowgun_zm";
 			break;
 
 		case "ak47":
-			// if (is_mob())
-				key = "ak47_zm";
+			key = "ak47_zm";
 			break;
 		case "an94":
 			key = "an94_zm";
 			break;
 		case "barret":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_mob() || is_buried())
-				key = "barretm82_zm";
+			key = "barretm82_zm";
 			break;
 		case "b23r":
 			key = "beretta93r_zm";
 			break;
 		case "b23re":
-			// if (is_origins())
-				key = "beretta93r_extclip_zm";
+			key = "beretta93r_extclip_zm";
 			break;
 		case "dsr":
 			key = "dsr50_zm";
 			break;
 		case "evo":
-			// if (is_origins())
-				key = "evoskorpion_zm";
+			key = "evoskorpion_zm";
 			break;
 		case "57":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried())
-				key = "fiveseven_zm";
+			key = "fiveseven_zm";
 			break;
 		case "257":
 			key = "fivesevendw_zm";
@@ -1940,98 +1927,75 @@ get_weapon_key(weapon_str, verifier)
 			key = "galil_zm";
 			break;
 		case "mtar":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_mob() || is_buried())
-				key = "tar21_zm";
+			key = "tar21_zm";
 			break;
 		case "hamr":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried() || is_origins())
-				key = "hamr_zm";
+			key = "hamr_zm";
 			break;
 		case "m27":
-			if (is_nuketown())
-				key = "hk416_zm";
+			key = "hk416_zm";
 			break;
 		case "exe":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_mob() || is_buried())
-				key = "judge_zm";
+			key = "judge_zm";
 			break;
 		case "kap":
 			key = "kard_zm";
 			break;
 		case "bk":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried())
-				key = "knife_ballistic_zm";
+			key = "knife_ballistic_zm";
 			break;
 		case "ksg":
-			// if (is_origins())
-				key = "ksg_zm";
+			key = "ksg_zm";
 			break;
 		case "wm":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried() || is_origins())
-				key = "m32_zm";
+			key = "m32_zm";
 			break;
 		case "mg":
-			// if (is_origins())
-				key = "mg08_zm";
+			key = "mg08_zm";
 			break;
 		case "lsat":
-			// if (is_nuketown() || is_mob())
-				key = "lsat_zm";
+			key = "lsat_zm";
 			break;
 		case "dm":
-			// if (is_mob())
-				key = "minigun_alcatraz_zm";
+			key = "minigun_alcatraz_zm";
 		case "mp40":
-			// if (is_origins())
-				key = "mp40_stalker_zm";
+			key = "mp40_stalker_zm";
 			break;
 		case "pdw":
-			// if (is_mob() || is_origins())
-				key = "pdw57_zm";
+			key = "pdw57_zm";
 			break;
 		case "pyt":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_origins())
-				key = "python_zm";
+			key = "python_zm";
 			break;
 		case "rnma":
-			// if (is_buried())
-				key = "rnma_zm";
+			key = "rnma_zm";
 			break;
 		case "type":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_origins())
-				key = "type95_zm";
+			key = "type95_zm";
 			break;
 		case "rpd":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise())
-				key = "rpd_zm";
+			key = "rpd_zm";
 			break;
 		case "s12":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_mob() || is_buried())
-				key = "saiga12_zm";
+			key = "saiga12_zm";
 			break;
 		case "scar":
-			// if (is_origins())
-				key = "scar_zm";
+			key = "scar_zm";
 			break;
 		case "m1216":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_buried() || is_origins())
-				key = "srm1216_zm";
+			key = "srm1216_zm";
 			break;
 		case "tommy":
-			// if (is_mob())
-				key = "thompson_zm";
+			key = "thompson_zm";
 			break;
 		case "chic":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_origins())
-				key = "qcw05_zm";
+			key = "qcw05_zm";
 			break;
 		case "rpg":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise() || is_mob() || is_buried())
-				key = "usrpg_zm";
+			key = "usrpg_zm";
 			break;
 		case "m8":
-			// if (is_town() || is_farm() || is_depot() || is_tranzit() || is_nuketown() || is_die_rise())
-				key = "xm8_zm";
+			key = "xm8_zm";
 			break;
 		case "m16":
 			key = "m16_zm";
@@ -2049,38 +2013,52 @@ get_weapon_key(weapon_str, verifier)
 		case "ak74":
 			key = "ak74u_zm";
 			break;
+		default:
+			key = weapon_str;
 	}
 
-	if (isDefined(verifier))
-		key = [[verifier]](key);
+	if (!isDefined(verifier))
+		verifier = ::default_weapon_verification;
+
+	key = [[verifier]](key);
 
 	debug_print("FIRST BOX: weapon_key: " + key);
 	return key;
 }
 
-verify_weapon_key_box(weapon_key)
-{
-	if (isDefined(level.zombie_weapons[weapon_key]) && level.zombie_weapons[weapon_key].is_in_box)
-		return weapon_key;
-	return "";
-}
-
-verify_weapon_key_fridge(weapon_key)
+default_weapon_verification()
 {
     weapon_key = get_base_weapon_name(weapon_key, 1);
 
     if (!is_weapon_included(weapon_key))
         return "";
 
-    if (is_offhand_weapon(weapon_key) || is_limited_weapon(weapon_key))
+	return weapon_key;
+}
+
+box_weapon_verification(weapon_key)
+{
+	if (isDefined(level.zombie_weapons[weapon_key]) && level.zombie_weapons[weapon_key].is_in_box)
+		return weapon_key;
+	return "";
+}
+
+fridge_weapon_verification(weapon_key)
+{
+    wpn = get_base_weapon_name(weapon_key, 1);
+
+    if (!is_weapon_included(wpn))
+        return "";
+
+    if (is_offhand_weapon(wpn) || is_limited_weapon(wpn))
         return "";
 
     return weapon_key;
 }
 
-verify_weapon_key_fridge_pap()
+fridge_pap_weapon_verification()
 {
-    weapon_key = verify_weapon_key_fridge(weapon_key);
+    weapon_key = fridge_weapon_verification(weapon_key);
 	if (weapon_key)
 		return level.zombie_weapons[weapon_key].upgrade_name;
 	return "";
