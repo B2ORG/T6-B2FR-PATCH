@@ -214,7 +214,7 @@ print_scheduler(label, content)
 
 	level.print_schedules++;
 	iPrintLn("" + label + content);
-	wait getDvarFloat("con_gameMsgWindow0FadeInTime") + getDvarFloat("con_gameMsgWindow0MsgTime") + getDvarFloat("con_gameMsgWindow0FadeOutTime");
+	wait_for_message_end();
 	level.print_schedules--;
 
 	if (level.print_schedules <= 0)
@@ -387,6 +387,11 @@ is_special_round()
 		return true;
 
 	return false;
+}
+
+wait_for_message_end()
+{
+	wait getDvarFloat("con_gameMsgWindow0FadeInTime") + getDvarFloat("con_gameMsgWindow0MsgTime") + getDvarFloat("con_gameMsgWindow0FadeOutTime");
 }
 
 first_room_fix_config(key)
@@ -805,15 +810,35 @@ hordes_hud()
 	while (true)
 	{
 		level waittill("start_of_round");
-		wait 0.1;
+		wait 0.05;
 
 		if (!is_special_round() && is_round(20))
 		{
+			label = "HORDES ON " + level.round_number + ": ^3";
 			zombies_value = int(((maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total) / 24) * 100);
 
-			self thread print_scheduler("HORDES ON " + level.round_number + ": ^3", zombies_value / 100);
+			self thread print_scheduler(label, zombies_value / 100);
+			wait_for_message_end();
+			self thread hordes_hud_on_demand(label, zombies_value / 100);
 
 			zombies_value = undefined;
+		}
+	}
+}
+
+hordes_hud_on_demand(label, horde_count)
+{
+	level endon("end_game");
+	level endon("end_of_round");
+
+	while (true)
+	{
+		level waittill("say", text, player);
+
+		if (text == "hordes" || text == "h")
+		{
+			self thread print_scheduler(label, horde_count);
+			wait_for_message_end();
 		}
 	}
 }
@@ -942,11 +967,31 @@ semtex_hud()
 		num_of_prenades = [[get_prenade_mode()]](num_of_prenades);
 
 		level waittill("start_of_round");
+		wait 0.05;
 
 		if (!num_of_prenades)
 			continue;
 
 		self thread print_scheduler("PRENADES ON " + level.round_number + ": ^3", num_of_prenades);
+		wait_for_message_end();
+		self thread semtex_hud_on_demand("PRENADES ON " + level.round_number + ": ^3", num_of_prenades);
+	}
+}
+
+semtex_hud_on_demand(label, prenades)
+{
+	level endon("end_game");
+	level endon("end_of_round");
+
+	while (true)
+	{
+		level waittill("say", text, player);
+
+		if (text == "prenades" || test == "p")
+		{
+			self thread print_scheduler(label, prenades);
+			wait_for_message_end();
+		}
 	}
 }
 
