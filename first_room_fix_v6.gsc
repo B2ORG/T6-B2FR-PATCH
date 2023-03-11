@@ -199,6 +199,28 @@ generate_watermark(text, color, alpha_override)
 	level.FRFIX_WATERMARKS[level.FRFIX_WATERMARKS.size] = watermark;
 }
 
+print_scheduler(label, content)
+{
+	level endon("end_game");
+
+	if (!isDefined(content))
+		content = "";
+
+	if (!isDefined(level.print_schedules))
+		level.print_schedules = 0;
+
+	while (level.print_schedules > getDvarInt("con_gameMsgWindow0LineCount"))
+		wait 0.05;
+
+	level.print_schedules++;
+	iPrintLn("" + label + content);
+	wait getDvarFloat("con_gameMsgWindow0FadeInTime") + getDvarFloat("con_gameMsgWindow0MsgTime") + getDvarFloat("con_gameMsgWindow0FadeOutTime");
+	level.print_schedules--;
+
+	if (level.print_schedules <= 0)
+		level.print_schedules = undefined;
+}
+
 convert_time(seconds)
 {
 	hours = 0; 
@@ -440,8 +462,8 @@ powerup_vars_controller()
 		if (level.powerup_drop_count != 0 || level.zombie_powerup_array.size < 1)
 		{
 			info_print("Possible issue with powerup related variables\nlevel.powerup_drop_count=" + level.powerup_drop_count + " level.zombie_powerup_array.size=" + level.zombie_powerup_array.size + ".\nPlease send screenshot of the console to Zi0#1063");
-			iPrintLn("^1WARNING^7: Possible issue with powerups");
-			iPrintLn("Check console for details");
+			self thread print_scheduler("^1WARNING: ", "^7Possible issue with powerups");
+			self thread print_scheduler("Check console for details");
 		}
 	}
 }
@@ -760,29 +782,15 @@ splits_timer_hud()
 
 		if (is_round(15) && !(level.round_number % 5))
 		{
-			splits_hud = createserverfontstring("hudsmall" , 1.3);
-			splits_hud set_hud_position("splits_hud", "CENTER", "TOP", 0, 30);
-			splits_hud.color = get_hud_color();
-			splits_hud.alpha = 0;
-			splits_hud.hidewheninmenu = 1;
-
 			timestamp = convert_time(int(getTime() / 1000) - level.FRFIX_START);
 			info_print("Split: Round " + level.round_number + ": " + timestamp);
 
 			if (is_vanilla())
 				continue;
 
-			splits_hud setText("" + level.round_number + " TIME: " + timestamp);
-			splits_hud fadeOverTime(0.25);
-			splits_hud.alpha = 1;
-			wait 4;
+			self thread print_scheduler("Round " + level.round_number + " time: ^3", timestamp);
 
-			splits_hud fadeOverTime(0.25);
-			splits_hud.alpha = 0;
-
-			splits_hud destroy();
 			timestamp = undefined;
-			splits_hud = undefined;
 		}
 	}
 }
@@ -791,10 +799,7 @@ hordes_hud()
 {
 	level endon("end_game");
 
-	if (is_vanilla())
-		return;
-
-	if (!first_room_fix_config("show_hordes"))
+	if (is_vanilla() || !first_room_fix_config("show_hordes"))
 		return;
 
 	while (true)
@@ -804,30 +809,10 @@ hordes_hud()
 
 		if (!is_special_round() && is_round(20))
 		{
-			hordes_hud = createserverfontstring("hudsmall" , 1.4);
-			hordes_hud set_hud_position("hordes_hud", "CENTER", "BOTTOM", 0, -75);
-			hordes_hud.color = get_hud_color();
-			hordes_hud.alpha = 0;
-			hordes_hud.hidewheninmenu = 1;
-			hordes_hud.label = &"Hordes this round: ";
-
-			label = "HORDES ON " + level.round_number + ": ";
-			hordes_hud.label = istring(label);
-
 			zombies_value = int(((maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total) / 24) * 100);
-			hordes_hud setValue(zombies_value / 100);
 
-			hordes_hud fadeOverTime(0.25);
-			hordes_hud.alpha = 1;
+			self thread print_scheduler("HORDES ON " + level.round_number + ": ^3", zombies_value / 100);
 
-			wait 5;
-
-			hordes_hud fadeOverTime(0.25);
-			hordes_hud.alpha = 0;
-
-			hordes_hud destroy();
-			hordes_hud = undefined;
-			label = undefined;
 			zombies_value = undefined;
 		}
 	}
@@ -961,29 +946,7 @@ semtex_hud()
 		if (!num_of_prenades)
 			continue;
 
-		semtex_hud = createserverfontstring("hudsmall" , 1.4);
-		semtex_hud set_hud_position("semtex_hud", "CENTER", "BOTTOM", 0, -95);
-		semtex_hud.color = get_hud_color();
-		semtex_hud.alpha = 0;
-		semtex_hud.hidewheninmenu = 1;
-		semtex_hud.label = &"Prenades this round: ";
-
-		label = "PRENADES ON " + level.round_number + ": ";
-		semtex_hud.label = istring(label);
-
-		semtex_hud setValue(num_of_prenades);
-
-		semtex_hud fadeOverTime(0.25);
-		semtex_hud.alpha = 1;
-
-		wait 5;
-
-		semtex_hud fadeOverTime(0.25);
-		semtex_hud.alpha = 0;
-
-		semtex_hud destroy();
-		label = undefined;
-		semtex_hud = undefined;
+		self thread print_scheduler("PRENADES ON " + level.round_number + ": ^3", num_of_prenades);
 	}
 }
 
@@ -1062,7 +1025,7 @@ notify_about_prenade_switch()
 	level endon("end_game");
 
 	self waittill("changed_prenade_type", prenade_type);
-	iPrintLn("Prenade values generation is now: ^3" + prenade_type);
+	self thread print_scheduler("Prenade values generation is now: ^3", prenade_type);
 }
 
 mannequinn_manager()
@@ -1755,7 +1718,7 @@ first_box()
 
 	flag_wait("initial_blackscreen_passed");
 
-	iPrintLn("First Box module: ^2AVAILABLE");
+	self thread print_scheduler("First Box module: ^2", "AVAILABLE");
 	self thread watch_for_finish_firstbox();
 	self.rigged_hits = 0;
 
@@ -1785,12 +1748,12 @@ rig_box(gun, player)
 	weapon_key = get_weapon_key(gun, ::verify_weapon_key_box);
 	if (weapon_key == "")
 	{
-		iPrintLn("Wrong weapon key: ^1" + gun);
+		self thread print_scheduler("Wrong weapon key: ^1",  gun);
 		return;
 	}
 
 	// weapon_name = level.zombie_weapons[weapon_key].name;
-	iPrintLn("" + player.name + " set box weapon to: ^3" +  weapon_display_wrapper(weapon_key));
+	self thread print_scheduler("" + player.name + " set box weapon to: ^3", weapon_display_wrapper(weapon_key));
 	level.is_first_box = true;
 	self.rigged_hits++;
 
@@ -1848,9 +1811,9 @@ watch_for_finish_firstbox()
 	while (!is_round(11))
 		wait 0.1;
 
-	iPrintLn("First Box module: ^1DISABLED");
+	self thread print_scheduler("First Box module: ^1", "DISABLED");
 	if (self.rigged_hits)
-		iPrintLn("First box used: ^3" + self.rigged_hits + " ^7times");
+		self thread print_scheduler("First box used: ^3", self.rigged_hits + " ^7times");
 
 	level notify("break_firstbox");
 	flag_set("break_firstbox");
