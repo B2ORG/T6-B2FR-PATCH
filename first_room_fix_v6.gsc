@@ -36,9 +36,10 @@ init()
 	// Patch Config
 	level.FRFIX_CONFIG = array();
 	level.FRFIX_CONFIG["version"] = 6;
-	level.FRFIX_CONFIG["beta"] = "ALPHA";
+	level.FRFIX_CONFIG["beta"] = true;
 	level.FRFIX_CONFIG["debug"] = true;
 	level.FRFIX_CONFIG["vanilla"] = get_vanilla_setting(false);
+	level.FRFIX_CONFIG["for_player"] = "";
 
 	level thread set_dvars();
 	level thread on_game_start();
@@ -97,6 +98,7 @@ on_game_start()
 	safety_round();
 	safety_difficulty();
 	safety_debugger();
+	safety_beta();
 	level thread mannequinn_manager();
 	level thread perma_perks_setup();
 }
@@ -436,14 +438,28 @@ get_hud_color(fallback)
 	return (1, 1, 1);
 }
 
+get_host_name(lowercase)
+{
+	if (!isDefined(lowercase))
+		lowercase = true;
+
+	if (lowercase)
+		return toLower(level.players[0].name);
+	return level.players[0].name;
+}
+
 // Functions
 
 welcome_prints()
 {
+	self iPrintLn("FIRST ROOM FIX V^3" + level.FRFIX_CONFIG["version"]);
 	wait 0.75;
-	self iPrintLn("^5FIRST ROOM FIX V" + level.FRFIX_CONFIG["version"] + " " + level.FRFIX_CONFIG["beta"]);
-	wait 0.75;
-	self iPrintLn("Source: github.com/Zi0MIX/T6-FIRST-ROOM-FIX");
+	if (level.FRFIX_CONFIG["for_player"] != "")
+	{
+		self iPrintLn("VERSION FOR: ^3" + level.FRFIX_CONFIG["for_player"]);
+		wait 0.75;
+	}
+	self iPrintLn("Source: ^3github.com/Zi0MIX/T6-FIRST-ROOM-FIX");
 }
 
 generate_cheat()
@@ -1441,19 +1457,19 @@ origins_fix()
 
 safety_zio()
 {
-	if (isDefined(level.SONG_AUTO_TIMER_ACTIVE) && level.SONG_AUTO_TIMER_ACTIVE)
+	// Song autotiming
+	if (isDefined(level.SONG_TIMING))
 	{
 		iPrintLn("^1SONG PATCH DETECTED!!!");
 		level notify("end_game");
 	}
 
-	if (isDefined(level.INNIT_ACTIVE) && level.INNIT_ACTIVE)
+	// Innit patch
+	if (isDefined(level.INNIT_CONFIG))
 	{
 		iPrintLn("^1INNIT PATCH DETECTED!!!");
 		level notify("end_game");
 	}
-
-	return;
 }
 
 safety_round()
@@ -1468,7 +1484,6 @@ safety_round()
 		return;
 
 	generate_watermark("STARTING ROUND", (0.8, 0, 0));
-	return;
 }
 
 safety_difficulty()
@@ -1484,9 +1499,8 @@ safety_debugger()
 	{
 		foreach(player in level.players)
 			player.score = 333333;
-		generate_watermark("DEBUGGER", (0, 0.8, 0));
+		generate_watermark("DEBUGGER", (0.8, 0.8, 0));
 	}
-	return;
 }
 
 safety_anticheat()
@@ -1499,6 +1513,12 @@ safety_anticheat()
 
 	foreach (player in level.players)
 		player doDamage(player.health + 69, player.origin);
+}
+
+safety_beta()
+{
+	if (first_room_fix_config("beta"))
+		generate_watermark("BETA", (0, 0.8, 0));
 }
 
 powerup_drop_tracking(drop_point)
