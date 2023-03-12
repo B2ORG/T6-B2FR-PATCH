@@ -101,6 +101,7 @@ on_game_start()
 	safety_beta();
 	level thread perma_perks_setup();
 	level thread nuketown_handler();
+	level thread topbarn_controller();
 }
 
 on_player_joined()
@@ -648,6 +649,13 @@ display_split(hudelem, time, length)
 	hudelem.alpha = 0;
 
 	return;
+}
+
+challenge_failed(challenge_name, challenge_name_upper, challenge_zone)
+{
+	thread print_scheduler(challenge_name + " Challenge: ^1", self.name + " LEFT " + challenge_zone + "!");
+	info_print(self.name + " failed challenge " + challenge_name + " at " + convert_time(int(GetTime() / 1000) - level.FRFIX_START));
+	generate_watermark("FAILED " + challenge_name_upper, (0.8, 0, 0));
 }
 
 print_network_frame(len)
@@ -2391,8 +2399,7 @@ yellowhouse_controller()
 		{
 			if (!isinarray(allowed_zones, player get_current_zone()))
 			{
-				self thread print_scheduler("Yellow House Challenge: ^1", player.name + " LEFT YELLOWHOUSE ZONE!");
-				info_print(player.name + " left zone 'openhouse2_f1_zone' at " + convert_time(int(GetTime() / 1000) - level.FRFIX_START));
+				player challenge_failed("Yellow House", "YELLOW HOUSE", "YELLOW HOUSE AREA");
 				return;
 			}
 		}
@@ -2430,4 +2437,56 @@ nuketown_switch_eyes()
 {
 	level setclientfield("zombie_eye_change", 1);
 	sndswitchannouncervox("richtofen");
+}
+
+topbarn_controller()
+{
+	level endon("end_game");
+
+	if (!is_farm() || has_magic() || !is_round(5))
+		return;
+
+	level waittill("start_of_round");
+
+	foreach (player in level.players)
+	{
+		if (!player is_player_in_top_barn())
+		{
+			debug_print("exiting topbarn_controller cause zone: '" + player get_current_zone() + "'");
+			return;
+		}
+	}
+
+	self thread print_scheduler("Top Barn Challenge: " + "^2ACTIVE");
+
+	while (true)
+	{
+		foreach (player in level.players)
+		{
+			if (!player is_player_in_top_barn())
+			{
+				player challenge_failed("Top Barn", "TOP BARN", "TOP BARN AREA");
+				return;
+			}
+		}
+
+		wait 0.05;
+	}
+}
+
+is_player_in_top_barn()
+{
+    if (self get_current_zone() != "zone_brn")
+        return false;
+
+    if (self.origin[2] < 50)
+	{
+		if (self.origin[0] < 7875 || self.origin[0] > 8115)
+			return false;
+		
+		if (self.origin[1] > -5115 || self.origin[1] < -5415)
+			return false;
+	}
+
+	return true;
 }
