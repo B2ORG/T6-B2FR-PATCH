@@ -63,6 +63,8 @@ zone_hud(raw_names)
 
     player_wait_for_initial_blackscreen();
 
+	// self thread get_my_coordinates();
+
     self.hud_zone = createfontstring("objective" , 1.2);
 	self.hud_zone set_hud_position("hud_zone", "CENTER", "BOTTOM", 0, 20);
 	self.hud_zone.alpha = 0.8;
@@ -1118,4 +1120,41 @@ translate_zone(zone)
 	}
 
 	return name;
+}
+
+get_my_coordinates()
+{
+    self.coordinates_x_hud = createfontstring("objective" , 1.1);
+	self.coordinates_x_hud set_hud_position("hud_origin_x", "CENTER", "BOTTOM", -40, 10);
+	self.coordinates_x_hud.alpha = 0.66;
+	self.coordinates_x_hud.color = get_hud_color();
+	self.coordinates_x_hud.hidewheninmenu = 0;
+
+    self.coordinates_y_hud = createfontstring("objective" , 1.1);
+	self.coordinates_y_hud set_hud_position("hud_origin_y", "CENTER", "BOTTOM", 0, 10);
+	self.coordinates_y_hud.alpha = 0.66;
+	self.coordinates_y_hud.color = get_hud_color();
+	self.coordinates_y_hud.hidewheninmenu = 0;
+
+    self.coordinates_z_hud = createfontstring("objective" , 1.1);
+	self.coordinates_z_hud set_hud_position("hud_origin_z", "CENTER", "BOTTOM", 40, 10);
+	self.coordinates_z_hud.alpha = 0.66;
+	self.coordinates_z_hud.color = get_hud_color();
+	self.coordinates_z_hud.hidewheninmenu = 0;
+
+	while (true)
+	{
+		self.coordinates_x_hud setValue(naive_round(self.origin[0]));
+		self.coordinates_y_hud setValue(naive_round(self.origin[1]));
+		self.coordinates_z_hud setValue(naive_round(self.origin[2]));
+
+		wait 0.05;
+	}
+}
+
+// Yes it's not super accurate, it doesn't have to be
+naive_round(floating_point)
+{
+	floating_point = int(floating_point * 1000);
+	return floating_point / 1000;
 }
