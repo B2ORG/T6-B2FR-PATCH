@@ -32,6 +32,7 @@ init()
 	flag_init("game_started");
 	flag_init("box_rigged");
 	flag_init("break_firstbox");
+	flag_init("permaperks_were_set");
 
 	// Patch Config
 	level.FRFIX_CONFIG = array();
@@ -179,7 +180,7 @@ print_permaperk_state(enabled, perk)
 
 	if (first_room_fix_config("track_permaperks"))
 		self iPrintLn("Permaperk " + permaperk_name(perk) + ": " + print_player);
-	debug_print("Permaperks: " + perk + " " + print_cli);
+	debug_print(self.name + ": Permaperk " + perk + " -> " + print_cli);
 	return;
 }
 
@@ -1146,18 +1147,22 @@ perma_perks_setup()
 	if (!has_permaperks_system())
 		return;
 
-	// Metalboards plugin handler
-	if (first_room_fix_config("give_permaperks") && isDefined(level.FRFIX_METALBOARDS_PLUGIN))
-	{
-		info_print("Metal Boards plugin present, if perk is awarded, a restart will be required");
-		[[level.FRFIX_METALBOARDS_PLUGIN]]();
-	}
+	self thread watch_permaperk_award();
 
 	foreach (player in level.players)
 	{
 		player thread permaperks_watcher();
-		player thread award_permaperks();
-		player thread permaperk_failsafe();
+		player thread permaperk_failsafe_early();
+
+		player.frfix_awarding_permaperks = false;
+		if (isDefined(level.FRFIX_PLUGIN_PERMAPERKS))
+		{
+			player thread [[level.FRFIX_PLUGIN_PERMAPERKS]]();
+		}
+		else
+		{
+			player thread award_permaperks_safe();
+		}
 	}
 
 	while (true)
@@ -1165,8 +1170,51 @@ perma_perks_setup()
 		level waittill("connected", player);
 
 		player thread permaperks_watcher();
-		player thread award_permaperks();
-		player thread permaperk_failsafe();
+		if (!is_round(15))
+			player thread permaperk_failsafe_early();
+		else
+			player thread permaperk_failsafe_late();
+
+		if (isDefined(level.FRFIX_PLUGIN_PERMAPERKS))
+			player thread [[level.FRFIX_PLUGIN_PERMAPERKS]]();
+	}
+}
+
+watch_permaperk_award()
+{
+	level endon("end_game");
+
+	present_players = level.players.size;
+
+	while (true)
+	{
+		i = 0;
+		foreach (player in level.players)
+		{
+			if (!isDefined(player.frfix_awarding_permaperks))
+				i++;
+		}
+
+		if (i == present_players && flag("permaperks_were_set"))
+		{
+			thread print_scheduler("Permaperks Awarded: ", "^1RESTART REQUIRED");
+			wait 1.5;
+			if (is_plutonium())
+				map_restart();
+			else
+				level notify("end_game");
+		}
+
+		if (!did_game_just_start())
+			break;
+
+		wait 0.1;
+	}
+
+	foreach (player in level.players)
+	{
+		if (isDefined(player.frfix_awarding_permaperks))
+			player.frfix_awarding_permaperks = undefined;
 	}
 }
 
@@ -1213,18 +1261,18 @@ permaperk_struct(current_array, code, award, take, to_round, maps_exclude, map_u
 	permaperk.maps_to_exclude = maps_exclude;
 	permaperk.map_unique = map_unique;
 
-	debug_print("generating permaperk struct | data: code=" + code + " to_round=" + to_round + " award=" + award + " take=" + take + " map_unique=" + map_unique + " | size of current: " + current_array.size);
+	// debug_print("generating permaperk struct | data: code=" + code + " to_round=" + to_round + " award=" + award + " take=" + take + " map_unique=" + map_unique + " | size of current: " + current_array.size);
 
 	current_array[current_array.size] = permaperk;
 	return current_array;
 }
 
-award_permaperks()
+award_permaperks_safe()
 {
 	level endon("end_game");
 	self endon("disconnect");
 
-	if (!first_room_fix_config("give_permaperks") || !did_game_just_start())
+	if (!first_room_fix_config("give_permaperks"))
 		return;
 
 	while (!isalive(self))
@@ -1240,6 +1288,7 @@ award_permaperks()
 	perks_to_process = permaperk_struct(perks_to_process, "flopper", true, false, 255, array(), "zm_buried");
 	perks_to_process = permaperk_struct(perks_to_process, "box_weapon", false, true, 255, array("zm_buried"));
 	perks_to_process = permaperk_struct(perks_to_process, "nube", true, true, 10, array("zm_highrise"));
+	perks_to_process = permaperk_struct(perks_to_process, "board", true, false);
 
 	self.frfix_awarding_permaperks = true;
 
@@ -1251,7 +1300,7 @@ award_permaperks()
 			continue;
 
 		perk_code = perk.code;
-		debug_print("processing: " + perk_code);
+		debug_print(self.name + ": processing -> " + perk_code);
 
 		// If award and take are both set, it means maps specified in 'maps_to_exclude' are the maps on which perk needs to be taken away
 		if (perk.award && perk.take && isinarray(perk.maps_to_exclude, level.script))
@@ -1266,13 +1315,14 @@ award_permaperks()
 			wait_network_frame();
 		}
 
+		// Do not try to award perk if player already has it
+		if (self.pers_upgrades_awarded[perk_code])
+			continue;
+
 		for (j = 0; j < level.pers_upgrades[perk_code].stat_names.size; j++)
 		{
 			stat_name = level.pers_upgrades[perk_code].stat_names[j];
 			stat_value = level.pers_upgrades[perk_code].stat_desired_values[j];
-
-			self reset_permaperk(stat_name, perk_code);
-			wait_network_frame();
 
 			// Award perk if all conditions match
 			if (perk.award && !is_round(perk.to_round) && !isinarray(perk.maps_to_exclude, level.script))
@@ -1288,62 +1338,73 @@ award_permaperks()
 	self uploadstatssoon();
 }
 
-reset_permaperk(stat_name, perk_code)
+award_permaperk(stat_name, perk_code, stat_value)
 {
+	flag_set("permaperks_were_set");
+
 	perk_name = permaperk_name(perk_code);
 
 	self.stats_this_frame[stat_name] = 1;
-	self set_global_stat(stat_name, 0);
-	info_print(self.name + ": Permaperk '" + perk_name + "' resetting -> " + stat_name + " set to: 0");
+	self set_global_stat(stat_name, stat_value);
+	info_print(self.name + ": Permaperk '" + perk_name + "' activation -> " + stat_name + " set to: " + stat_value);
 }
 
-award_permaperk(stat_name, perk_code, stat_value)
+remove_permaperk_wrapper(perk_code, round)
 {
 	perk_name = permaperk_name(perk_code);
 
-	if (self get_global_stat(stat_name) != stat_value)
+	if (!isDefined(round))
+		round = 1;
+
+	debug_print("remove_permaperk_wrapper(self=" + self.name + ", perk_code=" + perk_code + ", round=" + round + ")");
+
+	if (is_round(round) && self.pers_upgrades_awarded[perk_code])
 	{
-		self.stats_this_frame[stat_name] = 1;
-		self set_global_stat(stat_name, stat_value);
-		info_print(self.name + ": Permaperk '" + perk_name + "' activation -> " + stat_name + " set to: " + stat_value);
-	}
-	else
-	{
-		info_print(self.name + ": Permaperk '" + perk_name + "' activation -> Requirements already met");
+		info_print("Permaperk failsafe triggered for " + self.name + ": " + perk_name);
+		self remove_permaperk(perk_code, perk_name);
+		self playsoundtoplayer("evt_player_downgrade", self);
 	}
 }
 
-remove_permaperk(perk_code)
+remove_permaperk(perk_code, perk_name)
 {
-	perk_name = permaperk_name(perk_code);
+	if (!isDefined(perk_name))
+		perk_name = permaperk_name(perk_code);
+
 	info_print("Perk Removal for " + self.name + ": " + perk_name);
 	self.pers_upgrades_awarded[perk_code] = 0;
 }
 
-permaperk_failsafe()
+permaperk_failsafe_early()
 {
 	level endon("end_game");
 	self endon("disconnect");
 
-	while (true)
+	while (!is_round(16))
 	{
 		level waittill("start_of_round");
 		wait 5;
 
-		if (is_round(10) && self.pers_upgrades_awarded["nube"])
-		{
-			info_print("permaperk_failsafe(): Removing 'nube'");
-			self remove_permaperk("nube");
-			self playsoundtoplayer("evt_player_downgrade", self);
-		}
-
-		if (is_round(15) && self.pers_upgrades_awarded["jugg"])
-		{
-			info_print("permaperk_failsafe(): Removing 'jugg'");
-			self remove_permaperk("jugg");
-			self playsoundtoplayer("evt_player_downgrade", self);
-		}
+		remove_permaperk_wrapper("nube", 10);
+		remove_permaperk_wrapper("jugg", 15);
 	}
+
+	debug_print(self.name + " exiting permaperk_failsafe_early()");
+}
+
+permaperk_failsafe_late()
+{
+	level endon("end_game");
+	self endon("disconnect");
+
+	debug_print(self.name + " entering permaperk_failsafe_late()");
+
+	/* We want to remove the perks before players spawn to prevent health bonus 
+	The wait is essential, it allows the game to process permaperks internally before we override them */
+	wait 2;
+
+	remove_permaperk_wrapper("nube");
+	remove_permaperk_wrapper("jugg");
 }
 
 permaperk_name(perk)
@@ -2347,7 +2408,8 @@ remove_mannequin(origin, extra_delay)
 	if (isDefined(extra_delay))
 		wait extra_delay;
 
-	all_mannequins = maps\mp\zm_nuked::nuked_mannequin_filter(getentarray("destructible", "targetname"));
+	// all_mannequins = maps\mp\zm_nuked::nuked_mannequin_filter(getentarray("destructible", "targetname"));
+	all_mannequins = array();
 
 	foreach (mannequin in all_mannequins)
 	{
