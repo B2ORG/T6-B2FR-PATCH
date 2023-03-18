@@ -1168,13 +1168,9 @@ perma_perks_setup()
 
 		player.frfix_awarding_permaperks = false;
 		if (isDefined(level.FRFIX_PLUGIN_PERMAPERKS))
-		{
 			player thread [[level.FRFIX_PLUGIN_PERMAPERKS]]();
-		}
 		else
-		{
 			player thread award_permaperks_safe();
-		}
 	}
 
 	while (true)
