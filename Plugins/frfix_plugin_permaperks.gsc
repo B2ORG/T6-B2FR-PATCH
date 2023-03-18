@@ -12,6 +12,7 @@ main()
 
 safe_init()
 {
+	level waittill("frfix_init");
     level.FRFIX_PLUGIN_PERMAPERKS = ::award_permaperks;
 }
 

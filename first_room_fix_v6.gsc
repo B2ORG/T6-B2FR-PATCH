@@ -83,10 +83,8 @@ on_game_start()
 	level thread powerup_odds_watcher();
 	level thread powerup_vars_controller();
 
-	if (is_debug() && isDefined(level.FRFIX_TESTING_PLUGIN))
-		level thread [[level.FRFIX_TESTING_PLUGIN]]();
-	if (is_debug() && isDefined(level.FRFIX_PLUGIN_PERMAPERKS_DEBUG))
-		level thread [[level.FRFIX_PLUGIN_PERMAPERKS_DEBUG]]();
+	if (is_debug() && isDefined(level.FRFIX_PLUGIN_TEST))
+		level thread [[level.FRFIX_PLUGIN_TEST]]();
 
 	flag_wait("initial_blackscreen_passed");
 
@@ -137,7 +135,7 @@ on_player_spawned()
 	self thread velocity_meter();
 	self thread set_characters();
 	if (isDefined(level.FRFIX_PLUGIN_ZONES))
-		self thread [[level.FRFIX_PLUGIN_ZONES]]();
+		self thread [[level.FRFIX_PLUGIN_ZONES]](::set_hud_properties, false);
 }
 
 // Stubs

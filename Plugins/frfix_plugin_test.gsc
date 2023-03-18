@@ -1,13 +1,24 @@
 #include common_scripts\utility;
 #include maps\mp\_utility;
+#include maps\mp\zombies\_zm_audio;
+#include maps\mp\zombies\_zm_utility;
+#include maps\mp\zombies\_zm_spawner;
+#include maps\mp\zombies\_zm;
+#include maps\mp\zombies\_zm_weapons;
 #include maps\mp\zombies\_zm_stats;
 
-init()
+main()
 {
-    level.frfix_plugin_permaperk_debug = ::permaperks_plugin;
+    level thread safe_init();
 }
 
-permaperks_plugin()
+safe_init()
+{
+    level waittill("frfix_init");
+    level.FRFIX_PLUGIN_TEST = ::permaperks_testing;
+}
+
+permaperks_testing()
 {
     level endon("end_game");
 

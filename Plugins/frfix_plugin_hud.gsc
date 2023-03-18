@@ -12,6 +12,7 @@ safe_init()
     level.FRFIX_HUD_PLUGIN["timer_hud"] = ::get_timer_hud;
     level.FRFIX_HUD_PLUGIN["round_hud"] = ::get_round_hud;
     level.FRFIX_HUD_PLUGIN["hud_velocity"] = ::get_velocity_hud;
+    level.FRFIX_HUD_PLUGIN["hud_zone"] = ::get_zones_hud;
 }
 
 get_timer_hud(input)
@@ -104,4 +105,27 @@ get_velocity_hud(input)
     }
 
     return data;
+}
+
+get_zones_hud()
+{
+    data = array();
+
+    switch (input)
+    {
+        case "v5":
+            data["color"] = (0.9, 0.8, 1);
+            break;
+        case "zzeetaa":
+            data["color"] = (0, 0.980, 0.604);
+            break;
+        case "Vistek":
+            data["color"] = (1, 0.98, 0.35);
+            break;
+        case "Tonestone":
+            data["color"] = (0.26, 0.87, 0.94);
+            break;
+        default:
+            data = undefined;
+    }
 }
