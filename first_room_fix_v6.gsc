@@ -425,7 +425,9 @@ set_hud_properties(hud_key, x_align, y_align, x_pos, y_pos, col)
 
 	if (isDefined(level.FRFIX_HUD_PLUGIN))
 	{
-		plugin = [[level.FRFIX_HUD_PLUGIN[hud_key]]](level.FRFIX_CONFIG["key_hud_plugin"]);
+		/* Proxy variable for irony compatibility */
+		func = level.FRFIX_HUD_PLUGIN[hud_key];
+		plugin = [[func]](level.FRFIX_CONFIG["key_hud_plugin"]);
 		if (isDefined(plugin))
 		{
 			if (isDefined(plugin["x_align"]))
