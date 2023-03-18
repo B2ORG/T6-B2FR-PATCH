@@ -23,6 +23,8 @@ main()
 
 init()
 {
+	level notify("frfix_init");
+
 	flag_init("dvars_set");
 	flag_init("cheat_printed_backspeed");
 	flag_init("cheat_printed_noprint");
@@ -41,6 +43,8 @@ init()
 	level.FRFIX_CONFIG["debug"] = true;
 	level.FRFIX_CONFIG["vanilla"] = get_vanilla_setting(false);
 	level.FRFIX_CONFIG["for_player"] = "";
+	/* Default value here: level.players[0].name */
+	level.FRFIX_CONFIG["key_hud_plugin"] = undefined;
 
 	level thread set_dvars();
 	level thread on_game_start();
@@ -89,9 +93,11 @@ on_game_start()
 	// HUD
 	level thread timer_hud();
 	level thread round_timer_hud();
-	level thread splits_timer_hud();
-	level thread hordes_hud();
-	level thread semtex_hud();
+
+	// Scheduled prints
+	level thread display_splits();
+	level thread display_hordes();
+	level thread semtex_display();
 
 	// Game settings
 	safety_zio();
@@ -189,7 +195,7 @@ generate_watermark(text, color, alpha_override)
 {
 	y_offset = 12 * level.FRFIX_WATERMARKS.size;
 	if (!isDefined(color))
-		color = get_hud_color();
+		color = (1, 1, 1);
 
 	if (!isDefined(alpha_override))
 		alpha_override = 0.33;
@@ -414,31 +420,33 @@ first_room_fix_config(key)
 	return false;
 }
 
-set_hud_position(hud_key, x_align, y_align, x_pos, y_pos)
+set_hud_properties(hud_key, x_align, y_align, x_pos, y_pos, col)
 {
-	if (isDefined(level.FRFIX_HUD_POS_PLUGIN[hud_key]))
+	if (!isDefined(col))
+		col = level.FRFIX_CONFIG["hud_color"];
+
+	if (isDefined(level.FRFIX_HUD_PLUGIN))
 	{
-		x_align = level.FRFIX_HUD_POS_PLUGIN[hud_key]["x_align"];
-		y_align = level.FRFIX_HUD_POS_PLUGIN[hud_key]["y_align"];
-		x_pos = level.FRFIX_HUD_POS_PLUGIN[hud_key]["x_pos"];
-		y_pos = level.FRFIX_HUD_POS_PLUGIN[hud_key]["y_pos"];
+		plugin = [[level.FRFIX_HUD_PLUGIN[hud_key]]](level.FRFIX_CONFIG["key_hud_plugin"]);
+		if (isDefined(plugin))
+		{
+			if (isDefined(plugin["x_align"]))
+				x_align = plugin["x_align"];
+			if (isDefined(plugin["y_align"]))
+				y_align = plugin["y_align"];
+			if (isDefined(plugin["x_pos"]))
+				x_pos = plugin["x_pos"];
+			if (isDefined(plugin["y_pos"]))
+				y_pos = plugin["y_pos"];
+			if (isDefined(plugin["color"]))
+				col = plugin["color"];
+		}
+		else
+			debug_print("set_hud_properties(): hud plugin returned undefined for key='" + hud_key + "'");
 	}
 
 	self setpoint(x_align, y_align, x_pos, y_pos);
-}
-
-get_hud_color(fallback)
-{
-	if (isDefined(level.FRFIX_HUD_COLOR_PLUGIN))
-		return level.FRFIX_HUD_COLOR_PLUGIN;
-
-	if (isDefined(level.FRFIX_CONFIG["hud_color"]))
-		return level.FRFIX_CONFIG["hud_color"];
-
-	if (isDefined(fallback))
-		return fallback;
-
-	return (1, 1, 1);
+	self.color = col;
 }
 
 get_host_name(lowercase)
@@ -707,10 +715,9 @@ timer_hud()
     level endon("end_game");
 
     timer_hud = createserverfontstring("big" , 1.6);
-	timer_hud set_hud_position("timer_hud", "TOPRIGHT", "TOPRIGHT", 60, -26);
+	timer_hud set_hud_properties("timer_hud", "TOPRIGHT", "TOPRIGHT", 60, -26);
 	if (!is_plutonium())
-		timer_hud set_hud_position("round_hud", "TOPLEFT", "TOPLEFT", -55, -22);
-	timer_hud.color = get_hud_color();
+		timer_hud set_hud_properties("round_hud", "TOPLEFT", "TOPLEFT", -55, -22);
 	timer_hud.alpha = 0;
 	timer_hud.hidewheninmenu = 1;
 
@@ -768,10 +775,9 @@ round_timer_hud()
     level endon("end_game");
 
 	round_hud = createserverfontstring("big" , 1.6);
-	round_hud set_hud_position("round_hud", "TOPRIGHT", "TOPRIGHT", 60, -9);
+	round_hud set_hud_properties("round_hud", "TOPRIGHT", "TOPRIGHT", 60, -9);
 	if (!is_plutonium())
-		round_hud set_hud_position("round_hud", "TOPLEFT", "TOPLEFT", -55, -7);
-	round_hud.color = get_hud_color();
+		round_hud set_hud_properties("round_hud", "TOPLEFT", "TOPLEFT", -55, -7);
 	round_hud.alpha = 0;
 	round_hud.hidewheninmenu = 1;
 
@@ -815,7 +821,7 @@ round_timer_hud()
 	}
 }
 
-splits_timer_hud()
+display_splits()
 {
 	level endon("end_game");
 
@@ -839,7 +845,7 @@ splits_timer_hud()
 	}
 }
 
-hordes_hud()
+display_hordes()
 {
 	level endon("end_game");
 
@@ -858,14 +864,14 @@ hordes_hud()
 
 			self thread print_scheduler(label, zombies_value / 100);
 			wait_for_message_end();
-			self thread hordes_hud_on_demand(label, zombies_value / 100);
+			self thread display_hordes_on_demand(label, zombies_value / 100);
 
 			zombies_value = undefined;
 		}
 	}
 }
 
-hordes_hud_on_demand(label, horde_count)
+display_hordes_on_demand(label, horde_count)
 {
 	level endon("end_game");
 	level endon("end_of_round");
@@ -895,11 +901,9 @@ velocity_meter()
     player_wait_for_initial_blackscreen();
 
     self.hud_velocity = createfontstring("default" , 1.2);
-	self.hud_velocity set_hud_position("hud_velocity", "CENTER", "CENTER", "CENTER", 200);
+	self.hud_velocity set_hud_properties("hud_velocity", "CENTER", "CENTER", "CENTER", 200);
 	self.hud_velocity.alpha = 0.75;
-	self.hud_velocity.color = get_hud_color();
 	self.hud_velocity.hidewheninmenu = 1;
-    // self.hud_velocity.label = &"Velocity: ";
 
 	self thread velocity_meter_size(self.hud_velocity);
 
@@ -988,7 +992,7 @@ velocity_meter_size(hud)
 	}
 }
 
-semtex_hud()
+semtex_display()
 {
 	level endon("end_game");
 
@@ -1017,11 +1021,11 @@ semtex_hud()
 
 		self thread print_scheduler("PRENADES ON " + level.round_number + ": ^3", num_of_prenades);
 		wait_for_message_end();
-		self thread semtex_hud_on_demand("PRENADES ON " + level.round_number + ": ^3", num_of_prenades);
+		self thread semtex_print_on_demand("PRENADES ON " + level.round_number + ": ^3", num_of_prenades);
 	}
 }
 
-semtex_hud_on_demand(label, prenades)
+semtex_print_on_demand(label, prenades)
 {
 	level endon("end_game");
 	level endon("end_of_round");
