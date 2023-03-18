@@ -2083,6 +2083,12 @@ get_weapon_key(weapon_str, verifier)
 		case "ak74":
 			key = "ak74u_zm";
 			break;
+		case "m14":
+			key = "m14_zm";
+			break;
+		case "svu":
+			key = "svu_zm";
+			break;
 		default:
 			key = weapon_str;
 	}
