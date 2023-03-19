@@ -3,157 +3,231 @@
 
 # Launchers
 
-First Room Fix is compatibile with all modern Pluto versions. At this point in time i don't provide release versions for other launchers.
-That being said, a special version for Redacted is present in the repository,
-you may download the script file and use it as is, Redacted does not require compiled scripts. After compilation Redacted script also works with older offline Plutonium versions.
+First Room Fix is mainly meant for modern Plutonium versions, as most of the actual fixes are required for those.
 
-# Pluto Versions
-Compatibility ragarding legitimacy of the game while playing for records
+## Modern (R2905 & R3000+)
 
-| Version | V3 | V4 | V5 | V5.2+ | Redacted |
-| --- | --- | --- | --- | --- | --- |
-| Others | - | - | - | - | v |
-| R2905 (solo) | x | v | v | v | x |
-| R2905 (coop) | v | x | x | v | x |
-| R3000+ (solo) | v | v | v | v | x |
-| R3000+ (coop) | v | x | x | v | x |
+Download the script from [releases](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/releases) section, and put it Plutonium script folder
 
-# Features:
+```C:\Users\{your username}\AppData\Local\Plutonium\storage\t6\scripts\zm```
 
-Table of features lists all the basic functions the patch does. This is not absolutely everything it can do, there are a lot of small details but this more or less sums it up. Check column presence to know whether a feature is in the script by default. Value `Default` means, the feature is there and cannot be disabled (HUD elements are off if Vanilla version is used even if they're listed as Default). If value is `Enabled`, means a version of the patch can be requested with that option disabled, and value `Disabled` means the version with that option enabled can be produced. Special cases are Game and Round timers, where the toggle is between the timer being on the screen at all times or only at the end of each round.
+## Ancient (r353 and similar) and Redacted Nightly
 
-| Feature | Platform | Implementation | Presence | Dsc |
-| --- | --- | --- | --- | --- |
-| Backspeed depatch | All | V1 | Default | Puts back Strafespeedscale and Backspeedscale to Steam values |
-| Game Timer | All | V1 | Default | Displays game timer, optionally it can be only showing game time after each round for few seconds |
-| Fix to hostmigration | Pluto | V2 | Default | Changes `sv_endGameIfISuck` dvar to prevent host migration issues |
-| Nuketown Mannequins | All | V2 | Disabled | Removes certain mannequins from the map to prevent restarts for First Room and Yellow House |
-| Target Assist removal | Pluto | V3 | Default | Disables Target Assist |
-| Reddot Reticle | Pluto | V3 | Default | Sets reticle to always be a reddot in PaPed guns | 
-| Nuketown Blue Eyes | All | V3 | Disabled | Changes zombies eyes to blue, and announcer voice accordingly |
-| Anticheat | All | V4 | Default | Scans most basic game values players could attempt to change to cheat a game |
-| Round Timer | All | V4 | Default | Displays round time. By default it's showing up for a few seconds after each round, but optionally it can be enabled to display at all times |
-| Prepatch recoil removal | Pluto | V4 | Default | Puts back some recoil values back to Steam version |
-| Tickrate Fix | Pluto | V4 | Default | Sets tickrate back to steam values. This function has been fixed in version 5.2, as original implementation wasn't correct |
-| Origins blood override | All | V4 | Disabled | Overrides the reward to always be zombie blood, required for having blood at all in older pluto versions |
-| Permaperks | All | V4 | Enabled | Gives permaperks |
-| Console debug / info prints | Pluto | V5.0 | Default | Various info printed out to plutonium console | 
-| Velocity Meter | All | V5.0 | Default | Displays current velocity of the player |
-| Round splits | All | V5.0 | Default | Displays round splits every 5 rounds after round 10 |
-| Horde size | All | V5.0 | Enabled | Displays the amount of hordes for the round after round 20 on each round |
-| First Box | All | V5.1 | Disabled | Allows for overriding guns in the box (and is very vocal about it) |
-| Semtex prenades | All | V5.1 | Enabled | Shows the amount of prenades on Semtex for rounds 22-50 |
-| Fridge and Bank set | All | V5.1 | Disabled | Sets full bank and fridge weapon |
+Download the script with `-IRONY` postfix in the name from [releases](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/releases) section, and inject it to the game. [Video tutorial](https://youtu.be/Qhmful3ZVkE)
 
-## Permaperks
+## Redacted LAN
 
-Permaperks system is tricky. All versions of First Room Fix V4 and V5 were having issues related to it. Version 6 not only has the system rebuilt but also built in safety measures to prevent accidents.
-Testing indicates that most issues happen because of `fast_restart` and `map_restart` after losing certain perk, so avoiding that on Perma Perks map will decrease chances of stuff going wrong.
-Jug and Nube have a built in safety, if they won't be lose on the right rounds, the patch will force remove them.
-Metal Boards require the use of a plugin, but because you need to restart after awarding them, i recommend just skipping that unless you really need it from the start of the game.
+Download the raw [.gsc file](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/blob/main/first_room_fix_v6.gsc) containing the code (make sure it's downloaded from `main` branch), and insert it in Redacted scripts folder
 
-Awarded permaperks:
+```{path to your redacted}\data\scripts```
 
-| Perk | Map | Restriction |
+# Versions
+
+In the past it's been tricky to determine which release of which version was legit to play after some time (due to dynamic period of discoveries that rendered some of the versions unlegit for certain types of games, for instance a set of versions was not legit for coop, but was perfectly fine for solo). Head to [this](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/blob/main/LEGIT.MD) document, where all of those things are explained, and if anything new pops up, it'll also be added there.
+
+With version 6, it becomes easier, even tho there are 3 separate files for 3 launchers, all of those files contain the exact same code. The only difference between `FIRST-ROOM-FIX-6.gsc` and `FIRST-ROOM-FIX-6-IRONY.gsc` (and it'll remain the same as versioning progress, for instance v6.2) is the used compiler, Ancient Plutonium cannot use patches compiled with new compiler. And then the raw `.gsc` file you download is just uncompiled code.
+
+# First Room Fix changes:
+
+List of changes in First Room Fix V6. Detailed information about each of the features can be found further down the file (if it is required)
+
+## Fixes
+
+- Backspeed & Strafespeed scale
+- Host migration
+- Target Assist
+- Prepatch Recoil
+- Network Frame
+- Custom Games
+
+## HUD
+
+- Game timer
+- Round timer
+- Velocity meter
+- Splits
+- Round size (hordes)
+- Semtex prenades
+
+## Features
+
+- Nuketown Mannequins
+- Nuketown eyes & announcer
+- Red dot reticle
+- Anticheat
+- Info prints
+- First Box module
+- Permaperks module
+- Bank balance
+- Fridge
+
+# First Box module
+
+First Box module, aside from being able to make players obtain certain weapons from the box, is also making sure that use of First Box (even if it's source is another patch) does not go unnoticed. If tempering with box is detected, a red watermark is generated on player screen.
+
+## First Box functionality
+
+This part can be disabled entirely, and in fact is disabled by default. To obtain version with this enabled, you need to [request customized patch](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/blob/main/README.MD#customized-patch).
+
+Once you have patch with this functionality enabled, that doesn't mean you always play with first box. Until it's explicitely invoked, it'll leave your box alone. Here is how to do it, send following message in the game chat (by default press `t` on your keyboard)
+
+```fb <key>```
+
+Where key would be the representation of the weapon you want to obtain from the box. Now at this point, the game is considered as played with First Box. Next weapon that'll come out of the box will be the one that's been specified. Any player can specify a weapon, and whoever hits the box, will get said weapon. This does not prevent teddybears from appearing.
+
+First Box is automatically disabled at the end of round 10. Setting box weapon can no longer be triggered, and if there is a weapon set currently, it'll be cancelled.
+
+## First Box weapon keys
+
+Use following keys for setting box weapon. Passing actual weapon code will also work.
+
+| Weapon | Key |
+| --- | --- |
+| Ballistic Knife | bk |
+| Blundergat | blunder |
+| EMP | emp |
+| Monkeys | monk |
+| Paralyzer | paralyzer |
+| RayGun | mk1 |
+| RayGun MK2 | mk2 |
+| Sliquifier | sliq |
+| Time Bomb | time |
+| AK47 | ak47 |
+| B23R | b23re |
+| Chicom CQB | chic |
+| Death Machine | dm |
+| DSR50 | dsr |
+| Executioner | exe |
+| Fal | fal |
+| Five-Seven | 57 |
+| Five-Seven DW | 257 |
+| Galil | galil |
+| HAMR | hamr |
+| KAP-40 | kap |
+| KSG | ksg |
+| LSAT | lsat |
+| M1216 | m1216 |
+| M1927 | tommy |
+| M27 | m27 |
+| M82A1 Barret | barret |
+| M8A1 | m8 |
+| MG08 | mg |
+| MP40 | mp40 |
+| MTAR | mtar |
+| PDW57 | pdw |
+| Python | pyt |
+| RNMA | rnma |
+| RPD | rpd |
+| RPG | rpg |
+| Saiga | s12 |
+| Scar | scar |
+| Skorpion EVO | evo |
+| Type 25 | type |
+| War Machine | wm |
+
+# Fridge
+
+Fridge system works similarly to First Box, it is also activated via chat commands.
+
+```fridge all <key>```
+
+```fridge <key>```
+
+First of the commands can only be used by host player. It will set all players fridge weapon to gun specified in key. Second command can be used by anyone, and it sets that players weapon to what is specified in key.
+
+## Weapon keys
+
+Keys only differ from First Box module by the fact that some of the weapons cannot be put in fridge, and also wall weapons are now available.
+
+Another change is that in order to put upgraded weapon in the fridge, player has to add a `+` sign in front of the key, so message to give all players upgraded mp5 would look like
+
+``` fridge all +mp5```
+
+| WEAPON | KEY |
+| --- | --- |
+| AK74u | ak74 |
+| AN94 | an94
+| B23R | b23r |
+| Chicom CQB | chic |
+| DSR50 | dsr |
+| Executioner | exe |
+| Fal | fal |
+| Five-Seven | 57 |
+| Five-Seven DW | 257 |
+| Galil | galil |
+| HAMR | hamr |
+| KAP-40 | kap |
+| LSAT | lsat |
+| M1216 | m1216 |
+| M14 | m14 |
+| M82A1 Barret | barret |
+| M8A1 | m8 |
+| MP5 | mp5 |
+| MTAR | mtar |
+| Olympia | oly |
+| PDW57 | pdw |
+| Python | pyt |
+| Remington 870 | remington |
+| RNMA | rnma |
+| RPD | rpd |
+| RPG | rpg |
+| Saiga | s12 |
+| Scar | scar |
+| SVU | svu |
+| Type 25 | type |
+| War Machine | wm |
+
+# Permaperks
+
+Permaperks system is present in the First Room Fix since version 4, and since then there were problems with it. Finally at the long last, i can say that they have been resolved (or at least i hope so).
+
+Each player will be awarded permaperks he's missing from the predefined list of permaperks. If all the players in game have their permaperks, the process is skipped. Players will not be awarded any permaperks after they reconnect, furthermore, if game starts on round 20, they won't be given round restricted permaperks, such as jug. In case of games, where players connect to the game after it's initially started (such as Ancient Pluto when most of the time player connects at round 2), they need to obtain their permaperks before connecting to the coop game.
+
+Upon awarding permaperks, a game will restart (or end if it's Ancient Pluto or Redacted, for compatibility reasons. Players then should load the game again and they're good to go).
+
+## Permaperk tracker
+
+There is also a separate feature (can be disabled while requesting a patch without disabling the rest of permaperk system), where patch will inform players when they lose or gain permaperks.
+
+## Awarded permaperks:
+
+| Perk | Map restriction | Round restriction |
 | --- | --- | --- |
-| Jug | All | Must be below round 15 |
-| Revive | All | - |
-| Deadshot | All | - |
-| Tombstone | All | - |
-| Metal Boards | All | Only with plugin (check in releases) |
-| Flopper | Buried | - |
-| Nube (RayGun) | Tranzit & Buried | Must be below round 10 |
+| Jug | - | Below round 15 |
+| Revive | - | - |
+| Deadshot | - | - |
+| Tombstone | - | - |
+| Metal Boards | - | - |
+| Flopper | Only Buried | - |
+| Nube (RayGun) | Only Tranzit & Buried | Below round 10 |
 
-Removed permaperks:
+## Removed permaperks:
 
 | Perk | Map | Reason |
 | --- | --- | --- |
 | Better Box | Tranzit & Die Rise | Perk actually decreases the chances of getting MK2 on those maps. |
 | Nube (RayGun) | Die Rise | Could be kinda hard to get to 10 without Ray. If there is a demand, optional plugin will be made to reverse that |
 
-## First Box
+# Customized patch
 
-First Box module in this patch works differently than any first box you've encountered before. What happens, is even if you have that module enabled in your version of the patch (default versions in release comes with disabled for less butt hurt), the box will remain unaffected. A change in box have to specifically invoked using commands. To do so, simply put in game chat 
-```
-fb <gun>
-```
-or
-```
-/fb <gun>
-```
-and replace `<gun>` with any of the keys below. By game chat, i mean game chat, the one that's invoked by a key `t` (by default), not the console. It can however, be done via console too, simply insert following command
-```
-say fb <gun>
-```
-in the console.
-Once those commands are used, a weapon in the box will be overridden by weapon selected via the command and it'll remain that way until box is hit round 11 is achieved. Round 11 will stop First Box module from working, so the weapons can no longer be overridden.
-If First Box is used, a watermark will be generated on the screen, this ensures the first box usage cannot be hidden.
+Let me know which of the optional features you want enabled while requesting the patch. If you like the default settings (table below), use version from releases.
 
-| Weapon | Key | Green Run | Nuketown | Die Rise | Mob | Buried | Origins |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Ballistic Knife | bk | v | v | v | x | v | x |
-| Blundergat | blunder | x | x | x | v | x | x |
-| EMP | emp | v | x | x | x | x | x |
-| Monkeys | monk | v | v | v | x | v | v |
-| Paralyzer | paralyzer | x | x | x | x | v | x |
-| RayGun | mk1 | v | v | v | v | v | v |
-| RayGun MK2 | mk2 | v | v | v | v | v | v |
-| Sliquifier | sliq | x | x | v | x | x | x |
-| Time Bomb | time | x | x | x | x | v | x |
-| AK47 | ak47 | x | x | x | v | x | x |
-| B23R | b23re | x | x | x | x | x | v |
-| Chicom CQB | chic | v | v | v | x | x | v |
-| Death Machine | dm | x | x | x | v | x | x |
-| DSR50 | dsr | v | v | v | v | v | v |
-| Executioner | exe | v | v | v | v | v | x |
-| Fal | fal | v | v | v | v | v | v |
-| Five-Seven | 57 | v | v | v | v | v | x |
-| Five-Seven DW | 257 | v | v | v | v | v | v |
-| Galil | galil | v | v | v | v | v | v |
-| HAMR | hamr | v | v | v | x | v | v |
-| KAP-40 | kap | v | v | v | v | v | v |
-| KSG | ksg | x | x | x | x | x | v |
-| LSAT | lsat | x | v | x | v | x | x |
-| M1216 | m1216 | v | v | v | x | v | v |
-| M1927 | tommy | x | x | x | v | x | x |
-| M27 | m27 | x | v | x | x | x | x |
-| M82A1 Barret | barret | v | v | v | v | v | x |
-| M8A1 | m8 | v | v | v | x | x | x |
-| MG08 | mg | x | x | x | x | x | v |
-| MP40 | mp40 | x | x | x | x | x | v |
-| MTAR | mtar | v | v | v | v | v | x |
-| PDW57 | pdw | x | x | x | v | x | v |
-| Python | pyt | v | v | v | x | x | v |
-| RNMA | rnma | x | x | x | x | v | x |
-| RPD | rpd | v | v | v | x | x | x |
-| RPG | rpg | v | v | v | v | v | x |
-| Saiga | s12 | v | v | v | v | v | x |
-| Scar | scar | x | x | x | x | x | v |
-| Skorpion EVO | evo | x | x | x | x | x | v |
-| Type 25 | type | v | v | v | x | x | v |
-| War Machine | wm | v | v | v | x | v | v |
+Default settings of First Room Fix:
 
-# Optional features
-Let me know which of the optional features you want enabled while requesting the patch. If you like the default settings (table below), use version from releases
-
-Default settings of First Room Fix
-| Function | Main | Vanilla | Redacted |
-| --- | --- | --- | --- |
-| Timer | v | x | v |
-| Round Timer | x | x | x |
-| Horde count | v | x | v |
-| Semtex Prenades | v | x | v |
-| Origins Zombie Blood override | x | x | x |
-| Permaperks | v | v | v |
-| Fridge weapon | x | x | x |
-| Nuketown Mannequinns | x | x | x |
-| Nuketown Blue Eyes | x | x | x |
-| First Box Module | x | x | - |
-| Permaperks Tracker | x | x | x |
-
-# Tech
-- All versions below 5.4 were Compiled using irony.dll
-- 5.4 onwards normal version is compiled using xensiks [gsc-tool](https://github.com/xensik/gsc-tool)
+| FUNCTION | SETTING |
+| --- | --- |
+| Vanilla | Disabled |
+| Timer | Constant |
+| Round Timer | End of round |
+| Horde count | Enabled |
+| Semtex Prenades | Enabled |
+| Origins Zombie Blood override | Enabled |
+| Permaperk Award | Enabled |
+| Permaperk Tracker | Enabled |
+| Fridge weapon | Disabled |
+| Nuketown Mannequinns | Disabled |
+| Nuketown Blue Eyes | Disabled |
+| First Box Module | Disabled |
 
 # Thanks to
 - [JezuzLizard](https://github.com/JezuzLizard)
