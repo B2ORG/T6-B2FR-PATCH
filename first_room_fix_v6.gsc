@@ -133,7 +133,7 @@ on_player_spawned()
 	self thread welcome_prints();
 	self thread print_network_frame(6);
 	self thread velocity_meter();
-	self thread set_characters();
+	// self thread set_characters();
 	if (isDefined(level.FRFIX_PLUGIN_ZONES))
 		self thread [[level.FRFIX_PLUGIN_ZONES]](::set_hud_properties, false);
 }
@@ -2375,7 +2375,7 @@ set_characters()
 		player_id -= 4;
 
 	dvar = "frfix_player" + player_id + "_character";
-	if (isDefined(getDvar(dvar)) && getDvar(dvar))
+	if (getDvar(dvar) != "")
 	{
 		prop = pull_character_preset(getDvarInt(dvar));
 
