@@ -1513,7 +1513,7 @@ safety_debugger()
 	if (is_debug())
 	{
 		foreach(player in level.players)
-			player.score = 333333;
+			player thread award_points(333333);
 		generate_watermark("DEBUGGER", (0.8, 0.8, 0));
 	}
 }
@@ -1534,6 +1534,16 @@ safety_beta()
 {
 	if (first_room_fix_config("beta"))
 		generate_watermark("BETA", (0, 0.8, 0));
+}
+
+award_points(amount)
+{
+	level endon("end_game");
+	self endon("disconnect");
+
+	if (is_mob())
+		flag_wait("afterlife_start_over");
+	self.score = amount;
 }
 
 powerup_drop_tracking(drop_point)
