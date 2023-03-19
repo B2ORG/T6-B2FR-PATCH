@@ -148,6 +148,10 @@ print(arg1)
 {
 }
 
+stub(arg)
+{
+}
+
 // Utilities
 
 is_debug()
