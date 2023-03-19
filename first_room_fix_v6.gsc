@@ -65,7 +65,7 @@ on_game_start()
 	level.FRFIX_CONFIG["nuketown_25_ee"] = false;
 	level.FRFIX_CONFIG["forever_solo_game_fix"] = false;
 	level.FRFIX_CONFIG["semtex_prenades"] = true;
-	level.FRFIX_CONFIG["fridge"] = false;
+	level.FRFIX_CONFIG["fridge"] = true;
 	level.FRFIX_CONFIG["first_box_module"] = false;
 
 	level thread on_player_joined();
@@ -1598,7 +1598,6 @@ powerup_drop_tracking(drop_point)
 }
 
 fridge_handler()
-// Fill up the README
 {
 	level endon("end_game");
 
@@ -1628,8 +1627,11 @@ fridge()
 	level endon("terminate_fridge_process");
 
 	// Use plugin to set initial fridge weapons, only for players connected from r1
-	if (isDefined(level.frfix_fridge_plugin))
-		self thread [[level.frfix_fridge_plugin]](::player_rig_fridge);
+	if (isDefined(level.FRFIX_PLUGIN_FRIDGE))
+	{
+		self thread [[level.FRFIX_PLUGIN_FRIDGE]](::player_rig_fridge);
+		level notify("terminate_fridge_process", "plugin");
+	}
 
 	while (true)
 	{
@@ -1646,12 +1648,14 @@ fridge()
 
 rig_fridge(key, player)
 {
+	debug_print("rig_fridge(): key=" + key + "'");
+
 	if (isSubStr(key, "+"))
-		weapon = get_weapon_key(getSubStr(key, 2), ::fridge_pap_weapon_verification);
+		weapon = get_weapon_key(getSubStr(key, 1), ::fridge_pap_weapon_verification);
 	else
 		weapon = get_weapon_key(key, ::fridge_weapon_verification);
 
-	if (!weapon)
+	if (weapon == "")
 		return;
 
 	if (isDefined(player))
@@ -1666,11 +1670,32 @@ rig_fridge(key, player)
 player_rig_fridge(weapon)
 {
 	self clear_stored_weapondata();
-	self set_map_weaponlocker_stat("name", weapon);
-	self set_map_weaponlocker_stat("clip", weaponClipSize(weapon));
-	self set_map_weaponlocker_stat("stock", weaponMaxAmmo(weapon));
 
-	debug_print("FRIDGE: " + self.name + "s Fridge has been rigged with weapon '" + weapon + "'");
+	wpn = array();
+	wpn["clip"] = weaponClipSize(weapon);
+	wpn["stock"] = weaponMaxAmmo(weapon);
+	wpn["dw_name"] = weapondualwieldweaponname(weapon);
+	wpn["alt_name"] = weaponaltweaponname(weapon);
+	wpn["lh_clip"] = weaponClipSize(wpn["dw_name"]);
+	wpn["alt_clip"] = weaponClipSize(wpn["alt_name"]);
+	wpn["alt_stock"] = weaponMaxAmmo(wpn["alt_name"]);
+
+	self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "name", weapon);
+	self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "clip", wpn["clip"]);
+	self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "stock", wpn["stock"]);
+
+	if (isDefined(wpn["alt_name"]) && wpn["alt_name"] != "")
+	{
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "alt_name", wpn["alt_name"]);
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "alt_clip", wpn["alt_clip"]);
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "alt_stock", wpn["alt_stock"]);
+	}
+
+	if (isDefined(wpn["dw_name"]) && wpn["dw_name"] != "")
+	{
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "dw_name", wpn["dw_name"]);
+		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "lh_clip", wpn["lh_clip"]);
+	}
 }
 
 fridge_state_watcher()
@@ -1682,14 +1707,27 @@ fridge_state_watcher()
 	{
 		foreach(player in level.players)
 		{
-			if (isDefined(player.fridge_state) && player.fridge_state != get_map_weaponlocker_stat("name"))
+			locker = player get_locker_stat();
+			/* Save state of the locker, if it's any weapon */
+			if (!isDefined(player.fridge_state) && locker != "")
+				player.fridge_state = locker;
+			/* If locker is saved, but stat is cleared, break out */
+			else if (isDefined(player.fridge_state) && locker == "")
 				level notify("terminate_fridge_process", player.name);
-			else if (!isDefined(player.fridge_state))
-				player.fridge_state = get_map_weaponlocker_stat("name");
 		}
 
 		wait 0.25;
 	}
+}
+
+get_locker_stat(stat)
+{
+	if (!isDefined(stat))
+		stat = "name";
+
+	value = self getdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", stat);
+	// debug_print("get_locker_stat(): value='" + value + "' for stat='" + stat + "'");
+	return value;
 }
 
 first_box_handler()
@@ -2098,7 +2136,7 @@ get_weapon_key(weapon_str, verifier)
 
 	key = [[verifier]](key);
 
-	debug_print("FIRST BOX: weapon_key: " + key);
+	debug_print("get_weapon_key(): weapon_key: " + key);
 	return key;
 }
 
@@ -2122,6 +2160,7 @@ box_weapon_verification(weapon_key)
 fridge_weapon_verification(weapon_key)
 {
     wpn = get_base_weapon_name(weapon_key, 1);
+	// debug_print("fridge_weapon_verification(): wpn='" + wpn + "' weapon_key='" + weapon_key + "'");
 
     if (!is_weapon_included(wpn))
         return "";
@@ -2129,13 +2168,14 @@ fridge_weapon_verification(weapon_key)
     if (is_offhand_weapon(wpn) || is_limited_weapon(wpn))
         return "";
 
-    return weapon_key;
+    return wpn;
 }
 
-fridge_pap_weapon_verification()
+fridge_pap_weapon_verification(weapon_key)
 {
     weapon_key = fridge_weapon_verification(weapon_key);
-	if (weapon_key)
+	// debug_print("fridge_pap_weapon_verification(): weapon_key='" + weapon_key + "'");
+	if (weapon_key != "")
 		return level.zombie_weapons[weapon_key].upgrade_name;
 	return "";
 }
