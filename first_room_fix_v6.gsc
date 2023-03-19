@@ -40,7 +40,7 @@ init()
 	level.FRFIX_CONFIG = array();
 	level.FRFIX_CONFIG["version"] = 6;
 	level.FRFIX_CONFIG["beta"] = false;
-	level.FRFIX_CONFIG["debug"] = false;
+	level.FRFIX_CONFIG["debug"] = true;
 	level.FRFIX_CONFIG["vanilla"] = get_vanilla_setting(false);
 	level.FRFIX_CONFIG["for_player"] = "";
 	/* Default value here: level.players[0].name */
@@ -65,8 +65,8 @@ on_game_start()
 	level.FRFIX_CONFIG["nuketown_25_ee"] = false;
 	level.FRFIX_CONFIG["forever_solo_game_fix"] = true;
 	level.FRFIX_CONFIG["semtex_prenades"] = true;
-	level.FRFIX_CONFIG["fridge"] = false;
-	level.FRFIX_CONFIG["first_box_module"] = false;
+	level.FRFIX_CONFIG["fridge"] = true;
+	level.FRFIX_CONFIG["first_box_module"] = true;
 
 	level thread on_player_joined();
 
@@ -513,7 +513,7 @@ powerup_odds_watcher()
 {
 	level endon("end_game");
 
-	while (true)
+	while (is_plutonium())
 	{
 		level waittill("powerup_check", chance);
 		info_print("rand_drop = " + chance);
@@ -525,7 +525,7 @@ powerup_point_drop_watcher()
 {
 	level endon("end_game");
 
-	while (true)
+	while (is_plutonium())
 	{
 		wait 0.05;
 
@@ -640,6 +640,7 @@ fixed_wait_network_frame()
 		wait 0.05;
 }
 
+/* This is unused, to be removed */
 display_split(hudelem, time, length)
 {
 	level endon("end_game");
@@ -876,7 +877,7 @@ display_hordes_on_demand(label, horde_count)
 	level endon("end_game");
 	level endon("end_of_round");
 
-	while (true)
+	while (is_plutonium())
 	{
 		level waittill("say", text, player);
 
@@ -969,7 +970,7 @@ velocity_meter_size(hud)
     self endon("disconnect");
     level endon("end_game");
 
-	while (true)
+	while (is_plutonium())
 	{
 		message = undefined;
 
@@ -1003,7 +1004,9 @@ semtex_display()
 	if (has_magic() && !is_town() && !is_nuketown())
 		return;
 
-	self thread notify_about_prenade_switch();
+	// Based on variable in waittill
+	if (is_plutonium())
+		self thread notify_about_prenade_switch();
 
 	num_of_prenades = 0;
 	level waittill("start_of_round");
@@ -1030,7 +1033,7 @@ semtex_print_on_demand(label, prenades)
 	level endon("end_game");
 	level endon("end_of_round");
 
-	while (true)
+	while (is_plutonium())
 	{
 		level waittill("say", text, player);
 
@@ -1044,7 +1047,7 @@ semtex_print_on_demand(label, prenades)
 	}
 }
 
-get_prenade_mode()
+get_prenade_mode(switch_round)
 {
 	if (!isDefined(switch_round))
 		switch_round = 50;
@@ -1617,11 +1620,19 @@ fridge_handler()
 	if (!first_room_fix_config("fridge"))
 		return;
 
-	self thread fridge();
-	self thread fridge_state_watcher();
+	if (is_plutonium())
+	{
+		self thread fridge();
+		self thread fridge_state_watcher();
 
-	// Cleanup
-	level waittill("terminate_fridge_process", player_name);
+		// Cleanup
+		level waittill("terminate_fridge_process", player_name);
+	}
+	else
+	{
+		self thread old_fridge();
+	}
+
 	info_print("FRIDGE: Player " + player_name + " obtained his weapon. Fridge module no longer available");
 
 	foreach(player in level.players)
@@ -1728,6 +1739,25 @@ fridge_state_watcher()
 
 		wait 0.25;
 	}
+}
+
+old_fridge()
+{
+	switch (level.script)
+	{
+		case "zm_transit":
+			wpn = "mp5k_upgraded_zm";
+			break;
+		case "zm_highrise":
+		case "zm_buried":
+			wpn = "an94_upgraded_zm";
+			break;
+		default:
+			wpn = undefined;
+	}
+
+	foreach(player in level.players)
+		player player_rig_fridge(wpn);
 }
 
 get_locker_stat(stat)
@@ -1871,6 +1901,7 @@ first_box()
 	if (!first_room_fix_config("first_box_module"))
 		return;
 
+	/* WTF get rid of that */
 	if (level.start_round > 1 && !is_town())
 		return;
 
@@ -1880,7 +1911,7 @@ first_box()
 	self thread watch_for_finish_firstbox();
 	self.rigged_hits = 0;
 
-	while (true)
+	while (is_plutonium())
 	{
 		message = undefined;
 
@@ -1898,6 +1929,24 @@ first_box()
 
 		while (flag("box_rigged"))
 			wait 0.05;
+	}
+
+	/* Redacted / Ancient */
+	setDvar("fb", "");
+	while (true)
+	{
+		wait 0.05;
+
+		if (getDvar("fb") == "")
+			continue;
+
+		self thread rig_box(getDvar("fb"), level.players[0]);
+		wait_network_frame();
+
+		while (flag("box_rigged"))
+			wait 0.05;
+
+		setDvar("fb", "");
 	}
 }
 
