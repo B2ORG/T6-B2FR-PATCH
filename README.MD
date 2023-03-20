@@ -7,13 +7,13 @@ First Room Fix is mainly meant for modern Plutonium versions, as most of the act
 
 ## Modern (R2905 & R3000+)
 
-Download the script from [releases](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/releases) section, and put it Plutonium script folder
+Download the main script from [releases](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/releases) section, and put it Plutonium script folder
 
 ```C:\Users\{your username}\AppData\Local\Plutonium\storage\t6\scripts\zm```
 
 ## Ancient (r353 and similar) and Redacted Nightly
 
-Download the script with `-IRONY` postfix in the name from [releases](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/releases) section, and inject it to the game. [Video tutorial](https://youtu.be/Qhmful3ZVkE)
+Download the `_clientids.gsc` script from [releases](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/releases) section, and inject it to the game [Video tutorial](https://youtu.be/Qhmful3ZVkE). This script is preprocessed, as there is one particular compatibility issue between main version of the patch and version for Ancient.
 
 ## Redacted LAN
 
@@ -25,7 +25,7 @@ Download the raw [.gsc file](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/blob/ma
 
 In the past it's been tricky to determine which release of which version was legit to play after some time (due to dynamic period of discoveries that rendered some of the versions unlegit for certain types of games, for instance a set of versions was not legit for coop, but was perfectly fine for solo). Head to [this](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/blob/main/LEGIT.MD) document, where all of those things are explained, and if anything new pops up, it'll also be added there.
 
-With version 6, it becomes easier, even tho there are 3 separate files for 3 launchers, all of those files contain the exact same code. The only difference between `FIRST-ROOM-FIX-6.gsc` and `FIRST-ROOM-FIX-6-IRONY.gsc` (and it'll remain the same as versioning progress, for instance v6.2) is the used compiler, Ancient Plutonium cannot use patches compiled with new compiler. And then the raw `.gsc` file you download is just uncompiled code.
+With version 6, it becomes easier, even tho there are 3 separate files for 3 launchers, all of those files contain the exact same code (almost, head to [preprocessing](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/blob/main/README.MD#preprocessing) section for details). Besides that, it is exactly the same code for each of the 3 options, main patch is compiled with new compiler, Ancient Pluto version is compiled with old compiler, and for Redacted you just use uncompiled code.
 
 # First Room Fix changes:
 
@@ -34,10 +34,10 @@ List of changes in First Room Fix V6. Detailed information about each of the fea
 ## Fixes
 
 - Backspeed & Strafespeed scale
-- Host migration
-- Target Assist
-- Prepatch Recoil
-- Network Frame
+- Host migration (Pluto)
+- Target Assist (Pluto)
+- Prepatch Recoil (Pluto)
+- Network Frame (Pluto)
 - Custom Games
 
 ## HUD
@@ -53,9 +53,9 @@ List of changes in First Room Fix V6. Detailed information about each of the fea
 
 - Nuketown Mannequins
 - Nuketown eyes & announcer
-- Red dot reticle
+- Red dot reticle (Pluto)
 - Anticheat
-- Info prints
+- Info prints (Pluto)
 - First Box module
 - Permaperks module
 - Bank balance
@@ -69,7 +69,17 @@ First Box module, aside from being able to make players obtain certain weapons f
 
 This part can be disabled entirely, and in fact is disabled by default. To obtain version with this enabled, you need to [request customized patch](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/blob/main/README.MD#customized-patch).
 
-Once you have patch with this functionality enabled, that doesn't mean you always play with first box. Until it's explicitely invoked, it'll leave your box alone. Here is how to do it, send following message in the game chat (by default press `t` on your keyboard)
+Once you have patch with this functionality enabled, that doesn't mean you always play with first box. Until it's explicitely invoked, it'll leave your box alone. Here is how to do it:
+
+### New Plutonium
+
+Send following message in the game chat (by default press `t` on your keyboard)
+
+```fb <key>```
+
+### Ancient Plutonium & Redacted
+
+Set following dvar in the game console (by default press `~` on your keyboard)
 
 ```fb <key>```
 
@@ -127,13 +137,29 @@ Use following keys for setting box weapon. Passing actual weapon code will also 
 
 # Fridge
 
-Fridge system works similarly to First Box, it is also activated via chat commands.
+Fridge system works similarly to First Box. 
+
+## Activation
+
+Here is how to operate it:
+
+### New Plutonium
+
+Send either of the following messages in the game chat (by default press `t` on your keyboard)
 
 ```fridge all <key>```
 
 ```fridge <key>```
 
 First of the commands can only be used by host player. It will set all players fridge weapon to gun specified in key. Second command can be used by anyone, and it sets that players weapon to what is specified in key.
+
+### Ancient Plutonium & Redacted
+
+Set following dvar in the game console (by default press `~` on your keyboard)
+
+```fridge <key>```
+
+In this case `fridge` sets that weapon for every player. It is because off host players cannot set dvars.
 
 ## Weapon keys
 
@@ -228,6 +254,10 @@ Default settings of First Room Fix:
 | Nuketown Mannequinns | Disabled |
 | Nuketown Blue Eyes | Disabled |
 | First Box Module | Disabled |
+
+# Preprocessing
+
+Version for Ancient (path called `_clientids.gsc` in releases), has 2 function call replacements done on the level of compilation via Python script you can find in the repository. It does not change functionality at all, it's merely due to how different launchers handle certain errors differently.
 
 # Thanks to
 - [JezuzLizard](https://github.com/JezuzLizard)
