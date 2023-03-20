@@ -1,5 +1,8 @@
-- Ready to use patches can be found in [releases](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/releases) section.
-- Development thread on my Discord https://discord.gg/fDY4VR6rNE
+Ready to use patches can be found in [releases](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/releases) section.
+
+Development thread on my Discord https://discord.gg/fDY4VR6rNE
+
+This doc will be updated when i know what else needs clarification
 
 # Launchers
 
