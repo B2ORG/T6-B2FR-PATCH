@@ -1624,20 +1624,16 @@ fridge_handler()
 	if (!first_room_fix_config("fridge"))
 		return;
 
-	if (is_plutonium())
-	{
-		self thread fridge();
-		self thread fridge_state_watcher();
+	print_scheduler("Fridge module: ", "^2ENABLED");
 
-		// Cleanup
-		level waittill("terminate_fridge_process", player_name);
-	}
-	else
-	{
-		self thread old_fridge();
-	}
+	self thread fridge();
+	self thread fridge_state_watcher();
 
-	info_print("FRIDGE: Player " + player_name + " obtained his weapon. Fridge module no longer available");
+	// Cleanup
+	level waittill("terminate_fridge_process");
+
+	info_print("FRIDGE: One of the players obtained his weapon. Fridge module no longer available");
+	print_scheduler("Fridge module: ", "^2DISABLED");
 
 	foreach(player in level.players)
 	{
@@ -1655,10 +1651,10 @@ fridge()
 	if (isDefined(level.FRFIX_PLUGIN_FRIDGE))
 	{
 		self thread [[level.FRFIX_PLUGIN_FRIDGE]](::player_rig_fridge);
-		level notify("terminate_fridge_process", "plugin");
+		level notify("terminate_fridge_process");
 	}
 
-	while (true)
+	while (is_plutonium())
 	{
 		level waittill("say", message, player);
 
@@ -1668,6 +1664,17 @@ fridge()
 			rig_fridge(getSubStr(message, 7), player);
 
 		message = undefined;
+	}
+
+	/* Redacted / Ancient */
+	setDvar("fridge", "");
+	while (true)
+	{
+		wait 0.05;
+		if (getDvar("fridge" == ""))
+			continue;
+
+		rig_fridge(getDvar("fridge"));
 	}
 }
 
@@ -1738,11 +1745,15 @@ fridge_state_watcher()
 				player.fridge_state = locker;
 			/* If locker is saved, but stat is cleared, break out */
 			else if (isDefined(player.fridge_state) && locker == "")
-				level notify("terminate_fridge_process", player.name);
+				break;
 		}
+
+		if (is_round(11))
+			break;
 
 		wait 0.25;
 	}
+	level notify("terminate_fridge_process", player.name);
 }
 
 old_fridge()
