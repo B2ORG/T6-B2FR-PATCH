@@ -107,7 +107,7 @@ get_velocity_hud(input)
     return data;
 }
 
-get_zones_hud()
+get_zones_hud(input)
 {
     data = array();
 

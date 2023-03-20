@@ -29,33 +29,6 @@ player_wait_for_initial_blackscreen()
         wait 0.05;
 }
 
-set_hud_position(hud_key, x_align, y_align, x_pos, y_pos)
-{
-	if (isDefined(level.FRFIX_HUD_POS_PLUGIN[hud_key]))
-	{
-		x_align = level.FRFIX_HUD_POS_PLUGIN[hud_key]["x_align"];
-		y_align = level.FRFIX_HUD_POS_PLUGIN[hud_key]["y_align"];
-		x_pos = level.FRFIX_HUD_POS_PLUGIN[hud_key]["x_pos"];
-		y_pos = level.FRFIX_HUD_POS_PLUGIN[hud_key]["y_pos"];
-	}
-
-	self setpoint(x_align, y_align, x_pos, y_pos);
-}
-
-get_hud_color(fallback)
-{
-	if (isDefined(level.FRFIX_HUD_COLOR_PLUGIN))
-		return level.FRFIX_HUD_COLOR_PLUGIN;
-
-	if (isDefined(level.FRFIX_CONFIG["hud_color"]))
-		return level.FRFIX_CONFIG["hud_color"];
-
-	if (isDefined(fallback))
-		return fallback;
-
-	return (1, 1, 1);
-}
-
 zone_hud(func_hud_properties, raw_names)
 {
     self endon("disconnect");
@@ -645,6 +618,7 @@ translate_zone(zone)
 	return name;
 }
 
+/* Requires adjusting to set_hud_properties()
 get_my_coordinates()
 {
     self.coordinates_x_hud = createfontstring("objective" , 1.1);
@@ -681,3 +655,5 @@ naive_round(floating_point)
 	floating_point = int(floating_point * 1000);
 	return floating_point / 1000;
 }
+
+*/
