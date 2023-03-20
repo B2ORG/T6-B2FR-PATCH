@@ -453,16 +453,6 @@ set_hud_properties(hud_key, x_align, y_align, x_pos, y_pos, col)
 	self.color = col;
 }
 
-get_host_name(lowercase)
-{
-	if (!isDefined(lowercase))
-		lowercase = true;
-
-	if (lowercase)
-		return toLower(level.players[0].name);
-	return level.players[0].name;
-}
-
 // Functions
 
 welcome_prints()
@@ -642,26 +632,6 @@ fixed_wait_network_frame()
 		wait 0.1;
 	else
 		wait 0.05;
-}
-
-/* This is unused, to be removed */
-display_split(hudelem, time, length)
-{
-	level endon("end_game");
-
-	display_time = 20;
-	if (isDefined(length))
-		display_time = int(length / 4);
-
-	for (ticks = 0; ticks < display_time; ticks++)
-	{
-		hudelem setTimer(time - 0.1);
-		wait 0.25;
-	}
-	hudelem fadeOverTime(0.25);
-	hudelem.alpha = 0;
-
-	return;
 }
 
 challenge_failed(challenge_name, challenge_name_upper, challenge_zone)
@@ -1756,25 +1726,6 @@ fridge_state_watcher()
 	level notify("terminate_fridge_process", player.name);
 }
 
-old_fridge()
-{
-	switch (level.script)
-	{
-		case "zm_transit":
-			wpn = "mp5k_upgraded_zm";
-			break;
-		case "zm_highrise":
-		case "zm_buried":
-			wpn = "an94_upgraded_zm";
-			break;
-		default:
-			wpn = undefined;
-	}
-
-	foreach(player in level.players)
-		player player_rig_fridge(wpn);
-}
-
 get_locker_stat(stat)
 {
 	if (!isDefined(stat))
@@ -1914,10 +1865,6 @@ first_box()
 	level endon("break_firstbox");
 
 	if (!first_room_fix_config("first_box_module"))
-		return;
-
-	/* WTF get rid of that */
-	if (level.start_round > 1 && !is_town())
 		return;
 
 	flag_wait("initial_blackscreen_passed");
