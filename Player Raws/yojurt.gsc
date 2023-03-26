@@ -42,9 +42,9 @@ init()
 	level.FRFIX_CONFIG["beta"] = false;
 	level.FRFIX_CONFIG["debug"] = false;
 	level.FRFIX_CONFIG["vanilla"] = get_vanilla_setting(false);
-	level.FRFIX_CONFIG["for_player"] = "Vistek";
+	level.FRFIX_CONFIG["for_player"] = "Yojurt";
 	/* Default value here: level.players[0].name */
-	level.FRFIX_CONFIG["key_hud_plugin"] = "Vistek";
+	level.FRFIX_CONFIG["key_hud_plugin"] = "Yojurt";
 
 	level thread set_dvars();
 	level thread on_game_start();
@@ -59,10 +59,10 @@ on_game_start()
 	level.FRFIX_CONFIG["const_timer"] = true;
 	level.FRFIX_CONFIG["const_round_timer"] = true;
 	level.FRFIX_CONFIG["show_hordes"] = true;
-	level.FRFIX_CONFIG["give_permaperks"] = false;
-	level.FRFIX_CONFIG["track_permaperks"] = false;
-	level.FRFIX_CONFIG["mannequins"] = true;
-	level.FRFIX_CONFIG["nuketown_25_ee"] = true;
+	level.FRFIX_CONFIG["give_permaperks"] = true;
+	level.FRFIX_CONFIG["track_permaperks"] = true;
+	level.FRFIX_CONFIG["mannequins"] = false;
+	level.FRFIX_CONFIG["nuketown_25_ee"] = false;
 	level.FRFIX_CONFIG["forever_solo_game_fix"] = true;
 	level.FRFIX_CONFIG["semtex_prenades"] = true;
 	level.FRFIX_CONFIG["fridge"] = true;

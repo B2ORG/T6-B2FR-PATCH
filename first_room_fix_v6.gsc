@@ -42,9 +42,9 @@ init()
 	level.FRFIX_CONFIG["beta"] = false;
 	level.FRFIX_CONFIG["debug"] = false;
 	level.FRFIX_CONFIG["vanilla"] = get_vanilla_setting(false);
-	level.FRFIX_CONFIG["for_player"] = "Vistek";
+	level.FRFIX_CONFIG["for_player"] = "";
 	/* Default value here: level.players[0].name */
-	level.FRFIX_CONFIG["key_hud_plugin"] = "Vistek";
+	level.FRFIX_CONFIG["key_hud_plugin"] = undefined;
 
 	level thread set_dvars();
 	level thread on_game_start();
@@ -57,16 +57,16 @@ on_game_start()
 	// Func Config
 	level.FRFIX_CONFIG["hud_color"] = (0, 1, 0.5);
 	level.FRFIX_CONFIG["const_timer"] = true;
-	level.FRFIX_CONFIG["const_round_timer"] = true;
+	level.FRFIX_CONFIG["const_round_timer"] = false;
 	level.FRFIX_CONFIG["show_hordes"] = true;
-	level.FRFIX_CONFIG["give_permaperks"] = false;
-	level.FRFIX_CONFIG["track_permaperks"] = false;
-	level.FRFIX_CONFIG["mannequins"] = true;
-	level.FRFIX_CONFIG["nuketown_25_ee"] = true;
+	level.FRFIX_CONFIG["give_permaperks"] = true;
+	level.FRFIX_CONFIG["track_permaperks"] = true;
+	level.FRFIX_CONFIG["mannequins"] = false;
+	level.FRFIX_CONFIG["nuketown_25_ee"] = false;
 	level.FRFIX_CONFIG["forever_solo_game_fix"] = true;
 	level.FRFIX_CONFIG["semtex_prenades"] = true;
-	level.FRFIX_CONFIG["fridge"] = true;
-	level.FRFIX_CONFIG["first_box_module"] = true;
+	level.FRFIX_CONFIG["fridge"] = false;
+	level.FRFIX_CONFIG["first_box_module"] = false;
 
 	level thread on_player_joined();
 
