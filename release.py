@@ -49,9 +49,11 @@ def main(cfg) -> None:
     -s: skip main part\n
     -p: compile player scripts\n
     -x: compile plugin scripts\n
-    -k: keep copied file"""
+    -k: keep copied file\n
+    -r: keep raw filename of frfix"""
 
     cwd = os.path.dirname(os.path.abspath(__file__))
+    compiled_dir = os.path.join(cwd, "compiled", "t6")
     # cmd = os.path.join("C:\\", "Windows", "System32", "cmd.exe")
 
     if "-s" not in cfg:
@@ -68,6 +70,9 @@ def main(cfg) -> None:
         # Delete uncompiled copy
         if "-k" not in cfg:
             wrap_subprocess_call("DEL", f"\"{os.path.join(cwd, 'first_room_fix_v6_copy.gsc')}\"", shell=True)
+        if "-r" not in cfg:
+            wrap_subprocess_call("DEL", f"\"{os.path.join(compiled_dir, 'First-Room-Fix-V6.gsc')}\"", shell=True)
+            wrap_subprocess_call("REN", f"\"{os.path.join(compiled_dir, 'first_room_fix_v6.gsc')}\"", f"\"First-Room-Fix-V6.gsc\"", shell=True)
 
     if "-p" in cfg:
         # Compile players scripts
