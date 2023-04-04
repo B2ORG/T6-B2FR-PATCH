@@ -71,7 +71,7 @@ def main(cfg) -> None:
 
     if "-p" in cfg:
         # Compile players scripts
-        players = ["plant", "shadez", "tek", "tonestone", "vistek", "yojurt", "yuxx", "zi0"]
+        players = ["plant", "shadez", "tek", "tonestone", "vistek", "yojurt", "magafeezz", "zi0"]
         for player in players:
             wrap_subprocess_call("gsc-tool.exe", "comp", "t6", f"\"Player Raws\\{player}.gsc\"")
 

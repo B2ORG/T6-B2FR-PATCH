@@ -42,9 +42,9 @@ init()
 	level.FRFIX_CONFIG["beta"] = false;
 	level.FRFIX_CONFIG["debug"] = false;
 	level.FRFIX_CONFIG["vanilla"] = get_vanilla_setting(true);
-	level.FRFIX_CONFIG["for_player"] = "yuxx";
+	level.FRFIX_CONFIG["for_player"] = "MagaFeezz";
 	/* Default value here: level.players[0].name */
-	level.FRFIX_CONFIG["key_hud_plugin"] = "yuxx";
+	level.FRFIX_CONFIG["key_hud_plugin"] = "magafeezz";
 
 	level thread set_dvars();
 	level thread on_game_start();
