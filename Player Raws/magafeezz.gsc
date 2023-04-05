@@ -2482,8 +2482,12 @@ remove_mannequin(origin, extra_delay)
 	if (isDefined(extra_delay))
 		wait extra_delay;
 
-	// all_mannequins = maps\mp\zm_nuked::nuked_mannequin_filter(getentarray("destructible", "targetname"));
 	all_mannequins = array();
+	foreach (destructible in getentarray("destructible", "targetname"))
+	{
+		if (isSubStr(destructible.destructibledef, "male"))
+			all_mannequins[all_mannequins.size] = destructible;
+	}
 
 	foreach (mannequin in all_mannequins)
 	{
