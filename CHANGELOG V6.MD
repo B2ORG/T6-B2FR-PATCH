@@ -20,3 +20,8 @@
     * Prenades and horde size can now be invoked at any point via chat message
     * Box and Fridge systems now accept actual weapon codes in trigger chat messages
     * Yellow House and Top Barn challenges are now supported and are triggering automatically if all of the conditions are met
+
+# Version 6.1
+
+- Fixes
+    * Fixed a bug where mannequins were not being removed from the map

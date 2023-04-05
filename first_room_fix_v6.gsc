@@ -38,7 +38,7 @@ init()
 
 	// Patch Config
 	level.FRFIX_CONFIG = array();
-	level.FRFIX_CONFIG["version"] = 6;
+	level.FRFIX_CONFIG["version"] = 6.1;
 	level.FRFIX_CONFIG["beta"] = false;
 	level.FRFIX_CONFIG["debug"] = false;
 	level.FRFIX_CONFIG["vanilla"] = get_vanilla_setting(false);
@@ -2482,8 +2482,12 @@ remove_mannequin(origin, extra_delay)
 	if (isDefined(extra_delay))
 		wait extra_delay;
 
-	// all_mannequins = maps\mp\zm_nuked::nuked_mannequin_filter(getentarray("destructible", "targetname"));
 	all_mannequins = array();
+	foreach (destructible in getentarray("destructible", "targetname"))
+	{
+		if (isSubStr(destructible.destructibledef, "male"))
+			all_mannequins[all_mannequins.size] = destructible;
+	}
 
 	foreach (mannequin in all_mannequins)
 	{
