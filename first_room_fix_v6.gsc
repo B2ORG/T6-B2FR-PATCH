@@ -2369,7 +2369,7 @@ pull_character_preset(character_index)
 		{
 			preset["model"] = "c_zom_tomb_takeo_fb";
 			preset["viewmodel"] = "c_zom_takeo_viewhands";
-			preset["character_name"] = "Nikolai";
+			preset["character_name"] = "Takeo";
 		}
 	}
 
