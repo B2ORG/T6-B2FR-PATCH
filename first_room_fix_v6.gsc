@@ -1625,23 +1625,29 @@ fridge_handler()
 {
 	level endon("end_game");
 
-	if (!has_permaperks_system())
+	if (!has_permaperks_system() || !b2op_config("fridge"))
 		return;
 
-	if (!first_room_fix_config("fridge"))
-		return;
+	// debug_print("currently in fridge='" + level.players[0] get_locker_stat() + "'");
 
-	print_scheduler("Fridge module: ^2ENABLED");
+	if (isDefined(level.B2OP_PLUGIN_FRIDGE))
+	{
+		thread [[level.B2OP_PLUGIN_FRIDGE]](::player_rig_fridge);
+		print_scheduler("Fridge module: ^3LOADED PLUGIN");
+	}
+	else
+	{
+		print_scheduler("Fridge module: ^2AVAILABLE");
+		if (is_plutonium())
+			thread fridge_watch_chat();
+		thread fridge_watch_dvar();
+		thread fridge_watch_state();
 
-	self thread fridge();
-	self thread fridge_state_watcher();
+		level waittill("terminate_fridge_process");
+		print_scheduler("Fridge module: ^1DISABLED");
+	}
 
 	// Cleanup
-	level waittill("terminate_fridge_process");
-
-	info_print("FRIDGE: One of the players obtained his weapon. Fridge module no longer available");
-	print_scheduler("Fridge module: ^2DISABLED");
-
 	foreach(player in level.players)
 	{
 		if (isDefined(player.fridge_state))
@@ -1649,19 +1655,29 @@ fridge_handler()
 	}
 }
 
-fridge()
+fridge_watch_dvar()
 {
 	level endon("end_game");
 	level endon("terminate_fridge_process");
 
-	// Use plugin to set initial fridge weapons, only for players connected from r1
-	if (isDefined(level.FRFIX_PLUGIN_FRIDGE))
+	setDvar("fridge", "");
+	while (true)
 	{
-		self thread [[level.FRFIX_PLUGIN_FRIDGE]](::player_rig_fridge);
-		level notify("terminate_fridge_process");
-	}
+		wait 0.05;
+		if (getDvar("fridge") == "")
+			continue;
 
-	while (is_plutonium())
+		rig_fridge(getDvar("fridge"));
+		setDvar("fridge", "");
+	}
+}
+
+fridge_watch_chat()
+{
+	level endon("end_game");
+	level endon("terminate_fridge_process");
+
+	while (true)
 	{
 		level waittill("say", message, player);
 
@@ -1672,22 +1688,38 @@ fridge()
 
 		message = undefined;
 	}
+}
 
-	/* Redacted / Ancient */
-	setDvar("fridge", "");
-	while (true)
+fridge_watch_state()
+{
+	level endon("end_game");
+
+	fridge_claimed = false;
+
+	while (!fridge_claimed)
 	{
-		wait 0.05;
-		if (getDvar("fridge" == ""))
-			continue;
+		foreach(player in level.players)
+		{
+			locker = player get_locker_stat();
+			/* Save state of the locker, if it's any weapon */
+			if (!isDefined(player.fridge_state) && locker != "")
+				player.fridge_state = locker;
+			/* If locker is saved, but stat is cleared, break out */
+			else if (isDefined(player.fridge_state) && locker == "")
+				fridge_claimed = true;
+		}
 
-		rig_fridge(getDvar("fridge"));
+		if (is_round(11))
+			fridge_claimed = true;
+
+		wait 0.25;
 	}
+	level notify("terminate_fridge_process");
 }
 
 rig_fridge(key, player)
 {
-	debug_print("rig_fridge(): key=" + key + "'");
+	// debug_print("rig_fridge(): key=" + key + "'");
 
 	if (isSubStr(key, "+"))
 		weapon = get_weapon_key(getSubStr(key, 1), ::fridge_pap_weapon_verification);
@@ -1698,9 +1730,13 @@ rig_fridge(key, player)
 		return;
 
 	if (isDefined(player))
+	{
+		print_scheduler("You set your fridge weapon to: ^3" + weapon_display_wrapper(weapon), player);
 		player player_rig_fridge(weapon);
+	}
 	else
 	{
+		print_scheduler(level.players[0].name + " set your fridge weapon to: ^3" + weapon_display_wrapper(weapon));
 		foreach(player in level.players)
 			player player_rig_fridge(weapon);
 	}
@@ -1735,32 +1771,6 @@ player_rig_fridge(weapon)
 		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "dw_name", wpn["dw_name"]);
 		self setdstat("PlayerStatsByMap", "zm_transit", "weaponLocker", "lh_clip", wpn["lh_clip"]);
 	}
-}
-
-fridge_state_watcher()
-{
-	level endon("end_game");
-	level endon("terminate_fridge_process");
-
-	while (true)
-	{
-		foreach(player in level.players)
-		{
-			locker = player get_locker_stat();
-			/* Save state of the locker, if it's any weapon */
-			if (!isDefined(player.fridge_state) && locker != "")
-				player.fridge_state = locker;
-			/* If locker is saved, but stat is cleared, break out */
-			else if (isDefined(player.fridge_state) && locker == "")
-				break;
-		}
-
-		if (is_round(11))
-			break;
-
-		wait 0.25;
-	}
-	level notify("terminate_fridge_process", player.name);
 }
 
 get_locker_stat(stat)
