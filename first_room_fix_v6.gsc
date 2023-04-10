@@ -104,6 +104,7 @@ on_player_spawned()
 	self thread welcome_prints();
 	self thread print_network_frame(6);
 	self thread velocity_meter();
+	self thread fill_up_bank();
 	// self thread set_characters();
 	if (isDefined(level.FRFIX_PLUGIN_ZONES))
 		self thread [[level.FRFIX_PLUGIN_ZONES]](::set_hud_properties, false);
@@ -1144,6 +1145,17 @@ get_pap_weapon_options_set_reticle(weapon)
 
     self.pack_a_punch_weapon_options[weapon] = self calcweaponoptions( camo_index, lens_index, reticle_index, reticle_color_index );
     return self.pack_a_punch_weapon_options[weapon];
+}
+
+fill_up_bank()
+{
+	level endon("end_game");
+	self endon("disconnect");
+
+	flag_wait("initial_blackscreen_passed");
+
+    if (is_tranzit() || is_die_rise() || is_buried())
+        self.account_value = level.bank_account_max;
 }
 
 perma_perks_setup()
