@@ -1779,57 +1779,44 @@ first_box_handler()
 
 	flag_wait("initial_blackscreen_passed");
 
-    level.is_first_box = false;
-
-	// Debug func, doesn't do anything in production
-	self thread debug_print_initial_boxsize();
-
-	// Init threads watching the status of boxes
-	self thread init_box_status_watcher();
+	// Init thread counting box hits
+	thread init_boxhits_watcher();
 	// Scan weapons in the box
-	self thread scan_in_box();
+	thread scan_in_box();
 	// First Box main loop
-	self thread first_box();
-
-	while (true)
-	{
-		if (isDefined(level.is_first_box) && level.is_first_box)
-			break;
-
-		wait 0.25;
-	}
-
-	generate_watermark("FIRST BOX", (0.8, 0, 0));
+	thread first_box();
+	// First Box location main loop
+	thread first_box_location();
 }
 
-debug_print_initial_boxsize()
-{
-	in_box = 0;
-
-	foreach (weapon in getArrayKeys(level.zombie_weapons))
-	{
-		if (maps\mp\zombies\_zm_weapons::get_is_in_box(weapon))
-			in_box++;
-	}
-	debug_print("Size of initial box weapon list: " + in_box);
-}
-
-init_box_status_watcher()
+init_boxhits_watcher()
 {
     level endon("end_game");
-
-	level.total_box_hits = 0;
+	level endon("break_firstbox");
 
 	while (!isDefined(level.chests))
+	{
+		/* Escape if chests are not defined yet */
+		if (!did_game_just_start())
+			return;
 		wait 0.05;
-	
+	}
+
+	level.total_box_hits = 0;
 	foreach(chest in level.chests)
 		chest thread watch_box_state();
+
+	/* Extra code for the purpose of location manager */
+	while (level.total_box_hits == 0)
+		wait 0.05;
+
+	level notify("break_box_location");
 }
 
 watch_box_state()
 {
     level endon("end_game");
+	level endon("break_firstbox");
 
     while (!isDefined(self.zbarrier))
         wait 0.05;
@@ -1848,7 +1835,6 @@ scan_in_box()
 {
     level endon("end_game");
 
-	// Only town needed
     if (is_town() || is_farm() || is_depot() || is_tranzit())
         should_be_in_box = 25;
 	else if (is_nuketown())
@@ -1886,28 +1872,53 @@ scan_in_box()
 		else if ((offset > 0) && (in_box == (should_be_in_box + offset)))
 			continue;
 
-		level.is_first_box = true;
+		generate_watermark("FIRST BOX", (0.8, 0, 0));
 		break;
-
     }
-    return;
 }
 
 first_box()
 {	
+	if (!b2op_config("first_box_module"))
+		return;
+
+	level.rigged_hits = 0;
+	thread print_scheduler("First Box module: ^2AVAILABLE");
+	thread watch_for_finish_firstbox();
+	thread box_watch_dvar();
+	if (is_plutonium())
+		thread box_watch_chat();
+}
+
+box_watch_dvar()
+{
     level endon("end_game");
 	level endon("break_firstbox");
 
-	if (!first_room_fix_config("first_box_module"))
-		return;
+	setDvar("fb", "");
+	while (true)
+	{
+		wait 0.05;
 
-	flag_wait("initial_blackscreen_passed");
+		if (getDvar("fb") == "")
+			continue;
 
-	print_scheduler("First Box module: ^2AVAILABLE");
-	self thread watch_for_finish_firstbox();
-	self.rigged_hits = 0;
+		thread rig_box(getDvar("fb"), level.players[0]);
+		wait_network_frame();
 
-	while (is_plutonium())
+		while (flag("box_rigged"))
+			wait 0.05;
+
+		setDvar("fb", "");
+	}
+}
+
+box_watch_chat()
+{
+    level endon("end_game");
+	level endon("break_firstbox");
+
+	while (true)
 	{
 		message = undefined;
 
@@ -1918,31 +1929,13 @@ first_box()
 		else
 			continue;
 
-		self thread rig_box(wpn_key, player);
+		thread rig_box(wpn_key, player);
 		wait_network_frame();
 
 		wpn_key = undefined;
 
 		while (flag("box_rigged"))
 			wait 0.05;
-	}
-
-	/* Redacted / Ancient */
-	setDvar("fb", "");
-	while (true)
-	{
-		wait 0.05;
-
-		if (getDvar("fb") == "")
-			continue;
-
-		self thread rig_box(getDvar("fb"), level.players[0]);
-		wait_network_frame();
-
-		while (flag("box_rigged"))
-			wait 0.05;
-
-		setDvar("fb", "");
 	}
 }
 
@@ -1951,6 +1944,9 @@ rig_box(gun, player)
     level endon("end_game");
 
 	weapon_key = get_weapon_key(gun, ::box_weapon_verification);
+	if (isDefined(player))
+		weapon_key = player player_box_weapon_verification(weapon_key);
+
 	if (weapon_key == "")
 	{
 		print_scheduler("Wrong weapon key: ^1" + gun);
@@ -1958,16 +1954,16 @@ rig_box(gun, player)
 	}
 
 	// weapon_name = level.zombie_weapons[weapon_key].name;
-	print_scheduler("" + player.name + " set box weapon to: ^3", weapon_display_wrapper(weapon_key));
-	level.is_first_box = true;
-	self.rigged_hits++;
+	print_scheduler("" + player.name + " set box weapon to: ^3" + weapon_display_wrapper(weapon_key));
+	generate_watermark("FIRST BOX", (0.8, 0, 0));
+	level.rigged_hits++;
 
 	saved_check = level.special_weapon_magicbox_check;
 	current_box_hits = level.total_box_hits;
 	removed_guns = array();
 
 	flag_set("box_rigged");
-	debug_print("FIRST BOX: flag('box_rigged'): " + flag("box_rigged"));
+	// debug_print("FIRST BOX: flag('box_rigged'): " + flag("box_rigged"));
 
 	level.special_weapon_magicbox_check = undefined;
 	foreach(weapon in getarraykeys(level.zombie_weapons))
@@ -1976,16 +1972,16 @@ rig_box(gun, player)
 		{
 			removed_guns[removed_guns.size] = weapon;
 			level.zombie_weapons[weapon].is_in_box = 0;
-
-			debug_print("FIRST BOX: setting " + weapon + ".is_in_box to 0");
+			// debug_print("FIRST BOX: setting " + weapon + ".is_in_box to 0");
 		}
 	}
 
+	/* Critical loop responsible for restoring proper state */
 	while ((current_box_hits == level.total_box_hits) || !isDefined(level.total_box_hits))
 	{
 		if (is_round(11))
 		{
-			debug_print("FIRST BOX: breaking out of First Box above round 10");
+			// debug_print("FIRST BOX: breaking out of First Box above round 10");
 			break;
 		}
 		wait 0.05;
@@ -1995,18 +1991,17 @@ rig_box(gun, player)
 
 	level.special_weapon_magicbox_check = saved_check;
 
-	debug_print("FIRST BOX: removed_guns.size " + removed_guns.size);
+	// debug_print("FIRST BOX: removed_guns.size " + removed_guns.size);
 	if (removed_guns.size > 0)
 	{
 		foreach(rweapon in removed_guns)
 		{
 			level.zombie_weapons[rweapon].is_in_box = 1;
-			debug_print("FIRST BOX: setting " + rweapon + ".is_in_box to 1");
+			// debug_print("FIRST BOX: setting " + rweapon + ".is_in_box to 1");
 		}
 	}
 
 	flag_clear("box_rigged");
-	return;
 }
 
 watch_for_finish_firstbox()
@@ -2016,15 +2011,14 @@ watch_for_finish_firstbox()
 	while (!is_round(11))
 		wait 0.1;
 
-	print_scheduler("First Box module: ^1DISABLED");
-	if (self.rigged_hits)
-		print_scheduler("First box used: ^3" + self.rigged_hits + " ^7times");
+	print_scheduler("First Box module: ^1" + "DISABLED");
+	if (level.rigged_hits)
+		print_scheduler("First box used: ^3" + level.rigged_hits + " ^7times");
 
 	level notify("break_firstbox");
-	flag_set("break_firstbox");
-	debug_print("FIRST BOX: notifying module to break");
-
-	return;
+	// debug_print("FIRST BOX: notifying module to break");
+	level.rigged_hits = undefined;
+	level.total_box_hits = undefined;
 }
 
 get_weapon_key(weapon_str, verifier)
