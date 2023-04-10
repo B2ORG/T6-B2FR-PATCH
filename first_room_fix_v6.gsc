@@ -32,39 +32,15 @@ init()
 	flag_init("break_firstbox");
 	flag_init("permaperks_were_set");
 
-	// Patch Config
-	level.FRFIX_CONFIG = array();
-	level.FRFIX_CONFIG["version"] = 6.1;
-	level.FRFIX_CONFIG["beta"] = false;
-	level.FRFIX_CONFIG["debug"] = false;
-	level.FRFIX_CONFIG["vanilla"] = get_vanilla_setting(false);
-	level.FRFIX_CONFIG["for_player"] = "";
-	/* Default value here: level.players[0].name */
-	level.FRFIX_CONFIG["key_hud_plugin"] = undefined;
-
+	first_room_fix_config();
 	level thread set_dvars();
+	level thread on_player_joined();
 	level thread on_game_start();
 }
 
 on_game_start()
 {
 	level endon("end_game");
-
-	// Func Config
-	level.FRFIX_CONFIG["hud_color"] = (0, 1, 0.5);
-	level.FRFIX_CONFIG["const_timer"] = true;
-	level.FRFIX_CONFIG["const_round_timer"] = false;
-	level.FRFIX_CONFIG["show_hordes"] = true;
-	level.FRFIX_CONFIG["give_permaperks"] = true;
-	level.FRFIX_CONFIG["track_permaperks"] = true;
-	level.FRFIX_CONFIG["mannequins"] = false;
-	level.FRFIX_CONFIG["nuketown_25_ee"] = false;
-	level.FRFIX_CONFIG["forever_solo_game_fix"] = true;
-	level.FRFIX_CONFIG["semtex_prenades"] = true;
-	level.FRFIX_CONFIG["fridge"] = false;
-	level.FRFIX_CONFIG["first_box_module"] = false;
-
-	level thread on_player_joined();
 
 	level waittill("initial_players_connected");
 
@@ -539,6 +515,33 @@ powerup_point_drop_watcher()
 			wait 0.05;
 		info_print("Point drop");
 	}
+}
+
+first_room_fix_config()
+{
+	// Patch Config
+	level.FRFIX_CONFIG = array();
+	level.FRFIX_CONFIG["version"] = 6.1;
+	level.FRFIX_CONFIG["beta"] = false;
+	level.FRFIX_CONFIG["debug"] = false;
+	level.FRFIX_CONFIG["vanilla"] = get_vanilla_setting(false);
+	level.FRFIX_CONFIG["for_player"] = "";
+	/* Default value here: level.players[0].name */
+	level.FRFIX_CONFIG["key_hud_plugin"] = undefined;
+
+	// Func Config
+	level.FRFIX_CONFIG["hud_color"] = (0, 1, 0.5);
+	level.FRFIX_CONFIG["const_timer"] = true;
+	level.FRFIX_CONFIG["const_round_timer"] = false;
+	level.FRFIX_CONFIG["show_hordes"] = true;
+	level.FRFIX_CONFIG["give_permaperks"] = true;
+	level.FRFIX_CONFIG["track_permaperks"] = true;
+	level.FRFIX_CONFIG["mannequins"] = false;
+	level.FRFIX_CONFIG["nuketown_25_ee"] = false;
+	level.FRFIX_CONFIG["forever_solo_game_fix"] = true;
+	level.FRFIX_CONFIG["semtex_prenades"] = true;
+	level.FRFIX_CONFIG["fridge"] = false;
+	level.FRFIX_CONFIG["first_box_module"] = false;
 }
 
 set_dvars()
