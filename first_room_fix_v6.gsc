@@ -71,7 +71,6 @@ on_game_start()
 	level thread on_player_joined();
 
 	level waittill("initial_players_connected");
-	level.FRFIX_WATERMARKS = array();
 
 	// Initial game settings
 	level thread dvar_detector();
@@ -195,7 +194,13 @@ print_permaperk_state(enabled, perk)
 
 generate_watermark(text, color, alpha_override)
 {
-	y_offset = 12 * level.FRFIX_WATERMARKS.size;
+	if (is_true(flag(text)))
+		return;
+
+    if (!isDefined(level.num_of_watermarks))
+        level.num_of_watermarks = 0;
+
+	y_offset = 12 * level.num_of_watermarks;
 	if (!isDefined(color))
 		color = (1, 1, 1);
 
@@ -209,7 +214,9 @@ generate_watermark(text, color, alpha_override)
 	watermark.alpha = alpha_override;
 	watermark.hidewheninmenu = 0;
 
-	level.FRFIX_WATERMARKS[level.FRFIX_WATERMARKS.size] = watermark;
+	flag_set(text);
+
+    level.num_of_watermarks++;
 }
 
 print_scheduler(label, content)
