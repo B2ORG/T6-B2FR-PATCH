@@ -26,10 +26,6 @@ init()
 	level notify("frfix_init");
 
 	flag_init("dvars_set");
-	flag_init("cheat_printed_backspeed");
-	flag_init("cheat_printed_noprint");
-	flag_init("cheat_printed_cheats");
-	flag_init("cheat_printed_gspeed");
 
 	flag_init("game_started");
 	flag_init("box_rigged");
