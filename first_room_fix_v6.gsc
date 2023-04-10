@@ -1494,7 +1494,7 @@ safety_zio()
 	}
 
 	// B2OP patch
-	if (isDefined(level.B2OP_CONFIG))
+	if (isDefined(level.first_room_fix_config))
 	{
 		iPrintLn("^1B2OP DETECTED!!!");
 		level notify("end_game");
@@ -1625,14 +1625,14 @@ fridge_handler()
 {
 	level endon("end_game");
 
-	if (!has_permaperks_system() || !b2op_config("fridge"))
+	if (!has_permaperks_system() || !first_room_fix_config("fridge"))
 		return;
 
 	// debug_print("currently in fridge='" + level.players[0] get_locker_stat() + "'");
 
-	if (isDefined(level.B2OP_PLUGIN_FRIDGE))
+	if (isDefined(level.FRFIX_PLUGIN_FRIDGE))
 	{
-		thread [[level.B2OP_PLUGIN_FRIDGE]](::player_rig_fridge);
+		thread [[level.FRFIX_PLUGIN_FRIDGE]](::player_rig_fridge);
 		print_scheduler("Fridge module: ^3LOADED PLUGIN");
 	}
 	else
@@ -1892,7 +1892,7 @@ scan_in_box()
 
 first_box()
 {	
-	if (!b2op_config("first_box_module"))
+	if (!first_room_fix_config("first_box_module"))
 		return;
 
 	level.rigged_hits = 0;
