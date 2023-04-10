@@ -662,7 +662,7 @@ fixed_wait_network_frame()
 
 challenge_failed(challenge_name, challenge_name_upper, challenge_zone)
 {
-	print_scheduler(challenge_name + " Challenge: ^1" + self.name + " LEFT " + challenge_zone + "!", self);
+	print_scheduler(challenge_name + " Challenge: ^1" + self.name + " LEFT " + challenge_zone + "!");
 	info_print(self.name + " failed challenge " + challenge_name + " at " + convert_time(int(GetTime() / 1000) - level.FRFIX_START));
 	generate_watermark("FAILED " + challenge_name_upper, (0.8, 0, 0));
 }
