@@ -631,7 +631,10 @@ dvar_detector()
 					dvar_detections[dvar_detections.size] = detection_key;
 				}
 
-				set_dvars();
+				if (is_debug())
+					debug_print("Trigger for DVAR reset sent");
+				else
+					set_dvars();
 			}
 		}
 
