@@ -33,7 +33,7 @@ init()
 	flag_init("permaperks_were_set");
 
 	first_room_fix_config();
-	level thread set_dvars();
+	set_dvars();
 	level thread on_player_joined();
 	level thread on_game_start();
 }
@@ -1587,7 +1587,7 @@ fridge_handler()
 {
 	level endon("end_game");
 
-	if (!is_tranzit() && !is_die_rise() && !is_buried())
+	if (!has_permaperks_system())
 		return;
 
 	if (!first_room_fix_config("fridge"))
@@ -2232,7 +2232,7 @@ pull_character_preset(character_index)
 	preset["voice"] = undefined;
 	preset["is_female"] = 0;
 
-	if (is_tranzit() || is_die_rise() || is_buried())
+	if (has_permaperks_system())
 	{
 		if (character_index == 0)
 		{
