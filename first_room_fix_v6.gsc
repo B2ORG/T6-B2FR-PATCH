@@ -1490,10 +1490,10 @@ safety_zio()
 		level notify("end_game");
 	}
 
-	// Innit patch
-	if (isDefined(level.INNIT_CONFIG))
+	// B2OP patch
+	if (isDefined(level.B2OP_CONFIG))
 	{
-		iPrintLn("^1INNIT PATCH DETECTED!!!");
+		iPrintLn("^1B2OP DETECTED!!!");
 		level notify("end_game");
 	}
 }
