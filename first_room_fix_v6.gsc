@@ -191,26 +191,41 @@ generate_watermark(text, color, alpha_override)
     level.num_of_watermarks++;
 }
 
-print_scheduler(label, content)
+print_scheduler(content, player)
 {
-	level endon("end_game");
+	// debug_print("print_scheduler(content='" + content + ")");
+    if (isDefined(player))
+	{
+		// debug_print(player.name + ": print scheduled: " + content);
+        player thread player_print_scheduler(content);
+	}
+    else
+	{
+		// debug_print("general: print scheduled: " + content);
+        foreach (player in level.players)
+            player thread player_print_scheduler(content);
+	}
+}
 
-	if (!isDefined(content))
-		content = "";
+player_print_scheduler(content)
+{
+    level endon("end_game");
+    self endon("disconnect");
 
-	if (!isDefined(level.print_schedules))
-		level.print_schedules = 0;
+    while (isDefined(self.scheduled_prints) && self.scheduled_prints >= getDvarInt("con_gameMsgWindow0LineCount"))
+        wait 0.05;
 
-	while (level.print_schedules > getDvarInt("con_gameMsgWindow0LineCount"))
-		wait 0.05;
+    if (isDefined(self.scheduled_prints))
+        self.scheduled_prints++;
+    else
+        self.scheduled_prints = 1;
 
-	level.print_schedules++;
-	iPrintLn("" + label + content);
-	wait_for_message_end();
-	level.print_schedules--;
+    self iPrintLn(content);
+    wait_for_message_end();
+    self.scheduled_prints--;
 
-	if (level.print_schedules <= 0)
-		level.print_schedules = undefined;
+    if (self.scheduled_prints <= 0)
+        self.scheduled_prints = undefined;
 }
 
 convert_time(seconds)
@@ -476,8 +491,8 @@ powerup_vars_controller()
 		if (level.powerup_drop_count != 0 || level.zombie_powerup_array.size < 1)
 		{
 			info_print("Possible issue with powerup related variables\nlevel.powerup_drop_count=" + level.powerup_drop_count + " level.zombie_powerup_array.size=" + level.zombie_powerup_array.size + ".\nPlease send screenshot of the console to Zi0#1063");
-			self thread print_scheduler("^1WARNING: ", "^7Possible issue with powerups");
-			self thread print_scheduler("Check console for details");
+			print_scheduler("^1WARNING: ^7Possible issue with powerups");
+			print_scheduler("Check console for details");
 		}
 	}
 }
@@ -635,7 +650,7 @@ fixed_wait_network_frame()
 
 challenge_failed(challenge_name, challenge_name_upper, challenge_zone)
 {
-	thread print_scheduler(challenge_name + " Challenge: ^1", self.name + " LEFT " + challenge_zone + "!");
+	print_scheduler(challenge_name + " Challenge: ^1" + self.name + " LEFT " + challenge_zone + "!", self);
 	info_print(self.name + " failed challenge " + challenge_name + " at " + convert_time(int(GetTime() / 1000) - level.FRFIX_START));
 	generate_watermark("FAILED " + challenge_name_upper, (0.8, 0, 0));
 }
@@ -812,7 +827,7 @@ display_splits()
 			if (is_vanilla())
 				continue;
 
-			self thread print_scheduler("Round " + level.round_number + " time: ^3", timestamp);
+			print_scheduler("Round " + level.round_number + " time: ^3" + timestamp);
 
 			timestamp = undefined;
 		}
@@ -833,19 +848,19 @@ display_hordes()
 
 		if (!is_special_round() && is_round(20))
 		{
-			label = "HORDES ON " + level.round_number + ": ^3";
 			zombies_value = int(((maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total) / 24) * 100);
 
-			self thread print_scheduler(label, zombies_value / 100);
+			print_content = "HORDES ON " + level.round_number + ": ^3" + (zombies_value / 100);
+			print_scheduler(print_content);
 			wait_for_message_end();
-			self thread display_hordes_on_demand(label, zombies_value / 100);
+			self thread display_hordes_on_demand(print_content);
 
-			zombies_value = undefined;
+			print_content = undefined;
 		}
 	}
 }
 
-display_hordes_on_demand(label, horde_count)
+display_hordes_on_demand(to_print)
 {
 	level endon("end_game");
 	level endon("end_of_round");
@@ -856,7 +871,7 @@ display_hordes_on_demand(label, horde_count)
 
 		if (text == "hordes" || text == "h")
 		{
-			self thread print_scheduler(label, horde_count);
+			print_scheduler(to_print);
 			wait_for_message_end();
 		}
 
@@ -995,13 +1010,16 @@ semtex_display()
 		if (!num_of_prenades)
 			continue;
 
-		self thread print_scheduler("PRENADES ON " + level.round_number + ": ^3", num_of_prenades);
+		print_content = "PRENADES ON " + level.round_number + ": ^3" + num_of_prenades;
+		print_scheduler(print_content);
 		wait_for_message_end();
-		self thread semtex_print_on_demand("PRENADES ON " + level.round_number + ": ^3", num_of_prenades);
+		self thread semtex_print_on_demand(print_content);
+
+		print_content = undefined;
 	}
 }
 
-semtex_print_on_demand(label, prenades)
+semtex_print_on_demand(to_print)
 {
 	level endon("end_game");
 	level endon("end_of_round");
@@ -1012,7 +1030,7 @@ semtex_print_on_demand(label, prenades)
 
 		if (text == "prenades" || text == "p")
 		{
-			self thread print_scheduler(label, prenades);
+			print_scheduler(to_print);
 			wait_for_message_end();
 		}
 
@@ -1095,7 +1113,7 @@ notify_about_prenade_switch()
 	level endon("end_game");
 
 	self waittill("changed_prenade_type", prenade_type);
-	self thread print_scheduler("Prenade values generation is now: ^3", prenade_type);
+	print_scheduler("Prenade values generation is now: ^3" + prenade_type);
 }
 
 get_pap_weapon_options_set_reticle(weapon)
@@ -1181,7 +1199,7 @@ watch_permaperk_award()
 
 		if (i == present_players && flag("permaperks_were_set"))
 		{
-			thread print_scheduler("Permaperks Awarded: ", "^1RESTART REQUIRED");
+			print_scheduler("Permaperks Awarded: ^1RESTART REQUIRED");
 			wait 1.5;
 			if (is_plutonium())
 				map_restart();
@@ -1593,7 +1611,7 @@ fridge_handler()
 	if (!first_room_fix_config("fridge"))
 		return;
 
-	print_scheduler("Fridge module: ", "^2ENABLED");
+	print_scheduler("Fridge module: ^2ENABLED");
 
 	self thread fridge();
 	self thread fridge_state_watcher();
@@ -1602,7 +1620,7 @@ fridge_handler()
 	level waittill("terminate_fridge_process");
 
 	info_print("FRIDGE: One of the players obtained his weapon. Fridge module no longer available");
-	print_scheduler("Fridge module: ", "^2DISABLED");
+	print_scheduler("Fridge module: ^2DISABLED");
 
 	foreach(player in level.players)
 	{
@@ -1868,7 +1886,7 @@ first_box()
 
 	flag_wait("initial_blackscreen_passed");
 
-	self thread print_scheduler("First Box module: ^2", "AVAILABLE");
+	print_scheduler("First Box module: ^2AVAILABLE");
 	self thread watch_for_finish_firstbox();
 	self.rigged_hits = 0;
 
@@ -1918,12 +1936,12 @@ rig_box(gun, player)
 	weapon_key = get_weapon_key(gun, ::box_weapon_verification);
 	if (weapon_key == "")
 	{
-		self thread print_scheduler("Wrong weapon key: ^1",  gun);
+		print_scheduler("Wrong weapon key: ^1" + gun);
 		return;
 	}
 
 	// weapon_name = level.zombie_weapons[weapon_key].name;
-	self thread print_scheduler("" + player.name + " set box weapon to: ^3", weapon_display_wrapper(weapon_key));
+	print_scheduler("" + player.name + " set box weapon to: ^3", weapon_display_wrapper(weapon_key));
 	level.is_first_box = true;
 	self.rigged_hits++;
 
@@ -1981,9 +1999,9 @@ watch_for_finish_firstbox()
 	while (!is_round(11))
 		wait 0.1;
 
-	self thread print_scheduler("First Box module: ^1", "DISABLED");
+	print_scheduler("First Box module: ^1DISABLED");
 	if (self.rigged_hits)
-		self thread print_scheduler("First box used: ^3", self.rigged_hits + " ^7times");
+		print_scheduler("First box used: ^3" + self.rigged_hits + " ^7times");
 
 	level notify("break_firstbox");
 	flag_set("break_firstbox");
@@ -2450,7 +2468,7 @@ yellowhouse_controller()
 		}
 	}
 
-	self thread print_scheduler("Yellow House Challenge: " + "^2ACTIVE");
+	print_scheduler("Yellow House Challenge: ^2ACTIVE");
 
 	if (first_room_fix_config("mannequins"))
 	{
@@ -2527,7 +2545,7 @@ topbarn_controller()
 		}
 	}
 
-	self thread print_scheduler("Top Barn Challenge: " + "^2ACTIVE");
+	print_scheduler("Top Barn Challenge: ^2ACTIVE");
 
 	while (true)
 	{
