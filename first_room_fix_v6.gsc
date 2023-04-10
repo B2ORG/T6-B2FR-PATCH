@@ -546,36 +546,29 @@ first_room_fix_config()
 
 set_dvars()
 {
-	level endon("end_game");
-
-	if (is_mob())
+	if (is_mob() && !isDefined(level.custom_velocity_behaviour))
 		level.custom_velocity_behaviour = ::hide_in_afterlife;
 
 	// if (!getDvar("frfix_player0_character"))
 	// 	setDvar("frfix_player0_character", randomInt(3));
 
-	while (true)
-	{
-		setdvar("player_strafeSpeedScale", 0.8);
-		setdvar("player_backSpeedScale", 0.7);
-		setdvar("g_speed", 190);				// Only for reset_dvars
+	setdvar("player_strafeSpeedScale", 0.8);
+	setdvar("player_backSpeedScale", 0.7);
+	setdvar("g_speed", 190);				// Only for reset_dvars
 
-		setdvar("con_gameMsgWindow0Filter", "gamenotify obituary");
-		setdvar("con_gameMsgWindow0LineCount", 4);
-		setdvar("con_gameMsgWindow0MsgTime", 5);
-		setdvar("con_gameMsgWindow0FadeInTime", 0.25);
-		setdvar("con_gameMsgWindow0FadeOutTime", 0.5);
+	setdvar("con_gameMsgWindow0Filter", "gamenotify obituary");
+	setdvar("con_gameMsgWindow0LineCount", 4);
+	setdvar("con_gameMsgWindow0MsgTime", 5);
+	setdvar("con_gameMsgWindow0FadeInTime", 0.25);
+	setdvar("con_gameMsgWindow0FadeOutTime", 0.5);
 
-		setdvar("sv_endGameIfISuck", 0); 		// Prevent host migration
-		setdvar("sv_allowAimAssist", 0); 	 	// Removes target assist
-		setdvar("sv_patch_zm_weapons", 1);		// Force post dlc1 patch on recoil
-		setdvar("sv_cheats", 0);
+	setdvar("sv_endGameIfISuck", 0); 		// Prevent host migration
+	setdvar("sv_allowAimAssist", 0); 	 	// Removes target assist
+	setdvar("sv_patch_zm_weapons", 1);		// Force post dlc1 patch on recoil
+	setdvar("sv_cheats", 0);
 
-		if (!flag("dvars_set"))
-			flag_set("dvars_set");
-
-		level waittill("reset_dvars");
-	}
+	if (!flag("dvars_set"))
+		flag_set("dvars_set");
 }
 
 dvar_detector() 
@@ -614,7 +607,7 @@ dvar_detector()
 					dvar_detections[dvar_detections.size] = detection_key;
 				}
 
-				level notify("reset_dvars");
+				set_dvars();
 			}
 		}
 
