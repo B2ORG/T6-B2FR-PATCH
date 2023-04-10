@@ -379,6 +379,14 @@ is_plutonium()
 	return true;
 }
 
+safe_restart()
+{
+	if (!is_plutonium() && level.players.size > 1)
+		level notify("end_game");
+	else
+		map_restart();
+}
+
 has_magic()
 {
     if (isDefined(level.enable_magic) && level.enable_magic)
@@ -1213,10 +1221,7 @@ watch_permaperk_award()
 		{
 			print_scheduler("Permaperks Awarded: ^1RESTART REQUIRED");
 			wait 1.5;
-			if (is_plutonium())
-				map_restart();
-			else
-				level notify("end_game");
+			safe_restart();
 		}
 
 		if (!did_game_just_start())
