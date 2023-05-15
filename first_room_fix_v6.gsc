@@ -1798,8 +1798,6 @@ first_box_handler()
 	thread scan_in_box();
 	// First Box main loop
 	thread first_box();
-	// First Box location main loop
-	thread first_box_location();
 }
 
 init_boxhits_watcher()
@@ -2208,6 +2206,26 @@ default_weapon_verification()
 
     if (!is_weapon_included(weapon_key))
         return "";
+
+	return weapon_key;
+}
+
+player_box_weapon_verification(weapon_key)
+{
+	if (self has_weapon_or_upgrade(weapon_key))
+		return "";
+	if (!limited_weapon_below_quota(weapon_key, self, getentarray("specialty_weapupgrade", "script_noteworthy")))
+		return "";
+
+	switch (weapon_key)
+	{
+		case "ray_gun_zm":
+			if (self has_weapon_or_upgrade("raygun_mark2_zm"))
+				return "";
+		case "raygun_mark2_zm":
+			if (self has_weapon_or_upgrade("ray_gun_zm"))
+				return "";
+	}
 
 	return weapon_key;
 }
