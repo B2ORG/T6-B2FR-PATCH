@@ -4,6 +4,16 @@ Development thread on my Discord https://discord.gg/fDY4VR6rNE
 
 This doc will be updated when i know what else needs clarification
 
+# Categories
+
+This patch is meant to be used during First Room games. Below you can see alternatives for other categories
+
+| Category| Patch | Creator | Link |
+| --- | --- | --- | --- |
+| Highrounds / Round Speedruns | B2OP | Zi0 | [GitHub](https://github.com/Zi0MIX/T6-B2OP-PATCH) |
+| EE Speedrun | Easter Egg GSC Timer | HuthTV | [GitHub](https://github.com/HuthTV/BO2-Easter-Egg-GSC-timer) |
+| Song Speedruns | Song Auto-Timer | Zi0 | [GitHub](https://github.com/Zi0MIX/T6-SONG-TIMER-PATCH) |
+
 # Launchers
 
 First Room Fix is mainly meant for modern Plutonium versions, as most of the actual fixes are required for those.
