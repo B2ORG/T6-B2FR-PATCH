@@ -1960,7 +1960,7 @@ rig_box(gun, player)
 	}
 
 	// weapon_name = level.zombie_weapons[weapon_key].name;
-	print_scheduler("" + player.name + " set box weapon to: ^3" + weapon_display_wrapper(weapon_key));
+	print_scheduler(player.name + " ^7set box weapon to: ^3" + weapon_display_wrapper(weapon_key));
 	generate_watermark("FIRST BOX", (0.8, 0, 0));
 	level.rigged_hits++;
 
