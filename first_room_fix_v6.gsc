@@ -381,10 +381,10 @@ is_plutonium()
 
 safe_restart()
 {
-	if (!is_plutonium() && level.players.size > 1)
-		level notify("end_game");
-	else
+	if (is_plutonium())
 		map_restart();
+	else
+		level notify("end_game");
 }
 
 has_magic()
