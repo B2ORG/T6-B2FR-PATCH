@@ -1494,7 +1494,7 @@ safety_zio()
 	}
 
 	// B2OP patch
-	if (isDefined(level.first_room_fix_config))
+	if (isDefined(level.B2OP_CONFIG))
 	{
 		iPrintLn("^1B2OP DETECTED!!!");
 		level notify("end_game");
