@@ -32,7 +32,7 @@ init()
 	flag_init("break_firstbox");
 	flag_init("permaperks_were_set");
 
-	first_room_fix_config();
+	generate_first_room_fix_config();
 	set_dvars();
 	level thread on_player_joined();
 	level thread on_game_start();
@@ -541,7 +541,7 @@ powerup_point_drop_watcher()
 	}
 }
 
-first_room_fix_config()
+generate_first_room_fix_config()
 {
 	// Patch Config
 	level.FRFIX_CONFIG = array();
