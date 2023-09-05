@@ -30,7 +30,7 @@ on_game_start()
 {
 	level endon("end_game");
 
-	thread set_dvars();
+	level thread set_dvars();
 	level thread on_player_joined();
 
 	flag_wait("initial_blackscreen_passed");
@@ -110,7 +110,6 @@ b2fr_main_loop()
     while (true)
     {
         level waittill("start_of_round");
-        check_dvars();
         level thread show_hordes();
 
         /* Verify based on map, cause someone could sneak a patch that'd give those in offline game */
@@ -603,12 +602,6 @@ set_dvars()
     has to become a level variable and be manually removed later */
     dvar_rules = array();
 
-	init_dvar("timers", dvar_rules);
-	init_dvar("buildables", dvar_rules);
-	init_dvar("hordes", dvar_rules);
-	init_dvar("velocity", dvar_rules);
-    init_dvar("steam_backspeed", dvar_rules)
-
     if (has_permaperks_system())
         init_dvar("award_perks", dvar_rules);
 
@@ -617,26 +610,31 @@ set_dvars()
     setdvar("g_speed", 190);
     setdvar("con_gameMsgWindow0Filter", "gamenotify obituary");
     setdvar("sv_cheats", 0);
+
+    level thread dvar_watcher(array("sv_cheats", "g_speed", "player_strafeSpeedScale", "player_backSpeedScale", "con_gameMsgWindow0Filter"));
 }
 
-check_dvars()
+dvar_watcher(dvars)
 {
-    if (getDvar("sv_cheats") != "0")
-        generate_watermark("SVCHEATS", (0.8, 0, 0));
+    level endon("end_game");
 
-    if (getDvar("g_speed") != "190")
-        generate_watermark("GSPEED", (0.8, 0, 0));
-}
+    values = array();
+    foreach (dvar in dvars)
+        values[dvar] = getDvar(dvar);
 
-/* It's not explicit, but dvar_rules is optional arg, as long as it's only call remains inside of is_true() */
-init_dvar(dvar_str, dvar_rules)
-{
-	if (getDvar(dvar_str) != "")
-		return;
+    while (true)
+    {
+        foreach (dvar in dvars)
+        {
+            if (getDvar(dvar) != values[dvar])
+            {
+                generate_watermark("DVAR " + ToUpper(dvar) + " VIOLATED", (1, 0.6, 0.2), 0.66);
+                ArrayRemoveIndex(dvars, dvar, true);
+            }
+        }
 
-    setDvar(dvar_str, "1");
-	if (is_true(dvar_rules[dvar_str]))
-		setDvar(dvar_str, "0");
+        wait 0.25;
+    }
 }
 
 award_points(amount)
