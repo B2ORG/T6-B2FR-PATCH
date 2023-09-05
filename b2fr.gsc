@@ -10,6 +10,8 @@ main()
 {
 	replaceFunc(maps\mp\animscripts\zm_utility::wait_network_frame, ::fixed_wait_network_frame);
 	replaceFunc(maps\mp\zombies\_zm_utility::wait_network_frame, ::fixed_wait_network_frame);
+
+	replaceFunc(maps\mp\zombies\_zm_weapons::get_pack_a_punch_weapon_options, ::get_pap_weapon_options_set_reticle);
 }
 
 init()
@@ -1381,4 +1383,34 @@ fixed_wait_network_frame()
     }
     else
         wait 0.1;
+}
+
+get_pap_weapon_options_set_reticle(weapon)
+{
+    if (!isdefined(self.pack_a_punch_weapon_options))
+        self.pack_a_punch_weapon_options = [];
+
+    if (!is_weapon_upgraded(weapon))
+        return self calcweaponoptions(0, 0, 0, 0, 0);
+
+    if (isdefined(self.pack_a_punch_weapon_options[weapon]))
+        return self.pack_a_punch_weapon_options[weapon];
+
+    base = get_base_name(weapon);
+    camo_index = 39;
+
+    if ("zm_prison" == level.script)
+        camo_index = 40;
+    else if ("zm_tomb" == level.script)
+        camo_index = 45;
+
+    lens_index = randomintrange(0, 6);
+    reticle_index = 16;
+    reticle_color_index = randomintrange(0, 6);
+
+    if ("saritch_upgraded_zm" == base)
+        reticle_index = 1;
+
+    self.pack_a_punch_weapon_options[weapon] = self calcweaponoptions( camo_index, lens_index, reticle_index, reticle_color_index );
+    return self.pack_a_punch_weapon_options[weapon];
 }
