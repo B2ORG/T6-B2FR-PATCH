@@ -49,6 +49,9 @@ on_game_start()
 	level thread perma_perks_setup();
 	safety_zio();
 
+	level thread nuketown_handler();
+	level thread topbarn_controller();
+
     if (isDefined(level.B2_POWERUP_TRACKING))
         level thread [[level.B2_POWERUP_TRACKING]]();
 
@@ -1222,8 +1225,7 @@ print_permaperk_state(enabled, perk)
 		print_cli = "disabled";
 	}
 
-	if (first_room_fix_config("track_permaperks"))
-		self iPrintLn("Permaperk " + permaperk_name(perk) + ": " + print_player);
+    self iPrintLn("Permaperk " + permaperk_name(perk) + ": " + print_player);
 #if DEBUG == 1
 	debug_print("print_permaperk_state(): " + self.name + ": Permaperk " + perk + " -> " + print_cli);
 #endif
@@ -1581,4 +1583,152 @@ get_pap_weapon_options_set_reticle(weapon)
 
     self.pack_a_punch_weapon_options[weapon] = self calcweaponoptions( camo_index, lens_index, reticle_index, reticle_color_index );
     return self.pack_a_punch_weapon_options[weapon];
+}
+
+challenge_failed(challenge_name, challenge_name_upper, challenge_zone)
+{
+	print_scheduler(challenge_name + " Challenge: ^1" + self.name + " LEFT " + challenge_zone + "!");
+	info_print(self.name + " failed challenge " + challenge_name + " at " + convert_time(int(GetTime() / 1000) - level.B2FR_START));
+	generate_watermark("FAILED " + challenge_name_upper, (0.8, 0, 0));
+}
+
+nuketown_handler()
+{
+	level endon("end_game");
+
+	if (!is_nuketown())
+		return;
+
+	// Bus mannequin
+	/* This is bad for highrounds, if this mannequin happens to exist, it'll remove one entity that's otherwise not removable */
+    thread remove_mannequin((-30, 13.9031, -47.0411), 1);
+
+	// Yellow House
+	if (!has_magic() && level.start_round >= 5)
+		thread yellowhouse_controller();
+}
+
+yellowhouse_controller()
+{
+	level endon("end_game");
+
+	level waittill("start_of_round");
+
+	allowed_zones = array("openhouse2_backyard_zone", "openhouse2_f1_zone");
+
+	foreach (player in level.players)
+	{
+		if (!isinarray(allowed_zones, player get_current_zone()))
+		{
+#if DEBUG == 1
+			debug_print("exiting yellowhouse_controller cause zone: '" + player get_current_zone() + "'");
+#endif
+			return;
+		}
+	}
+
+	print_scheduler("Yellow House Challenge: ^2ACTIVE");
+
+    yellow_house_mannequins = array((1058.2, 387.3, -57), (609.28, 315.9, -53.89), (872.48, 461.88, -56.8), (851.1, 156.6, -51), (808, 140.5, -51), (602.53, 281.09, -55));
+    foreach (origin in yellow_house_mannequins)
+        remove_mannequin(origin);
+
+	while (true)
+	{
+		foreach (player in level.players)
+		{
+			if (!isinarray(allowed_zones, player get_current_zone()))
+			{
+				player challenge_failed("Yellow House", "YELLOW HOUSE", "YELLOW HOUSE AREA");
+				return;
+			}
+		}
+
+		wait 0.05;
+	}
+}
+
+remove_mannequin(origin, extra_delay)
+{
+	level endon("end_game");
+
+	if (isDefined(extra_delay))
+		wait extra_delay;
+
+	all_mannequins = array();
+	foreach (destructible in getentarray("destructible", "targetname"))
+	{
+		if (isSubStr(destructible.destructibledef, "male"))
+			all_mannequins[all_mannequins.size] = destructible;
+	}
+
+	foreach (mannequin in all_mannequins)
+	{
+		if (mannequin.origin == origin)
+		{
+			// Delete collision
+			getent(mannequin.target, "targetname") delete();
+			// Delete model
+			mannequin delete();
+
+#if DEBUG == 1
+			debug_print("Removed mannequin on origin: " + origin);
+#endif
+			break;
+		}
+	}
+}
+
+topbarn_controller()
+{
+	level endon("end_game");
+
+	if (!is_farm() || has_magic() || !is_round(5))
+		return;
+
+	level waittill("start_of_round");
+
+	foreach (player in level.players)
+	{
+		if (!player is_player_in_top_barn())
+		{
+#if DEBUG == 1
+			debug_print("exiting topbarn_controller cause zone: '" + player get_current_zone() + "'");
+#endif
+			return;
+		}
+	}
+
+	print_scheduler("Top Barn Challenge: ^2ACTIVE");
+
+	while (true)
+	{
+		foreach (player in level.players)
+		{
+			if (!player is_player_in_top_barn())
+			{
+				player challenge_failed("Top Barn", "TOP BARN", "TOP BARN AREA");
+				return;
+			}
+		}
+
+		wait 0.05;
+	}
+}
+
+is_player_in_top_barn()
+{
+    if (self get_current_zone() != "zone_brn")
+        return false;
+
+    if (self.origin[2] < 50)
+	{
+		if (self.origin[0] < 7875 || self.origin[0] > 8115)
+			return false;
+		
+		if (self.origin[1] > -5115 || self.origin[1] < -5415)
+			return false;
+	}
+
+	return true;
 }
