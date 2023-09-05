@@ -128,7 +128,17 @@ b2fr_main_loop()
 				player remove_permaperk_wrapper("nube", 10);
 			}
 		}
+
+        /* Check first box each round */
         scan_in_box();
+
+        /* Check gamerules */
+        if (getgametypesetting("startRound") > 1 && (is_tranzit() || is_mob() || is_die_rise() || is_mob() || is_buried() || is_origins()))
+            generate_watermark("STARTING ROUND", (1, 0, 0), 0.5);
+        else if (getgametypesetting("startRound") > 10 && (is_depot() || is_town() || is_farm() || is_nuketown()))
+            generate_watermark("STARTING ROUND", (1, 0, 0), 0.5);
+        if (!is_true(level.gamedifficulty))
+            generate_watermark("DIFFICULTY", (1, 0, 0), 0.5);
 
         level waittill("end_of_round");
 #if NOHUD == 0
@@ -138,8 +148,6 @@ b2fr_main_loop()
             setDvar("award_perks", 1);
     }
 }
-
-// Utilities
 
 debug_print(text)
 {
@@ -583,7 +591,7 @@ emulate_menu_call(content, ent)
 welcome_prints()
 {
 	wait 0.75;
-#if NOHUD == 0
+#if NOHUD == 1
 	self iPrintLn("B2^1FR^7 PATCH ^1V" + level.B2FR_CONFIG["version"] + " ^7[NOHUD]");
 #else
 	self iPrintLn("B2^1FR^7 PATCH ^1V" + level.B2FR_CONFIG["version"]);
@@ -1022,9 +1030,11 @@ perma_perks_setup()
 
 	foreach (player in level.players)
     {
-        player.frfix_permaperk_display_lock = true;
-	    player thread permaperks_watcher();
+        player.permaperk_display_lock = true;
 		player thread award_permaperks_safe();
+#if NOHUD == 0
+	    player thread permaperks_watcher();
+#endif
     }
 }
 
@@ -1113,7 +1123,7 @@ award_permaperks_safe()
 	wait 0.5;
 	perks_to_process = undefined;
 	self.awarding_permaperks_now = undefined;
-	self.frfix_permaperk_display_lock = undefined;
+	self.permaperk_display_lock = undefined;
 	self maps\mp\zombies\_zm_stats::uploadstatssoon();
 }
 
@@ -1168,6 +1178,7 @@ remove_permaperk(perk_code)
 	self playsoundtoplayer("evt_player_downgrade", self);
 }
 
+#if NOHUD == 0
 permaperks_watcher()
 {
 	level endon("end_game");
@@ -1187,7 +1198,7 @@ permaperks_watcher()
 		{
 			if (self.pers_upgrades_awarded[perk] != self.last_perk_state[perk])
 			{
-				if (!is_true(self.frfix_permaperk_display_lock))
+				if (!is_true(self.permaperk_display_lock))
 					self print_permaperk_state(self.pers_upgrades_awarded[perk], perk);
 				self.last_perk_state[perk] = self.pers_upgrades_awarded[perk];
 				wait 0.1;
@@ -1254,6 +1265,7 @@ permaperk_name(perk)
 			return perk;
 	}
 }
+#endif
 
 origins_fix()
 {
