@@ -92,8 +92,8 @@ on_player_spawned_permaperk()
 	The wait is essential, it allows the game to process permaperks internally before we override them */
 	wait 2;
 
-	if (has_permaperks_system() && is_round(15))
-		self remove_permaperk_wrapper("jugg");
+	if (has_permaperks_system())
+		self remove_permaperk_wrapper("jugg", 15);
 }
 
 b2fr_main_loop()
@@ -872,7 +872,11 @@ perma_perks_setup()
 	thread watch_permaperk_award();
 
 	foreach (player in level.players)
+    {
+        player.frfix_permaperk_display_lock = true;
+	    player thread permaperks_watcher();
 		player thread award_permaperks_safe();
+    }
 }
 
 watch_permaperk_award()
@@ -935,9 +939,6 @@ award_permaperks_safe()
 	level endon("end_game");
 	self endon("disconnect");
 
-	if (!b2fr_config("give_permaperks"))
-		return;
-
 	while (!isalive(self))
 		wait 0.05;
 
@@ -963,6 +964,7 @@ award_permaperks_safe()
 	wait 0.5;
 	perks_to_process = undefined;
 	self.awarding_permaperks_now = undefined;
+	self.frfix_permaperk_display_lock = undefined;
 	self maps\mp\zombies\_zm_stats::uploadstatssoon();
 }
 
@@ -1016,6 +1018,95 @@ remove_permaperk(perk_code)
 	self.pers_upgrades_awarded[perk_code] = 0;
 	self playsoundtoplayer("evt_player_downgrade", self);
 }
+
+permaperks_watcher()
+{
+	level endon("end_game");
+	self endon("disconnect");
+
+	self.last_perk_state = array();
+	foreach(perk in level.pers_upgrades_keys)
+	{
+		while (!isDefined(self.pers_upgrades_awarded[perk]))
+			wait 0.1;
+		self.last_perk_state[perk] = self.pers_upgrades_awarded[perk];
+	}
+
+	while (true)
+	{
+		foreach(perk in level.pers_upgrades_keys)
+		{
+			if (self.pers_upgrades_awarded[perk] != self.last_perk_state[perk])
+			{
+				if (!is_true(self.frfix_permaperk_display_lock))
+					self print_permaperk_state(self.pers_upgrades_awarded[perk], perk);
+				self.last_perk_state[perk] = self.pers_upgrades_awarded[perk];
+				wait 0.1;
+			}
+		}
+
+		wait 0.1;
+	}
+}
+
+print_permaperk_state(enabled, perk)
+{
+	if (enabled)
+	{
+		print_player = "^2ENABLED";
+		print_cli = "enabled";
+	}
+	else
+	{
+		print_player = "^1DISABLED";
+		print_cli = "disabled";
+	}
+
+	if (first_room_fix_config("track_permaperks"))
+		self iPrintLn("Permaperk " + permaperk_name(perk) + ": " + print_player);
+#if DEBUG == 1
+	debug_print("print_permaperk_state(): " + self.name + ": Permaperk " + perk + " -> " + print_cli);
+#endif
+}
+
+permaperk_name(perk)
+{
+	switch (perk)
+	{
+		case "revive":
+			return "Quick Revive";
+		case "multikill_headshots":
+			return "Extra Headshot Damage";
+		case "perk_lose":
+			return "Tombstone";
+		case "jugg":
+			return "Juggernog";
+		case "flopper":
+			return "Flopper";
+		case "box_weapon":
+			return "Better Mystery Box";
+		case "nube":
+			return "Nube";
+		case "board":
+			return "Metal Boards";
+		case "carpenter":
+			return "Metal Carpenter Boards";
+		case "insta_kill":
+			return "Insta-Kill Pro";
+		case "cash_back":
+			return "Perk Refund";
+		case "pistol_points":
+			return "Double Pistol Points";
+		case "double_points":
+			return "Half-Off";
+		case "sniper":
+			return "Sniper Points";
+		default:
+			return perk;
+	}
+}
+
+
 
 scan_in_box()
 {
