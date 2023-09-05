@@ -967,7 +967,6 @@ get_prenade_from_map(stub_arg)
 	index = level.round_number + 1;
 	if (isDefined(nade_map["" + index]))
 	{
-		debug_print("Returning value from nade_map of index '" + index + "': " + nade_map["" + index]);
 		return nade_map["" + index];
 	}
 	return 0;
@@ -987,8 +986,6 @@ get_prenade_dynamic(previous)
 
 	zm_health = int(level.zombie_health * 1.1) - (dmg_semtex * previous);
 
-	debug_print("init dynamic prenade: previous='" + previous + " dmg_curve='" + dmg_curve + "' dmg_semtex='" + dmg_semtex + "'");
-
 	i = 0;
 	while (dmg_semtex / zm_health < 0.1)
 	{
@@ -1001,12 +998,8 @@ get_prenade_dynamic(previous)
 			wait 0.05;
 		}
 
-		debug_print("Iter: i='" + i + "' zm_health='" + zm_health + "' nades='" + previous + "'");
-
 		i++;
 	}
-
-	debug_print("Finished calculating prenades: " + previous);
 
 	return previous; 
 }
