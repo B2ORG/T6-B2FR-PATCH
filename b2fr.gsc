@@ -36,6 +36,8 @@ on_game_start()
     level thread b2fr_main_loop();
 #if NOHUD == 0
 	level thread timers();
+    if (isDefined(level.B2_NETWORK_HUD))
+        level thread [[level.B2_NETWORK_HUD]]();
 #endif
 	level thread perma_perks_setup();
 	safety_zio();
