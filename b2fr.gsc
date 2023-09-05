@@ -32,6 +32,7 @@ on_game_start()
 
 	level thread set_dvars();
 	level thread on_player_joined();
+    level thread origins_fix();
 
 	flag_wait("initial_blackscreen_passed");
 
@@ -1118,7 +1119,16 @@ permaperk_name(perk)
 	}
 }
 
+origins_fix()
+{
+    level endon("end_game");
 
+	flag_wait("start_zombie_round_logic");
+	wait 0.5;
+
+	if (is_origins())
+		level.is_forever_solo_game = 0;
+}
 
 scan_in_box()
 {
