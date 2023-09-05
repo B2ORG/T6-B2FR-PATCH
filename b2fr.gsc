@@ -35,6 +35,9 @@ on_game_start()
 
 	flag_wait("initial_blackscreen_passed");
 
+    level.B2FR_START = int(getTime() / 1000);
+	flag_set("game_started");
+
     level thread b2fr_main_loop();
 #if NOHUD == 0
 	level thread timers();
@@ -48,7 +51,6 @@ on_game_start()
         level thread [[level.B2_POWERUP_TRACKING]]();
 
 #if DEBUG == 1
-	level thread network_frame_hud();
 	debug_mode();
 #endif
 #if BETA == 1
@@ -734,9 +736,6 @@ timers()
 {
     level endon("end_game");
 
-	level.B2FR_START = int(getTime() / 1000);
-	flag_set("game_started");
-
     level.timer_hud = createserverfontstring("big" , 1.6);
 	level.timer_hud set_hud_properties("timer_hud", "TOPRIGHT", "TOPRIGHT", 60, -14);
 	level.timer_hud.alpha = 1;
@@ -775,9 +774,6 @@ show_split()
 {
 	level endon("end_game");
 
-    if (getDvar("timers") == "0")
-        return;
-
 	split_rounds = array(15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100);
 	if (isDefined(level.B2OP_PLUGIN_SPLITS))
 		split_rounds = level.B2OP_PLUGIN_SPLITS;
@@ -788,6 +784,19 @@ show_split()
 
     timestamp = convert_time(int(getTime() / 1000) - level.B2FR_START);
     print_scheduler("Round " + level.round_number + " time: ^1" + timestamp);
+}
+
+show_hordes()
+{
+	level endon("end_game");
+
+    wait 0.05;
+
+    if (!is_special_round() && is_round(20))
+    {
+        zombies_value = get_hordes_left();
+        print_scheduler("HORDES ON " + level.round_number + ": ^3" + zombies_value);
+    }
 }
 
 velocity_meter()
