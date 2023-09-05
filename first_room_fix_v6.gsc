@@ -26,27 +26,15 @@ init()
 	level notify("frfix_init");
 
 	flag_init("dvars_set");
-	flag_init("cheat_printed_backspeed");
-	flag_init("cheat_printed_noprint");
-	flag_init("cheat_printed_cheats");
-	flag_init("cheat_printed_gspeed");
 
 	flag_init("game_started");
 	flag_init("box_rigged");
 	flag_init("break_firstbox");
 	flag_init("permaperks_were_set");
 
-	// Patch Config
-	level.FRFIX_CONFIG = array();
-	level.FRFIX_CONFIG["version"] = 6;
-	level.FRFIX_CONFIG["beta"] = false;
-	level.FRFIX_CONFIG["debug"] = false;
-	level.FRFIX_CONFIG["vanilla"] = get_vanilla_setting(false);
-	level.FRFIX_CONFIG["for_player"] = "";
-	/* Default value here: level.players[0].name */
-	level.FRFIX_CONFIG["key_hud_plugin"] = undefined;
-
-	level thread set_dvars();
+	generate_first_room_fix_config();
+	set_dvars();
+	level thread on_player_joined();
 	level thread on_game_start();
 }
 
@@ -54,24 +42,7 @@ on_game_start()
 {
 	level endon("end_game");
 
-	// Func Config
-	level.FRFIX_CONFIG["hud_color"] = (0, 1, 0.5);
-	level.FRFIX_CONFIG["const_timer"] = true;
-	level.FRFIX_CONFIG["const_round_timer"] = false;
-	level.FRFIX_CONFIG["show_hordes"] = true;
-	level.FRFIX_CONFIG["give_permaperks"] = true;
-	level.FRFIX_CONFIG["track_permaperks"] = true;
-	level.FRFIX_CONFIG["mannequins"] = false;
-	level.FRFIX_CONFIG["nuketown_25_ee"] = false;
-	level.FRFIX_CONFIG["forever_solo_game_fix"] = true;
-	level.FRFIX_CONFIG["semtex_prenades"] = true;
-	level.FRFIX_CONFIG["fridge"] = false;
-	level.FRFIX_CONFIG["first_box_module"] = false;
-
-	level thread on_player_joined();
-
 	level waittill("initial_players_connected");
-	level.FRFIX_WATERMARKS = array();
 
 	// Initial game settings
 	level thread dvar_detector();
@@ -116,6 +87,7 @@ on_player_joined()
 	{
 		level waittill("connected", player);
 		player thread on_player_spawned();
+		player player_permaperk_controller();
 	}
 }
 
@@ -133,6 +105,7 @@ on_player_spawned()
 	self thread welcome_prints();
 	self thread print_network_frame(6);
 	self thread velocity_meter();
+	self thread fill_up_bank();
 	// self thread set_characters();
 	if (isDefined(level.FRFIX_PLUGIN_ZONES))
 		self thread [[level.FRFIX_PLUGIN_ZONES]](::set_hud_properties, false);
@@ -190,12 +163,17 @@ print_permaperk_state(enabled, perk)
 	if (first_room_fix_config("track_permaperks"))
 		self iPrintLn("Permaperk " + permaperk_name(perk) + ": " + print_player);
 	debug_print(self.name + ": Permaperk " + perk + " -> " + print_cli);
-	return;
 }
 
 generate_watermark(text, color, alpha_override)
 {
-	y_offset = 12 * level.FRFIX_WATERMARKS.size;
+	if (is_true(flag(text)))
+		return;
+
+    if (!isDefined(level.num_of_watermarks))
+        level.num_of_watermarks = 0;
+
+	y_offset = 12 * level.num_of_watermarks;
 	if (!isDefined(color))
 		color = (1, 1, 1);
 
@@ -209,29 +187,46 @@ generate_watermark(text, color, alpha_override)
 	watermark.alpha = alpha_override;
 	watermark.hidewheninmenu = 0;
 
-	level.FRFIX_WATERMARKS[level.FRFIX_WATERMARKS.size] = watermark;
+	flag_set(text);
+
+    level.num_of_watermarks++;
 }
 
-print_scheduler(label, content)
+print_scheduler(content, player)
 {
-	level endon("end_game");
+	// debug_print("print_scheduler(content='" + content + ")");
+    if (isDefined(player))
+	{
+		// debug_print(player.name + ": print scheduled: " + content);
+        player thread player_print_scheduler(content);
+	}
+    else
+	{
+		// debug_print("general: print scheduled: " + content);
+        foreach (player in level.players)
+            player thread player_print_scheduler(content);
+	}
+}
 
-	if (!isDefined(content))
-		content = "";
+player_print_scheduler(content)
+{
+    level endon("end_game");
+    self endon("disconnect");
 
-	if (!isDefined(level.print_schedules))
-		level.print_schedules = 0;
+    while (isDefined(self.scheduled_prints) && self.scheduled_prints >= getDvarInt("con_gameMsgWindow0LineCount"))
+        wait 0.05;
 
-	while (level.print_schedules > getDvarInt("con_gameMsgWindow0LineCount"))
-		wait 0.05;
+    if (isDefined(self.scheduled_prints))
+        self.scheduled_prints++;
+    else
+        self.scheduled_prints = 1;
 
-	level.print_schedules++;
-	iPrintLn("" + label + content);
-	wait_for_message_end();
-	level.print_schedules--;
+    self iPrintLn(content);
+    wait_for_message_end();
+    self.scheduled_prints--;
 
-	if (level.print_schedules <= 0)
-		level.print_schedules = undefined;
+    if (self.scheduled_prints <= 0)
+        self.scheduled_prints = undefined;
 }
 
 convert_time(seconds)
@@ -384,6 +379,14 @@ is_plutonium()
 	return true;
 }
 
+safe_restart()
+{
+	if (is_plutonium())
+		map_restart();
+	else
+		level notify("end_game");
+}
+
 has_magic()
 {
     if (isDefined(level.enable_magic) && level.enable_magic)
@@ -497,8 +500,8 @@ powerup_vars_controller()
 		if (level.powerup_drop_count != 0 || level.zombie_powerup_array.size < 1)
 		{
 			info_print("Possible issue with powerup related variables\nlevel.powerup_drop_count=" + level.powerup_drop_count + " level.zombie_powerup_array.size=" + level.zombie_powerup_array.size + ".\nPlease send screenshot of the console to Zi0#1063");
-			self thread print_scheduler("^1WARNING: ", "^7Possible issue with powerups");
-			self thread print_scheduler("Check console for details");
+			print_scheduler("^1WARNING: ^7Possible issue with powerups");
+			print_scheduler("Check console for details");
 		}
 	}
 }
@@ -538,38 +541,58 @@ powerup_point_drop_watcher()
 	}
 }
 
+generate_first_room_fix_config()
+{
+	// Patch Config
+	level.FRFIX_CONFIG = array();
+	level.FRFIX_CONFIG["version"] = 6.1;
+	level.FRFIX_CONFIG["beta"] = false;
+	level.FRFIX_CONFIG["debug"] = false;
+	level.FRFIX_CONFIG["vanilla"] = get_vanilla_setting(false);
+	level.FRFIX_CONFIG["for_player"] = "";
+	/* Default value here: level.players[0].name */
+	level.FRFIX_CONFIG["key_hud_plugin"] = undefined;
+
+	// Func Config
+	level.FRFIX_CONFIG["hud_color"] = (0, 1, 0.5);
+	level.FRFIX_CONFIG["const_timer"] = true;
+	level.FRFIX_CONFIG["const_round_timer"] = false;
+	level.FRFIX_CONFIG["show_hordes"] = true;
+	level.FRFIX_CONFIG["give_permaperks"] = true;
+	level.FRFIX_CONFIG["track_permaperks"] = true;
+	level.FRFIX_CONFIG["mannequins"] = false;
+	level.FRFIX_CONFIG["nuketown_25_ee"] = false;
+	level.FRFIX_CONFIG["forever_solo_game_fix"] = true;
+	level.FRFIX_CONFIG["semtex_prenades"] = true;
+	level.FRFIX_CONFIG["fridge"] = false;
+	level.FRFIX_CONFIG["first_box_module"] = false;
+}
+
 set_dvars()
 {
-	level endon("end_game");
-
-	if (is_mob())
+	if (is_mob() && !isDefined(level.custom_velocity_behaviour))
 		level.custom_velocity_behaviour = ::hide_in_afterlife;
 
 	// if (!getDvar("frfix_player0_character"))
 	// 	setDvar("frfix_player0_character", randomInt(3));
 
-	while (true)
-	{
-		setdvar("player_strafeSpeedScale", 0.8);
-		setdvar("player_backSpeedScale", 0.7);
-		setdvar("g_speed", 190);				// Only for reset_dvars
+	setdvar("player_strafeSpeedScale", 0.8);
+	setdvar("player_backSpeedScale", 0.7);
+	setdvar("g_speed", 190);				// Only for reset_dvars
 
-		setdvar("con_gameMsgWindow0Filter", "gamenotify obituary");
-		setdvar("con_gameMsgWindow0LineCount", 4);
-		setdvar("con_gameMsgWindow0MsgTime", 5);
-		setdvar("con_gameMsgWindow0FadeInTime", 0.25);
-		setdvar("con_gameMsgWindow0FadeOutTime", 0.5);
+	setdvar("con_gameMsgWindow0Filter", "gamenotify obituary");
+	setdvar("con_gameMsgWindow0LineCount", 4);
+	setdvar("con_gameMsgWindow0MsgTime", 5);
+	setdvar("con_gameMsgWindow0FadeInTime", 0.25);
+	setdvar("con_gameMsgWindow0FadeOutTime", 0.5);
 
-		setdvar("sv_endGameIfISuck", 0); 		// Prevent host migration
-		setdvar("sv_allowAimAssist", 0); 	 	// Removes target assist
-		setdvar("sv_patch_zm_weapons", 1);		// Force post dlc1 patch on recoil
-		setdvar("sv_cheats", 0);
+	setdvar("sv_endGameIfISuck", 0); 		// Prevent host migration
+	setdvar("sv_allowAimAssist", 0); 	 	// Removes target assist
+	setdvar("sv_patch_zm_weapons", 1);		// Force post dlc1 patch on recoil
+	setdvar("sv_cheats", 0);
 
-		if (!flag("dvars_set"))
-			flag_set("dvars_set");
-
-		level waittill("reset_dvars");
-	}
+	if (!flag("dvars_set"))
+		flag_set("dvars_set");
 }
 
 dvar_detector() 
@@ -608,7 +631,10 @@ dvar_detector()
 					dvar_detections[dvar_detections.size] = detection_key;
 				}
 
-				level notify("reset_dvars");
+				if (is_debug())
+					debug_print("Trigger for DVAR reset sent");
+				else
+					set_dvars();
 			}
 		}
 
@@ -636,7 +662,7 @@ fixed_wait_network_frame()
 
 challenge_failed(challenge_name, challenge_name_upper, challenge_zone)
 {
-	thread print_scheduler(challenge_name + " Challenge: ^1", self.name + " LEFT " + challenge_zone + "!");
+	print_scheduler(challenge_name + " Challenge: ^1" + self.name + " LEFT " + challenge_zone + "!");
 	info_print(self.name + " failed challenge " + challenge_name + " at " + convert_time(int(GetTime() / 1000) - level.FRFIX_START));
 	generate_watermark("FAILED " + challenge_name_upper, (0.8, 0, 0));
 }
@@ -813,7 +839,7 @@ display_splits()
 			if (is_vanilla())
 				continue;
 
-			self thread print_scheduler("Round " + level.round_number + " time: ^3", timestamp);
+			print_scheduler("Round " + level.round_number + " time: ^3" + timestamp);
 
 			timestamp = undefined;
 		}
@@ -834,19 +860,19 @@ display_hordes()
 
 		if (!is_special_round() && is_round(20))
 		{
-			label = "HORDES ON " + level.round_number + ": ^3";
 			zombies_value = int(((maps\mp\zombies\_zm_utility::get_round_enemy_array().size + level.zombie_total) / 24) * 100);
 
-			self thread print_scheduler(label, zombies_value / 100);
+			print_content = "HORDES ON " + level.round_number + ": ^3" + (zombies_value / 100);
+			print_scheduler(print_content);
 			wait_for_message_end();
-			self thread display_hordes_on_demand(label, zombies_value / 100);
+			self thread display_hordes_on_demand(print_content);
 
-			zombies_value = undefined;
+			print_content = undefined;
 		}
 	}
 }
 
-display_hordes_on_demand(label, horde_count)
+display_hordes_on_demand(to_print)
 {
 	level endon("end_game");
 	level endon("end_of_round");
@@ -857,7 +883,7 @@ display_hordes_on_demand(label, horde_count)
 
 		if (text == "hordes" || text == "h")
 		{
-			self thread print_scheduler(label, horde_count);
+			print_scheduler(to_print);
 			wait_for_message_end();
 		}
 
@@ -996,13 +1022,16 @@ semtex_display()
 		if (!num_of_prenades)
 			continue;
 
-		self thread print_scheduler("PRENADES ON " + level.round_number + ": ^3", num_of_prenades);
+		print_content = "PRENADES ON " + level.round_number + ": ^3" + num_of_prenades;
+		print_scheduler(print_content);
 		wait_for_message_end();
-		self thread semtex_print_on_demand("PRENADES ON " + level.round_number + ": ^3", num_of_prenades);
+		self thread semtex_print_on_demand(print_content);
+
+		print_content = undefined;
 	}
 }
 
-semtex_print_on_demand(label, prenades)
+semtex_print_on_demand(to_print)
 {
 	level endon("end_game");
 	level endon("end_of_round");
@@ -1013,7 +1042,7 @@ semtex_print_on_demand(label, prenades)
 
 		if (text == "prenades" || text == "p")
 		{
-			self thread print_scheduler(label, prenades);
+			print_scheduler(to_print);
 			wait_for_message_end();
 		}
 
@@ -1096,7 +1125,7 @@ notify_about_prenade_switch()
 	level endon("end_game");
 
 	self waittill("changed_prenade_type", prenade_type);
-	self thread print_scheduler("Prenade values generation is now: ^3", prenade_type);
+	print_scheduler("Prenade values generation is now: ^3" + prenade_type);
 }
 
 get_pap_weapon_options_set_reticle(weapon)
@@ -1129,40 +1158,38 @@ get_pap_weapon_options_set_reticle(weapon)
     return self.pack_a_punch_weapon_options[weapon];
 }
 
-perma_perks_setup()
+fill_up_bank()
 {
 	level endon("end_game");
+	self endon("disconnect");
 
+	flag_wait("initial_blackscreen_passed");
+
+    if (is_tranzit() || is_die_rise() || is_buried())
+        self.account_value = level.bank_account_max;
+}
+
+perma_perks_setup()
+{
 	if (!has_permaperks_system())
 		return;
 
-	self thread watch_permaperk_award();
+	thread watch_permaperk_award();
+	thread permaperk_verification_early();
 
 	foreach (player in level.players)
-	{
-		player thread permaperks_watcher();
-		player thread permaperk_failsafe_early();
+		player thread award_permaperks_safe();
+}
 
-		player.frfix_awarding_permaperks = false;
-		if (isDefined(level.FRFIX_PLUGIN_PERMAPERKS))
-			player thread [[level.FRFIX_PLUGIN_PERMAPERKS]]();
-		else
-			player thread award_permaperks_safe();
-	}
+player_permaperk_controller()
+{
+	if (!has_permaperks_system())
+		return;
 
-	while (true)
-	{
-		level waittill("connected", player);
-
-		player thread permaperks_watcher();
-		if (!is_round(15))
-			player thread permaperk_failsafe_early();
-		else
-			player thread permaperk_failsafe_late();
-
-		if (isDefined(level.FRFIX_PLUGIN_PERMAPERKS))
-			player thread [[level.FRFIX_PLUGIN_PERMAPERKS]]();
-	}
+	self.frfix_permaperk_display_lock = true;
+	self thread permaperks_watcher();
+	if (is_round(15))
+		self thread permaperk_verification_on_connect();
 }
 
 watch_permaperk_award()
@@ -1182,12 +1209,19 @@ watch_permaperk_award()
 
 		if (i == present_players && flag("permaperks_were_set"))
 		{
-			thread print_scheduler("Permaperks Awarded: ", "^1RESTART REQUIRED");
-			wait 1.5;
-			if (is_plutonium())
-				map_restart();
+			/* Irony launchers - Recommend restart */
+			if (!is_plutonium())
+			{
+				print_scheduler("Permaperks Awarded: ^1RESTART STRONGLY RECOMMENDED");
+				break;
+			}
+			/* Coop new Pluto - Automatic restart */
 			else
-				level notify("end_game");
+			{
+				print_scheduler("Permaperks Awarded: ^2MAP GONNA RESTART");
+				wait 1.5;
+				safe_restart();
+			}
 		}
 
 		if (!did_game_just_start())
@@ -1203,181 +1237,23 @@ watch_permaperk_award()
 	}
 }
 
-permaperks_watcher()
+permaperk_verification_early()
 {
 	level endon("end_game");
-	self endon("disconnect");
-
-	self.last_perk_state = array();
-	foreach(perk in level.pers_upgrades_keys)
-		self.last_perk_state[perk] = self.pers_upgrades_awarded[perk];
-
-	while (true)
-	{
-		foreach(perk in level.pers_upgrades_keys)
-		{
-			if (self.pers_upgrades_awarded[perk] != self.last_perk_state[perk])
-			{
-				if (!isDefined(self.frfix_awarding_permaperks))
-					self print_permaperk_state(self.pers_upgrades_awarded[perk], perk);
-				self.last_perk_state[perk] = self.pers_upgrades_awarded[perk];
-				wait 0.1;
-			}
-		}
-
-		wait 0.1;
-	}
-}
-
-permaperk_struct(current_array, code, award, take, to_round, maps_exclude, map_unique)
-{
-	if (!isDefined(maps_exclude))
-		maps_exclude = array();
-	if (!isDefined(to_round))
-		to_round = 255;
-	if (!isDefined(map_unique))
-		map_unique = undefined;
-
-	permaperk = spawnStruct();
-	permaperk.code = code;
-	permaperk.to_round = to_round;
-	permaperk.award = award;
-	permaperk.take = take;
-	permaperk.maps_to_exclude = maps_exclude;
-	permaperk.map_unique = map_unique;
-
-	// debug_print("generating permaperk struct | data: code=" + code + " to_round=" + to_round + " award=" + award + " take=" + take + " map_unique=" + map_unique + " | size of current: " + current_array.size);
-
-	current_array[current_array.size] = permaperk;
-	return current_array;
-}
-
-award_permaperks_safe()
-{
-	level endon("end_game");
-	self endon("disconnect");
-
-	if (!first_room_fix_config("give_permaperks"))
-		return;
-
-	while (!isalive(self))
-		wait 0.05;
-
-	wait 0.5;
-
-	perks_to_process = array();
-	perks_to_process = permaperk_struct(perks_to_process, "revive", true, false);
-	perks_to_process = permaperk_struct(perks_to_process, "multikill_headshots", true, false);
-	perks_to_process = permaperk_struct(perks_to_process, "perk_lose", true, false);
-	perks_to_process = permaperk_struct(perks_to_process, "jugg", true, false, 15);
-	perks_to_process = permaperk_struct(perks_to_process, "flopper", true, false, 255, array(), "zm_buried");
-	perks_to_process = permaperk_struct(perks_to_process, "box_weapon", false, true, 255, array("zm_buried"));
-	perks_to_process = permaperk_struct(perks_to_process, "nube", true, true, 10, array("zm_highrise"));
-	perks_to_process = permaperk_struct(perks_to_process, "board", true, false);
-
-	self.frfix_awarding_permaperks = true;
-
-	foreach (perk in perks_to_process)
-	{
-		wait 0.05;
-
-		if (isDefined(perk.map_unique) && perk.map_unique != level.script)
-			continue;
-
-		perk_code = perk.code;
-		debug_print(self.name + ": processing -> " + perk_code);
-
-		// If award and take are both set, it means maps specified in 'maps_to_exclude' are the maps on which perk needs to be taken away
-		if (perk.award && perk.take && isinarray(perk.maps_to_exclude, level.script))
-		{
-			self remove_permaperk(perk_code);
-			wait_network_frame();
-		}
-		// Else if take is specified, take
-		else if (!perk.award && perk.take && !isinarray(perk.maps_to_exclude, level.script))
-		{
-			self remove_permaperk(perk_code);
-			wait_network_frame();
-		}
-
-		// Do not try to award perk if player already has it
-		if (self.pers_upgrades_awarded[perk_code])
-			continue;
-
-		for (j = 0; j < level.pers_upgrades[perk_code].stat_names.size; j++)
-		{
-			stat_name = level.pers_upgrades[perk_code].stat_names[j];
-			stat_value = level.pers_upgrades[perk_code].stat_desired_values[j];
-
-			// Award perk if all conditions match
-			if (perk.award && !is_round(perk.to_round) && !isinarray(perk.maps_to_exclude, level.script))
-			{
-				self award_permaperk(stat_name, perk_code, stat_value);
-				wait_network_frame();
-			}
-		}
-	}
-
-	wait 0.5;
-	self.frfix_awarding_permaperks = undefined;
-	self uploadstatssoon();
-}
-
-award_permaperk(stat_name, perk_code, stat_value)
-{
-	flag_set("permaperks_were_set");
-
-	perk_name = permaperk_name(perk_code);
-
-	self.stats_this_frame[stat_name] = 1;
-	self set_global_stat(stat_name, stat_value);
-	info_print(self.name + ": Permaperk '" + perk_name + "' activation -> " + stat_name + " set to: " + stat_value);
-}
-
-remove_permaperk_wrapper(perk_code, round)
-{
-	perk_name = permaperk_name(perk_code);
-
-	if (!isDefined(round))
-		round = 1;
-
-	debug_print("remove_permaperk_wrapper(self=" + self.name + ", perk_code=" + perk_code + ", round=" + round + ")");
-
-	if (is_round(round) && self.pers_upgrades_awarded[perk_code])
-	{
-		info_print("Permaperk failsafe triggered for " + self.name + ": " + perk_name);
-		self remove_permaperk(perk_code, perk_name);
-		self playsoundtoplayer("evt_player_downgrade", self);
-	}
-}
-
-remove_permaperk(perk_code, perk_name)
-{
-	if (!isDefined(perk_name))
-		perk_name = permaperk_name(perk_code);
-
-	info_print("Perk Removal for " + self.name + ": " + perk_name);
-	self.pers_upgrades_awarded[perk_code] = 0;
-}
-
-permaperk_failsafe_early()
-{
-	level endon("end_game");
-	self endon("disconnect");
 
 	while (!is_round(16))
 	{
 		level waittill("start_of_round");
 		wait 5;
 
-		remove_permaperk_wrapper("nube", 10);
-		remove_permaperk_wrapper("jugg", 15);
+		self remove_permaperk_wrapper("nube", 10);
+		self remove_permaperk_wrapper("jugg", 15);
 	}
 
 	debug_print(self.name + " exiting permaperk_failsafe_early()");
 }
 
-permaperk_failsafe_late()
+permaperk_verification_on_connect()
 {
 	level endon("end_game");
 	self endon("disconnect");
@@ -1388,8 +1264,164 @@ permaperk_failsafe_late()
 	The wait is essential, it allows the game to process permaperks internally before we override them */
 	wait 2;
 
-	remove_permaperk_wrapper("nube");
-	remove_permaperk_wrapper("jugg");
+	self remove_permaperk_wrapper("nube");
+	self remove_permaperk_wrapper("jugg");
+}
+
+permaperk_array(code, maps_award, maps_take, to_round)
+{
+	if (!isDefined(maps_award))
+		maps_award = array("zm_transit", "zm_highrise", "zm_buried");
+	if (!isDefined(maps_take))
+		maps_take = array();
+	if (!isDefined(to_round))
+		to_round = 255;
+
+	permaperk = array();
+	permaperk["code"] = code;
+	permaperk["maps_award"] = maps_award;
+	permaperk["maps_take"] = maps_take;
+	permaperk["to_round"] = to_round;
+
+	return permaperk;
+}
+
+award_permaperks_safe()
+{
+	level endon("end_game");
+	self endon("disconnect");
+
+	if (!first_room_fix_config("give_permaperks"))
+	{
+		self.frfix_permaperk_display_lock = undefined;
+		return;
+	}
+
+	while (!isalive(self))
+		wait 0.05;
+
+	wait 0.5;
+
+	perks_to_process = array();
+	perks_to_process[perks_to_process.size] = permaperk_array("revive");
+	perks_to_process[perks_to_process.size] = permaperk_array("multikill_headshots");
+	perks_to_process[perks_to_process.size] = permaperk_array("perk_lose");
+	perks_to_process[perks_to_process.size] = permaperk_array("jugg", undefined, undefined, 15);
+	perks_to_process[perks_to_process.size] = permaperk_array("flopper", array("zm_buried"));
+	perks_to_process[perks_to_process.size] = permaperk_array("box_weapon", array("zm_highrise", "zm_buried"), array("zm_transit"));
+	perks_to_process[perks_to_process.size] = permaperk_array("insta_kill");
+	perks_to_process[perks_to_process.size] = permaperk_array("nube", array("zm_transit", "zm_buried"), array("zm_highrise"), 10);
+	perks_to_process[perks_to_process.size] = permaperk_array("board");
+
+	self.frfix_awarding_permaperks = true;
+
+	foreach (perk in perks_to_process)
+		self resolve_permaperk(perk);
+
+	wait 0.5;
+	perks_to_process = undefined;
+	self.frfix_awarding_permaperks = undefined;
+	self.frfix_permaperk_display_lock = undefined;
+	self uploadstatssoon();
+}
+
+resolve_permaperk(perk)
+{
+	wait 0.05;
+
+	perk_code = perk["code"];
+
+	/* Too high of a round, return out */
+	if (is_round(perk["to_round"]))
+		return;
+
+	/* Map is not included in this perks logic */
+	if (!isinarray(arraycombine(perk["maps_award"], perk["maps_take"], false, false), level.script))
+		return;
+
+	for (j = 0; j < level.pers_upgrades[perk_code].stat_names.size; j++)
+	{
+		stat_name = level.pers_upgrades[perk_code].stat_names[j];
+		stat_value = level.pers_upgrades[perk_code].stat_desired_values[j];
+
+		if (isinarray(perk["maps_award"], level.script) && !is_true(self.pers_upgrades_awarded[perk_code]))
+		{
+			flag_set("permaperks_were_set");
+			self award_permaperk(stat_name, perk_code, stat_value);
+		}
+		if (isinarray(perk["maps_take"], level.script) && is_true(self.pers_upgrades_awarded[perk_code]))
+		{
+			self remove_permaperk(stat_name);
+		}
+
+		wait 0.05;
+	}
+}
+
+award_permaperk(stat_name, perk_code, stat_value)
+{
+	// debug_print("awarding: " + stat_name + " " + perk_code + " " + stat_value);
+	self.stats_this_frame[stat_name] = 1;
+	self set_global_stat(stat_name, stat_value);
+	// self playsoundtoplayer("evt_player_upgrade", self);
+}
+
+remove_permaperk_wrapper(perk_code, round)
+{
+	level endon("end_game");
+	self endon("disconnect");
+
+	if (!isDefined(round))
+		round = 1;
+
+	if (is_round(round) && is_true(self.pers_upgrades_awarded[perk_code]))
+	{
+		foreach (statname in level.pers_upgrades[perk_code].stat_names)
+		{
+			self remove_permaperk(statname);
+			wait 0.05;
+		}
+	}
+}
+
+remove_permaperk(stat_name)
+{
+	// debug_print("remove_permaperk(): setting " + stat_name + " to 0");
+	self.stats_this_frame[stat_name] = 1;
+	self set_global_stat(stat_name, 0);
+	// self playsoundtoplayer("evt_player_downgrade", self);
+}
+
+permaperks_watcher()
+{
+	level endon("end_game");
+	self endon("disconnect");
+
+	self.last_perk_state = array();
+	debug_print("initial perk states from permaperks_watcher():");
+	foreach(perk in level.pers_upgrades_keys)
+	{
+		while (!isDefined(self.pers_upgrades_awarded[perk]))
+			wait 0.1;
+		self.last_perk_state[perk] = self.pers_upgrades_awarded[perk];
+		debug_print("" + perk + ": " + self.pers_upgrades_awarded[perk]);
+	}
+
+	while (true)
+	{
+		foreach(perk in level.pers_upgrades_keys)
+		{
+			if (self.pers_upgrades_awarded[perk] != self.last_perk_state[perk])
+			{
+				if (!is_true(self.frfix_permaperk_display_lock))
+					self print_permaperk_state(self.pers_upgrades_awarded[perk], perk);
+				self.last_perk_state[perk] = self.pers_upgrades_awarded[perk];
+				wait 0.1;
+			}
+		}
+
+		wait 0.1;
+	}
 }
 
 permaperk_name(perk)
@@ -1456,10 +1488,10 @@ safety_zio()
 		level notify("end_game");
 	}
 
-	// Innit patch
-	if (isDefined(level.INNIT_CONFIG))
+	// B2OP patch
+	if (isDefined(level.B2OP_CONFIG))
 	{
-		iPrintLn("^1INNIT PATCH DETECTED!!!");
+		iPrintLn("^1B2OP DETECTED!!!");
 		level notify("end_game");
 	}
 }
@@ -1588,23 +1620,29 @@ fridge_handler()
 {
 	level endon("end_game");
 
-	if (!is_tranzit() && !is_die_rise() && !is_buried())
+	if (!has_permaperks_system() || !first_room_fix_config("fridge"))
 		return;
 
-	if (!first_room_fix_config("fridge"))
-		return;
+	// debug_print("currently in fridge='" + level.players[0] get_locker_stat() + "'");
 
-	print_scheduler("Fridge module: ", "^2ENABLED");
+	if (isDefined(level.FRFIX_PLUGIN_FRIDGE))
+	{
+		thread [[level.FRFIX_PLUGIN_FRIDGE]](::player_rig_fridge);
+		print_scheduler("Fridge module: ^3LOADED PLUGIN");
+	}
+	else
+	{
+		print_scheduler("Fridge module: ^2AVAILABLE");
+		if (is_plutonium())
+			thread fridge_watch_chat();
+		thread fridge_watch_dvar();
+		thread fridge_watch_state();
 
-	self thread fridge();
-	self thread fridge_state_watcher();
+		level waittill("terminate_fridge_process");
+		print_scheduler("Fridge module: ^1DISABLED");
+	}
 
 	// Cleanup
-	level waittill("terminate_fridge_process");
-
-	info_print("FRIDGE: One of the players obtained his weapon. Fridge module no longer available");
-	print_scheduler("Fridge module: ", "^2DISABLED");
-
 	foreach(player in level.players)
 	{
 		if (isDefined(player.fridge_state))
@@ -1612,19 +1650,29 @@ fridge_handler()
 	}
 }
 
-fridge()
+fridge_watch_dvar()
 {
 	level endon("end_game");
 	level endon("terminate_fridge_process");
 
-	// Use plugin to set initial fridge weapons, only for players connected from r1
-	if (isDefined(level.FRFIX_PLUGIN_FRIDGE))
+	setDvar("fridge", "");
+	while (true)
 	{
-		self thread [[level.FRFIX_PLUGIN_FRIDGE]](::player_rig_fridge);
-		level notify("terminate_fridge_process");
-	}
+		wait 0.05;
+		if (getDvar("fridge") == "")
+			continue;
 
-	while (is_plutonium())
+		rig_fridge(getDvar("fridge"));
+		setDvar("fridge", "");
+	}
+}
+
+fridge_watch_chat()
+{
+	level endon("end_game");
+	level endon("terminate_fridge_process");
+
+	while (true)
 	{
 		level waittill("say", message, player);
 
@@ -1635,22 +1683,38 @@ fridge()
 
 		message = undefined;
 	}
+}
 
-	/* Redacted / Ancient */
-	setDvar("fridge", "");
-	while (true)
+fridge_watch_state()
+{
+	level endon("end_game");
+
+	fridge_claimed = false;
+
+	while (!fridge_claimed)
 	{
-		wait 0.05;
-		if (getDvar("fridge" == ""))
-			continue;
+		foreach(player in level.players)
+		{
+			locker = player get_locker_stat();
+			/* Save state of the locker, if it's any weapon */
+			if (!isDefined(player.fridge_state) && locker != "")
+				player.fridge_state = locker;
+			/* If locker is saved, but stat is cleared, break out */
+			else if (isDefined(player.fridge_state) && locker == "")
+				fridge_claimed = true;
+		}
 
-		rig_fridge(getDvar("fridge"));
+		if (is_round(11))
+			fridge_claimed = true;
+
+		wait 0.25;
 	}
+	level notify("terminate_fridge_process");
 }
 
 rig_fridge(key, player)
 {
-	debug_print("rig_fridge(): key=" + key + "'");
+	// debug_print("rig_fridge(): key=" + key + "'");
 
 	if (isSubStr(key, "+"))
 		weapon = get_weapon_key(getSubStr(key, 1), ::fridge_pap_weapon_verification);
@@ -1661,9 +1725,13 @@ rig_fridge(key, player)
 		return;
 
 	if (isDefined(player))
+	{
+		print_scheduler("You set your fridge weapon to: ^3" + weapon_display_wrapper(weapon), player);
 		player player_rig_fridge(weapon);
+	}
 	else
 	{
+		print_scheduler(level.players[0].name + " set your fridge weapon to: ^3" + weapon_display_wrapper(weapon));
 		foreach(player in level.players)
 			player player_rig_fridge(weapon);
 	}
@@ -1700,32 +1768,6 @@ player_rig_fridge(weapon)
 	}
 }
 
-fridge_state_watcher()
-{
-	level endon("end_game");
-	level endon("terminate_fridge_process");
-
-	while (true)
-	{
-		foreach(player in level.players)
-		{
-			locker = player get_locker_stat();
-			/* Save state of the locker, if it's any weapon */
-			if (!isDefined(player.fridge_state) && locker != "")
-				player.fridge_state = locker;
-			/* If locker is saved, but stat is cleared, break out */
-			else if (isDefined(player.fridge_state) && locker == "")
-				break;
-		}
-
-		if (is_round(11))
-			break;
-
-		wait 0.25;
-	}
-	level notify("terminate_fridge_process", player.name);
-}
-
 get_locker_stat(stat)
 {
 	if (!isDefined(stat))
@@ -1745,57 +1787,42 @@ first_box_handler()
 
 	flag_wait("initial_blackscreen_passed");
 
-    level.is_first_box = false;
-
-	// Debug func, doesn't do anything in production
-	self thread debug_print_initial_boxsize();
-
-	// Init threads watching the status of boxes
-	self thread init_box_status_watcher();
+	// Init thread counting box hits
+	thread init_boxhits_watcher();
 	// Scan weapons in the box
-	self thread scan_in_box();
+	thread scan_in_box();
 	// First Box main loop
-	self thread first_box();
-
-	while (true)
-	{
-		if (isDefined(level.is_first_box) && level.is_first_box)
-			break;
-
-		wait 0.25;
-	}
-
-	generate_watermark("FIRST BOX", (0.8, 0, 0));
+	thread first_box();
 }
 
-debug_print_initial_boxsize()
-{
-	in_box = 0;
-
-	foreach (weapon in getArrayKeys(level.zombie_weapons))
-	{
-		if (maps\mp\zombies\_zm_weapons::get_is_in_box(weapon))
-			in_box++;
-	}
-	debug_print("Size of initial box weapon list: " + in_box);
-}
-
-init_box_status_watcher()
+init_boxhits_watcher()
 {
     level endon("end_game");
-
-	level.total_box_hits = 0;
+	level endon("break_firstbox");
 
 	while (!isDefined(level.chests))
+	{
+		/* Escape if chests are not defined yet */
+		if (!did_game_just_start())
+			return;
 		wait 0.05;
-	
+	}
+
+	level.total_box_hits = 0;
 	foreach(chest in level.chests)
 		chest thread watch_box_state();
+
+	/* Extra code for the purpose of location manager */
+	while (level.total_box_hits == 0)
+		wait 0.05;
+
+	level notify("break_box_location");
 }
 
 watch_box_state()
 {
     level endon("end_game");
+	level endon("break_firstbox");
 
     while (!isDefined(self.zbarrier))
         wait 0.05;
@@ -1814,7 +1841,6 @@ scan_in_box()
 {
     level endon("end_game");
 
-	// Only town needed
     if (is_town() || is_farm() || is_depot() || is_tranzit())
         should_be_in_box = 25;
 	else if (is_nuketown())
@@ -1852,28 +1878,53 @@ scan_in_box()
 		else if ((offset > 0) && (in_box == (should_be_in_box + offset)))
 			continue;
 
-		level.is_first_box = true;
+		generate_watermark("FIRST BOX", (0.8, 0, 0));
 		break;
-
     }
-    return;
 }
 
 first_box()
 {	
-    level endon("end_game");
-	level endon("break_firstbox");
-
 	if (!first_room_fix_config("first_box_module"))
 		return;
 
-	flag_wait("initial_blackscreen_passed");
+	level.rigged_hits = 0;
+	thread print_scheduler("First Box module: ^2AVAILABLE");
+	thread watch_for_finish_firstbox();
+	thread box_watch_dvar();
+	if (is_plutonium())
+		thread box_watch_chat();
+}
 
-	self thread print_scheduler("First Box module: ^2", "AVAILABLE");
-	self thread watch_for_finish_firstbox();
-	self.rigged_hits = 0;
+box_watch_dvar()
+{
+    level endon("end_game");
+	level endon("break_firstbox");
 
-	while (is_plutonium())
+	setDvar("fb", "");
+	while (true)
+	{
+		wait 0.05;
+
+		if (getDvar("fb") == "")
+			continue;
+
+		thread rig_box(getDvar("fb"), level.players[0]);
+		wait_network_frame();
+
+		while (flag("box_rigged"))
+			wait 0.05;
+
+		setDvar("fb", "");
+	}
+}
+
+box_watch_chat()
+{
+    level endon("end_game");
+	level endon("break_firstbox");
+
+	while (true)
 	{
 		message = undefined;
 
@@ -1884,31 +1935,13 @@ first_box()
 		else
 			continue;
 
-		self thread rig_box(wpn_key, player);
+		thread rig_box(wpn_key, player);
 		wait_network_frame();
 
 		wpn_key = undefined;
 
 		while (flag("box_rigged"))
 			wait 0.05;
-	}
-
-	/* Redacted / Ancient */
-	setDvar("fb", "");
-	while (true)
-	{
-		wait 0.05;
-
-		if (getDvar("fb") == "")
-			continue;
-
-		self thread rig_box(getDvar("fb"), level.players[0]);
-		wait_network_frame();
-
-		while (flag("box_rigged"))
-			wait 0.05;
-
-		setDvar("fb", "");
 	}
 }
 
@@ -1917,23 +1950,26 @@ rig_box(gun, player)
     level endon("end_game");
 
 	weapon_key = get_weapon_key(gun, ::box_weapon_verification);
+	if (isDefined(player))
+		weapon_key = player player_box_weapon_verification(weapon_key);
+
 	if (weapon_key == "")
 	{
-		self thread print_scheduler("Wrong weapon key: ^1",  gun);
+		print_scheduler("Wrong weapon key: ^1" + gun);
 		return;
 	}
 
 	// weapon_name = level.zombie_weapons[weapon_key].name;
-	self thread print_scheduler("" + player.name + " set box weapon to: ^3", weapon_display_wrapper(weapon_key));
-	level.is_first_box = true;
-	self.rigged_hits++;
+	print_scheduler(player.name + " ^7set box weapon to: ^3" + weapon_display_wrapper(weapon_key));
+	generate_watermark("FIRST BOX", (0.8, 0, 0));
+	level.rigged_hits++;
 
 	saved_check = level.special_weapon_magicbox_check;
 	current_box_hits = level.total_box_hits;
 	removed_guns = array();
 
 	flag_set("box_rigged");
-	debug_print("FIRST BOX: flag('box_rigged'): " + flag("box_rigged"));
+	// debug_print("FIRST BOX: flag('box_rigged'): " + flag("box_rigged"));
 
 	level.special_weapon_magicbox_check = undefined;
 	foreach(weapon in getarraykeys(level.zombie_weapons))
@@ -1942,16 +1978,16 @@ rig_box(gun, player)
 		{
 			removed_guns[removed_guns.size] = weapon;
 			level.zombie_weapons[weapon].is_in_box = 0;
-
-			debug_print("FIRST BOX: setting " + weapon + ".is_in_box to 0");
+			// debug_print("FIRST BOX: setting " + weapon + ".is_in_box to 0");
 		}
 	}
 
+	/* Critical loop responsible for restoring proper state */
 	while ((current_box_hits == level.total_box_hits) || !isDefined(level.total_box_hits))
 	{
 		if (is_round(11))
 		{
-			debug_print("FIRST BOX: breaking out of First Box above round 10");
+			// debug_print("FIRST BOX: breaking out of First Box above round 10");
 			break;
 		}
 		wait 0.05;
@@ -1961,18 +1997,17 @@ rig_box(gun, player)
 
 	level.special_weapon_magicbox_check = saved_check;
 
-	debug_print("FIRST BOX: removed_guns.size " + removed_guns.size);
+	// debug_print("FIRST BOX: removed_guns.size " + removed_guns.size);
 	if (removed_guns.size > 0)
 	{
 		foreach(rweapon in removed_guns)
 		{
 			level.zombie_weapons[rweapon].is_in_box = 1;
-			debug_print("FIRST BOX: setting " + rweapon + ".is_in_box to 1");
+			// debug_print("FIRST BOX: setting " + rweapon + ".is_in_box to 1");
 		}
 	}
 
 	flag_clear("box_rigged");
-	return;
 }
 
 watch_for_finish_firstbox()
@@ -1982,15 +2017,14 @@ watch_for_finish_firstbox()
 	while (!is_round(11))
 		wait 0.1;
 
-	self thread print_scheduler("First Box module: ^1", "DISABLED");
-	if (self.rigged_hits)
-		self thread print_scheduler("First box used: ^3", self.rigged_hits + " ^7times");
+	print_scheduler("First Box module: ^1" + "DISABLED");
+	if (level.rigged_hits)
+		print_scheduler("First box used: ^3" + level.rigged_hits + " ^7times");
 
 	level notify("break_firstbox");
-	flag_set("break_firstbox");
-	debug_print("FIRST BOX: notifying module to break");
-
-	return;
+	// debug_print("FIRST BOX: notifying module to break");
+	level.rigged_hits = undefined;
+	level.total_box_hits = undefined;
 }
 
 get_weapon_key(weapon_str, verifier)
@@ -2171,6 +2205,26 @@ default_weapon_verification()
 	return weapon_key;
 }
 
+player_box_weapon_verification(weapon_key)
+{
+	if (self has_weapon_or_upgrade(weapon_key))
+		return "";
+	if (!limited_weapon_below_quota(weapon_key, self, getentarray("specialty_weapupgrade", "script_noteworthy")))
+		return "";
+
+	switch (weapon_key)
+	{
+		case "ray_gun_zm":
+			if (self has_weapon_or_upgrade("raygun_mark2_zm"))
+				return "";
+		case "raygun_mark2_zm":
+			if (self has_weapon_or_upgrade("ray_gun_zm"))
+				return "";
+	}
+
+	return weapon_key;
+}
+
 box_weapon_verification(weapon_key)
 {
 	if (isDefined(level.zombie_weapons[weapon_key]) && level.zombie_weapons[weapon_key].is_in_box)
@@ -2233,7 +2287,7 @@ pull_character_preset(character_index)
 	preset["voice"] = undefined;
 	preset["is_female"] = 0;
 
-	if (is_tranzit() || is_die_rise() || is_buried())
+	if (has_permaperks_system())
 	{
 		if (character_index == 0)
 		{
@@ -2369,7 +2423,7 @@ pull_character_preset(character_index)
 		{
 			preset["model"] = "c_zom_tomb_takeo_fb";
 			preset["viewmodel"] = "c_zom_takeo_viewhands";
-			preset["character_name"] = "Nikolai";
+			preset["character_name"] = "Takeo";
 		}
 	}
 
@@ -2451,7 +2505,7 @@ yellowhouse_controller()
 		}
 	}
 
-	self thread print_scheduler("Yellow House Challenge: " + "^2ACTIVE");
+	print_scheduler("Yellow House Challenge: ^2ACTIVE");
 
 	if (first_room_fix_config("mannequins"))
 	{
@@ -2482,8 +2536,12 @@ remove_mannequin(origin, extra_delay)
 	if (isDefined(extra_delay))
 		wait extra_delay;
 
-	// all_mannequins = maps\mp\zm_nuked::nuked_mannequin_filter(getentarray("destructible", "targetname"));
 	all_mannequins = array();
+	foreach (destructible in getentarray("destructible", "targetname"))
+	{
+		if (isSubStr(destructible.destructibledef, "male"))
+			all_mannequins[all_mannequins.size] = destructible;
+	}
 
 	foreach (mannequin in all_mannequins)
 	{
@@ -2524,7 +2582,7 @@ topbarn_controller()
 		}
 	}
 
-	self thread print_scheduler("Top Barn Challenge: " + "^2ACTIVE");
+	print_scheduler("Top Barn Challenge: ^2ACTIVE");
 
 	while (true)
 	{
