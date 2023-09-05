@@ -42,6 +42,7 @@ on_game_start()
     level thread b2fr_main_loop();
 #if NOHUD == 0
 	level thread timers();
+    level thread semtex_display();
     if (isDefined(level.B2_NETWORK_HUD))
         level thread [[level.B2_NETWORK_HUD]]();
 #endif
@@ -870,6 +871,141 @@ velocity_meter_scale(vel)
 		self.color = (1, 0.2, 0);
 		self.glowcolor = (0.7, 0.1, 0);
 	}
+}
+
+semtex_display()
+{
+	level endon("end_game");
+
+	if (is_vanilla())
+		return;
+
+	// Town for Semtex, Nuketown for No Magic
+	if (has_magic() && !is_town() && !is_nuketown())
+		return;
+
+	// Based on variable in waittill
+	if (is_plutonium())
+		self thread notify_about_prenade_switch();
+
+	num_of_prenades = 0;
+	level waittill("start_of_round");
+
+	while (true)
+	{
+		// func = ;
+		num_of_prenades = [[get_prenade_mode()]](num_of_prenades);
+
+		level waittill("start_of_round");
+		wait 0.05;
+
+		if (!num_of_prenades)
+			continue;
+
+		print_content = "PRENADES ON " + level.round_number + ": ^3" + num_of_prenades;
+		print_scheduler(print_content);
+		wait_for_message_end();
+		self thread semtex_print_on_demand(print_content);
+
+		print_content = undefined;
+	}
+}
+
+semtex_print_on_demand(to_print)
+{
+	level endon("end_game");
+	level endon("end_of_round");
+
+	while (is_plutonium())
+	{
+		level waittill("say", text, player);
+
+		if (text == "prenades" || text == "p")
+		{
+			print_scheduler(to_print);
+			wait_for_message_end();
+		}
+
+		text = undefined;
+	}
+}
+
+get_prenade_mode(switch_round)
+{
+	if (!isDefined(switch_round))
+		switch_round = 50;
+
+	if (is_round(switch_round))
+	{
+		self notify("changed_prenade_type", "DYNAMIC");
+		return ::get_prenade_dynamic;
+	}
+	return ::get_prenade_from_map;
+}
+
+get_prenade_from_map(stub_arg)
+{
+	nade_array = array(1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 17, 19, 22, 24, 28, 29, 34, 39, 42, 46, 52, 57, 61, 69, 78, 86, 96, 103);
+	nade_map = array();
+	for (i = 0; i < nade_array.size; i++)
+	{
+		index = 22 + i;
+		nade_map["" + index] = nade_array[i]; 
+	}
+
+	index = level.round_number + 1;
+	if (isDefined(nade_map["" + index]))
+	{
+		debug_print("Returning value from nade_map of index '" + index + "': " + nade_map["" + index]);
+		return nade_map["" + index];
+	}
+	return 0;
+}
+
+get_prenade_dynamic(previous)
+{
+	level endon("end_game");
+
+	// Failsafe for starting game at 50 or higher
+	if (!previous)
+		previous = 103;
+
+	calculated_round = level.round_number + 1;
+	dmg_curve = int((-0.958 * 128) + 300);
+	dmg_semtex = int(dmg_curve + 150 + calculated_round);
+
+	zm_health = int(level.zombie_health * 1.1) - (dmg_semtex * previous);
+
+	debug_print("init dynamic prenade: previous='" + previous + " dmg_curve='" + dmg_curve + "' dmg_semtex='" + dmg_semtex + "'");
+
+	i = 0;
+	while (dmg_semtex / zm_health < 0.1)
+	{
+		zm_health -= dmg_semtex;
+		previous += 1;
+
+		if (i >= 20)
+		{
+			i = 0;
+			wait 0.05;
+		}
+
+		debug_print("Iter: i='" + i + "' zm_health='" + zm_health + "' nades='" + previous + "'");
+
+		i++;
+	}
+
+	debug_print("Finished calculating prenades: " + previous);
+
+	return previous; 
+}
+
+notify_about_prenade_switch()
+{
+	level endon("end_game");
+
+	self waittill("changed_prenade_type", prenade_type);
+	print_scheduler("Prenade values generation is now: ^3" + prenade_type);
 }
 #endif
 
