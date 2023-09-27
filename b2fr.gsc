@@ -47,7 +47,7 @@ on_game_start()
         level thread [[level.B2_NETWORK_HUD]]();
 #endif
 	level thread perma_perks_setup();
-	safety_zio();
+	b2safety();
 
 	level thread nuketown_handler();
 	level thread topbarn_controller();
@@ -663,26 +663,23 @@ award_points(amount)
 	self.score = amount;
 }
 
-safety_zio()
+b2safety()
 {
-	// Songs
-	if (isDefined(level.SONG_TIMING))
+	if (isDefined(level.SONG_TIMING) || isDefined(level.B2SONG_CONFIG))
 	{
-		print_scheduler("^1SONG PATCH DETECTED!!!");
+		print_scheduler("^1B2SONG DETECTED!!!");
 		emulate_menu_call("endround");
 	}
 
-	// First Room Fix
-	if (isDefined(level.FRFIX_CONFIG))
+	if (isDefined(level.FRFIX_CONFIG) || isDefined(level.B2FR_CONFIG))
 	{
-		print_scheduler("^1ANOTHER FIRST ROOM FIX DETECTED!!!");
+		print_scheduler("^1ANOTHER B2FR DETECTED!!!");
 		emulate_menu_call("endround");
 	}
 
-	// B2OP
 	if (isDefined(level.B2OP_CONFIG))
 	{
-		print_scheduler("^1ANOTHER FIRST ROOM FIX DETECTED!!!");
+		print_scheduler("^1B2OP DETECTED!!!");
 		emulate_menu_call("endround");
 	}
 }
