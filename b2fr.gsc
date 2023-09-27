@@ -92,6 +92,9 @@ on_player_spawned()
 
 #if NOHUD == 0
 	self thread velocity_meter();
+
+	if (isDefined(level.B2_ZONES))
+		self thread [[level.B2_ZONES]]();
 #endif
 }
 
