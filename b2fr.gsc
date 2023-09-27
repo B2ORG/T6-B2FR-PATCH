@@ -504,9 +504,9 @@ set_hud_properties(hud_key, x_align, y_align, x_pos, y_pos, col)
 	if (!isDefined(col))
 		col = (1, 1, 1);
 
-	if (isDefined(level.B2OP_PLUGIN_HUD))
+	if (isDefined(level.B2_HUD))
 	{
-		data = level.B2OP_PLUGIN_HUD[hud_key];
+		data = level.B2_HUD[hud_key];
 		if (isDefined(data))
 		{
 			if (isDefined(data["x_align"]))
@@ -786,8 +786,8 @@ show_split()
 	level endon("end_game");
 
 	split_rounds = array(15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100);
-	if (isDefined(level.B2OP_PLUGIN_SPLITS))
-		split_rounds = level.B2OP_PLUGIN_SPLITS;
+	if (isDefined(level.B2_SPLITS))
+		split_rounds = level.B2_SPLITS;
 
 	if (!IsInArray(split_rounds, level.round_number))
 		return;
@@ -1506,9 +1506,9 @@ set_characters()
 		map = "origins";
 
 	translation_index = translation_layer[player_id];
-	if (!isDefined(level.B2OP_PLUGIN_CHARACTER[map][translation_index]))
+	if (!isDefined(level.B2_CHARACTERS[map][translation_index]))
 		return;
-	character = level.B2OP_PLUGIN_CHARACTER[map][translation_index];
+	character = level.B2_CHARACTERS[map][translation_index];
 
 	prop = pull_character_preset(character);
 
