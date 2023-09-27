@@ -888,23 +888,17 @@ semtex_display()
 {
 	level endon("end_game");
 
-	if (is_vanilla())
-		return;
-
 	// Town for Semtex, Nuketown for No Magic
 	if (has_magic() && !is_town() && !is_nuketown())
 		return;
 
-	// Based on variable in waittill
-	if (is_plutonium())
-		self thread notify_about_prenade_switch();
+	self thread notify_about_prenade_switch();
 
 	num_of_prenades = 0;
 	level waittill("start_of_round");
 
 	while (true)
 	{
-		// func = ;
 		num_of_prenades = [[get_prenade_mode()]](num_of_prenades);
 
 		level waittill("start_of_round");
