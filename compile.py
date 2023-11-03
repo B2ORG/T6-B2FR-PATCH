@@ -56,7 +56,8 @@ def arg_path(*paths: str) -> str:
 def file_rename(old: str, new: str) -> None:
     if os.path.isfile(new):
         os.remove(new)
-    os.rename(old, new)
+    if os.path.isfile(old):
+        os.rename(old, new)
 
 
 def main(cfg: list) -> None:
