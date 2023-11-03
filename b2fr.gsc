@@ -1,6 +1,7 @@
 #define DEBUG 0
 #define BETA 0
 #define NOHUD 0
+#define PLUTO_CLI 1
 
 #include common_scripts\utility;
 #include maps\mp\gametypes_zm\_hud_util;
@@ -155,13 +156,23 @@ b2fr_main_loop()
     }
 }
 
+#if PLUTO_CLI == 1
+#if DEBUG == 1
 debug_print(text)
 {
-	if (is_plutonium())
-		print("DEBUG: " + text);
-	else
-		iprintln("DEBUG: " + text);
+	print("DEBUG: " + text);
 }
+#else
+debug_print(text) 
+{
+
+}
+#endif
+info_print(text)
+{
+	print("INFO: " + text);
+}
+#endif
 
 generate_watermark_slots()
 {
