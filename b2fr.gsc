@@ -1288,11 +1288,15 @@ scan_in_box()
 	if (is_die_rise() || is_origins())
 		offset = 1;
 
+	in_box = 0;
     foreach (weapon in getarraykeys(level.zombie_weapons))
     {
         if (maps\mp\zombies\_zm_weapons::get_is_in_box(weapon))
             in_box++;
     }
+
+	if (!isDefined(in_box) || !in_box)
+		return;
 
     if ((in_box == should_be_in_box) || ((offset > 0) && (in_box == (should_be_in_box + offset))))
         return;
