@@ -22,7 +22,7 @@ init()
 	flag_init("permaperks_were_set");
 
 	// Patch Config
-	level.B2FR_VERSION = 2;
+	level.B2FR_VERSION = 1;
 
 	level thread on_game_start();
 }
@@ -609,9 +609,9 @@ welcome_prints()
 {
 	wait 0.75;
 #if NOHUD == 1
-	self iPrintLn("B2^1FR^7 PATCH ^1V" + level.B2FR_CONFIG["version"] + " ^7[NOHUD]");
+	self iPrintLn("B2^1FR^7 PATCH ^1V" + level.B2FR_VERSION + " ^7[NOHUD]");
 #else
-	self iPrintLn("B2^1FR^7 PATCH ^1V" + level.B2FR_CONFIG["version"]);
+	self iPrintLn("B2^1FR^7 PATCH ^1V" + level.B2FR_VERSION);
 #endif
 	wait 0.75;
 	self iPrintLn("Source: ^1github.com/Zi0MIX/T6-FIRST-ROOM-FIX");
