@@ -664,6 +664,17 @@ dvar_watcher(dvars)
     }
 }
 
+/* It's not explicit, but dvar_rules is optional arg, as long as it's only call remains inside of is_true() */
+init_dvar(dvar_str, dvar_rules)
+{
+	if (getDvar(dvar_str) != "")
+		return;
+
+    setDvar(dvar_str, "1");
+	if (is_true(dvar_rules[dvar_str]))
+		setDvar(dvar_str, "0");
+}
+
 award_points(amount)
 {
 	level endon("end_game");
@@ -750,6 +761,22 @@ evaluate_network_frame()
     else
     {
         generate_watermark("NETWORK FRAME", (0.8, 0, 0), 0.66);
+    }
+}
+
+trap_fix()
+{
+    rnd_155 = 1044606905;
+
+    if (level.zombie_health <= rnd_155)
+        return;
+
+    level.zombie_health = rnd_155;
+
+    foreach (zombie in get_round_enemy_array())
+    {
+        if (zombie.health > rnd_155)
+            zombie.heath = rnd_155;
     }
 }
 
