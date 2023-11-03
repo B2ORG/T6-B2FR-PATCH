@@ -1647,10 +1647,10 @@ yellowhouse_controller()
 
 	foreach (player in level.players)
 	{
-		if (!isinarray(allowed_zones, player get_current_zone()))
+		if (!player is_player_in_yellowhouse())
 		{
 #if DEBUG == 1
-			debug_print("exiting yellowhouse_controller cause zone: '" + player get_current_zone() + "'");
+			debug_print("exiting yellowhouse_controller cause zone: '" + player get_current_zone() + "' with coordinates [0] => " + player.origin[0] + " [1] => " + player.origin[1] + " [2] =>" + player.origin[2]);
 #endif
 			return;
 		}
@@ -1666,7 +1666,7 @@ yellowhouse_controller()
 	{
 		foreach (player in level.players)
 		{
-			if (!isinarray(allowed_zones, player get_current_zone()))
+			if (!player is_player_in_yellowhouse())
 			{
 				player challenge_failed("Yellow House", "YELLOW HOUSE", "YELLOW HOUSE AREA");
 				return;
@@ -1743,6 +1743,29 @@ topbarn_controller()
 
 		wait 0.05;
 	}
+}
+
+is_player_in_yellowhouse()
+{
+	if (self get_current_zone() == "openhouse2_f1_zone")
+		return true;
+
+	/* Staircase */
+	if ((self.origin[0] > 780 && self.origin[1] < 200)
+		&& (self.origin[0] < 900 && self.origin[1] > 30))
+			return true;
+
+	/* Doors */
+	if ((self.origin[0] < 1130 && self.origin[1] > 100)
+		&& (self.origin[0] > 900 && self.origin[1] < 750)
+		&& self.origin[2] < 0)
+			return true;
+
+#if DEBUG == 1
+	debug_print("what");
+	debug_print("player not in yellowhouse: [zone] => " + self get_current_zone() + " [0] => " + self.origin[0] + " [1] => " + self.origin[1] + " [2] =>" + self.origin[2]);
+#endif
+	return false;
 }
 
 is_player_in_top_barn()
