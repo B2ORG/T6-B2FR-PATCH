@@ -110,7 +110,13 @@ on_player_spawned_permaperk()
 	wait 2;
 
 	if (has_permaperks_system())
+	{
 		self remove_permaperk_wrapper("jugg", 15);
+		if (is_buried())
+			self remove_permaperk_wrapper("nube", 10);
+		else
+			self remove_permaperk_wrapper("nube");
+	}
 }
 
 b2fr_main_loop()
@@ -128,7 +134,6 @@ b2fr_main_loop()
 #if DEBUG == 1
 			level.players[0] remove_permaperk_wrapper("insta_kill", 2);
 #endif
-
 			wait 2;
 			foreach(player in level.players)
 			{
