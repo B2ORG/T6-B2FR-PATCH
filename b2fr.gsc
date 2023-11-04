@@ -40,6 +40,8 @@ on_game_start()
     level.B2FR_START = int(getTime() / 1000);
 	flag_set("game_started");
 
+	b2safety();
+
     level thread b2fr_main_loop();
 #if NOHUD == 0
 	level thread timers();
@@ -48,7 +50,6 @@ on_game_start()
         level thread [[level.B2_NETWORK_HUD]]();
 #endif
 	level thread perma_perks_setup();
-	b2safety();
 
 	level thread nuketown_handler();
 	level thread topbarn_controller();
@@ -152,6 +153,8 @@ b2fr_main_loop()
             generate_watermark("DIFFICULTY", (1, 0, 0), 0.5);
 
         level waittill("end_of_round");
+		if (isDefined(level.B2FR_CHECK))
+			level.B2FR_CHECK = undefined;
 #if NOHUD == 0
         level thread show_split();
 #endif
@@ -708,11 +711,18 @@ b2safety()
 		emulate_menu_call("endround");
 	}
 
-	if (isDefined(level.FRFIX_CONFIG) || isDefined(level.B2FR_VERSION))
+	if (isDefined(level.FRFIX_CONFIG))
+	{
+		print_scheduler("^1OLD FIRST ROOM FIX DETECTED!!!");
+		emulate_menu_call("endround");
+	}
+
+	if (isDefined(level.B2FR_CHECK))
 	{
 		print_scheduler("^1ANOTHER B2FR DETECTED!!!");
 		emulate_menu_call("endround");
 	}
+	level.B2FR_CHECK = true;
 
 	if (isDefined(level.B2OP_CONFIG))
 	{
