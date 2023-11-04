@@ -115,8 +115,6 @@ on_player_spawned_permaperk()
 		self remove_permaperk_wrapper("jugg", 15);
 		if (is_buried())
 			self remove_permaperk_wrapper("nube", 10);
-		else
-			self remove_permaperk_wrapper("nube");
 	}
 }
 
@@ -1152,6 +1150,7 @@ award_permaperks_safe()
 	perks_to_process[perks_to_process.size] = permaperk_array("perk_lose");
 	perks_to_process[perks_to_process.size] = permaperk_array("jugg", undefined, undefined, 15);
 	perks_to_process[perks_to_process.size] = permaperk_array("flopper", array("zm_buried"));
+	perks_to_process[perks_to_process.size] = permaperk_array("nube", array("zm_buried"), array("zm_transit", "zm_highrise"), 10);
 
 	self.awarding_permaperks_now = true;
 
