@@ -33,7 +33,6 @@ on_game_start()
 
 	level thread set_dvars();
 	level thread on_player_joined();
-	level thread gameplay_reminder();
     level thread origins_fix();
 
 	flag_wait("initial_blackscreen_passed");
@@ -56,6 +55,8 @@ on_game_start()
 
     if (isDefined(level.B2_POWERUP_TRACKING))
         level thread [[level.B2_POWERUP_TRACKING]]();
+
+	level thread [[level.GAMEPLAY_REMINDER]]();
 
 #if DEBUG == 1
 	debug_mode();
@@ -657,6 +658,8 @@ set_dvars()
     setdvar("g_speed", 190);
     setdvar("con_gameMsgWindow0Filter", "gamenotify obituary");
     setdvar("sv_cheats", 0);
+
+	level.GAMEPLAY_REMINDER = ::gameplay_reminder;
 
     level thread dvar_watcher(array("sv_cheats", "g_speed", "player_strafeSpeedScale", "player_backSpeedScale", "con_gameMsgWindow0Filter"));
 }
@@ -1648,6 +1651,8 @@ nuketown_handler()
 	if (!is_nuketown())
 		return;
 
+	level.GAMEPLAY_REMINDER = ::nuketown_gameplay_reminder;
+
 	// Bus mannequin
 	/* This is bad for highrounds, if this mannequin happens to exist, it'll remove one entity that's otherwise not removable */
     thread remove_mannequin((-30, 13.9031, -47.0411), 1);
@@ -1804,3 +1809,62 @@ is_player_in_top_barn()
 
 	return true;
 }
+
+nuketown_gameplay_reminder()
+{
+	level endon("end_game");
+	level waittill("connected", player);
+	level waittill("start_of_round");
+
+	// 804.1 -56.86
+	// -455.42 617.4
+	// -82.07 740.67
+	// -844.93 60.8
+
+	if (level.players.size > 1)
+	{
+		spawn_positions = array();
+
+		spawn_positions[0] = SpawnStruct();
+		spawn_positions[0].x_start = 790;
+		spawn_positions[0].x_end = 820;
+		spawn_positions[0].y_start = -70;
+		spawn_positions[0].y_end = 40;
+
+		spawn_positions[1] = SpawnStruct();
+		spawn_positions[1].x_start = -470;
+		spawn_positions[1].x_end = -440;
+		spawn_positions[1].y_start = 600;
+		spawn_positions[1].y_end = 630;
+
+		spawn_positions[2] = SpawnStruct();
+		spawn_positions[2].x_start = -100;
+		spawn_positions[2].x_end = -70;
+		spawn_positions[2].y_start = 725;
+		spawn_positions[2].y_end = 755;
+
+		spawn_positions[3] = SpawnStruct();
+		spawn_positions[3].x_start = -860;
+		spawn_positions[3].x_end = -830;
+		spawn_positions[3].y_start = 45;
+		spawn_positions[3].y_end = 75;
+
+		jug_in_spawn = false;
+		jug_perk = getent("vending_jugg", "targetname");
+
+		foreach(spawn in spawn_positions)
+		{
+			if ((jug_perk.origin[0] > spawn.x_start && jug_perk.origin[0] < spawn.x_end)
+				&& jug_perk.origin[1] > spawn.y_start && jug_perk.origin[1] < spawn.y_end)
+					jug_in_spawn = true;
+		}
+
+		print_scheduler("^1REMINDER ^7You are a host", player);
+		wait 0.25;
+		if (jug_in_spawn)
+			print_scheduler("JuggerNog in the first room! Full gameplay from all players will be required!");
+		else
+			print_scheduler("Full gameplay is required from host perspective as of April 2023", player);
+	}
+}
+
