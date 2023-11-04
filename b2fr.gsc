@@ -33,6 +33,7 @@ on_game_start()
 
 	level thread set_dvars();
 	level thread on_player_joined();
+	level thread gameplay_reminder();
     level thread origins_fix();
 
 	flag_wait("initial_blackscreen_passed");
@@ -615,6 +616,20 @@ welcome_prints()
 #endif
 	wait 0.75;
 	self iPrintLn("Source: ^1github.com/Zi0MIX/T6-FIRST-ROOM-FIX");
+}
+
+gameplay_reminder()
+{
+	level endon("end_game");
+	level waittill("connected", player);
+	level waittill("start_of_round");
+
+	if (level.players.size > 1)
+	{
+		print_scheduler("^1REMINDER ^7You are a host", player);
+		wait 0.25;
+		print_scheduler("Full gameplay is required from host perspective as of April 2023", player);
+	}
 }
 
 set_dvars()
