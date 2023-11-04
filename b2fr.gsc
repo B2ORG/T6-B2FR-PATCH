@@ -132,9 +132,6 @@ b2fr_main_loop()
         /* Verify based on map, cause someone could sneak a patch that'd give those in offline game */
 		if (is_tranzit() || is_die_rise() || is_buried())
 		{
-#if DEBUG == 1
-			level.players[0] remove_permaperk_wrapper("insta_kill", 2);
-#endif
 			wait 2;
 			foreach(player in level.players)
 			{
@@ -1073,20 +1070,21 @@ perma_perks_setup()
 	if (!has_permaperks_system())
 		return;
 
-    if (getDvar("award_perks") != "1")
-        return;
+    if (getDvar("award_perks") == "1")
+	{
+		setDvar("award_perks", 0);
+		thread watch_permaperk_award();
 
-    setDvar("award_perks", 0);
-	thread watch_permaperk_award();
+		foreach (player in level.players)
+		{
+			player.permaperk_display_lock = true;
+			player thread award_permaperks_safe();
+		}
+	}
 
-	foreach (player in level.players)
-    {
-        player.permaperk_display_lock = true;
-		player thread award_permaperks_safe();
 #if NOHUD == 0
-	    player thread permaperks_watcher();
+	array_thread(level.players, ::permaperks_watcher);
 #endif
-    }
 }
 
 watch_permaperk_award()
@@ -1160,8 +1158,6 @@ award_permaperks_safe()
 	perks_to_process[perks_to_process.size] = permaperk_array("perk_lose");
 	perks_to_process[perks_to_process.size] = permaperk_array("jugg", undefined, undefined, 15);
 	perks_to_process[perks_to_process.size] = permaperk_array("flopper", array("zm_buried"));
-	perks_to_process[perks_to_process.size] = permaperk_array("cash_back");
-	perks_to_process[perks_to_process.size] = permaperk_array("insta_kill");
 
 	self.awarding_permaperks_now = true;
 
@@ -1184,9 +1180,17 @@ resolve_permaperk(perk)
 
 	perk_code = perk["code"];
 
+	/* Triggers when perk is not on the map */
+	if (!isDefined(self.pers_upgrades_awarded[perk_code]))
+		return;
+
 	/* Too high of a round, return out */
 	if (is_round(perk["to_round"]))
 		return;
+
+#if DEBUG == 1
+	// debug_print("perk = " + perk_code + " 1st eval = " + isinarray(perk["maps_award"], level.script) + " 2nd eval = " + !self.pers_upgrades_awarded[perk_code]);
+#endif
 
 	if (isinarray(perk["maps_award"], level.script) && !self.pers_upgrades_awarded[perk_code])
 	{
@@ -1199,7 +1203,7 @@ resolve_permaperk(perk)
 		}
 	}
 
-	if (isinarray(perk["maps_take"], level.script) && self.pers_upgrades_awarded[perk_code])
+	if (isinarray(perk["maps_take"], level.script) && is_true(self.pers_upgrades_awarded[perk_code]))
 		self remove_permaperk(perk_code);
 }
 
