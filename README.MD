@@ -1,278 +1,139 @@
-Ready to use patches can be found in [releases](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/releases) section.
+# T6-B2OP-PATCH
 
-Development thread on my Discord https://discord.gg/fDY4VR6rNE
+Patch for playing world record games in Black Ops II Zombies for First Room games. It is fully tuned to ensure integrity of every type of First Room games accordingly to most recent ruleset (including vote from April 2023). This patch has previously been known as First Room Fix.
 
-This doc will be updated when i know what else needs clarification
+# Info
+
+Please inform me about any issues you may encounter with the patch, so they can be fixed, preferably with decent amount of information in what circumstances an issue occured. The main channel for issues is GitHubs Issues section, although it won't hurt to ask about it on [Discord](https://discord.gg/fDY4VR6rNE) first
+
+Before reporting a problem, please check out the FAQ section down below, you may find answers you're looking for there
 
 # Categories
 
-This patch is meant to be used during First Room games. Below you can see alternatives for other categories
+This patch is meant to be used during games of Highrounds, No Powers & Round Speedruns. Below you can see alternatives for other categories
 
 | Category| Patch | Creator | Link |
 | --- | --- | --- | --- |
-| Highrounds / Round Speedruns | B2OP | Zi0 | [GitHub](https://github.com/Zi0MIX/T6-B2OP-PATCH) |
+| Highrounds / Round speedruns | B2OP | Zi0 & Astrox | [GitHub](link-here.com) |
 | EE Speedrun | Easter Egg GSC Timer | HuthTV | [GitHub](https://github.com/HuthTV/BO2-Easter-Egg-GSC-timer) |
-| Song Speedruns | Song Auto-Timer | Zi0 | [GitHub](https://github.com/Zi0MIX/T6-SONG-TIMER-PATCH) |
+| Song Speedruns | Song Auto-Timer | Zi0 | [GitHub](link-here.com) |
 
-# Launchers
+# Installation
 
-First Room Fix is mainly meant for modern Plutonium versions, as most of the actual fixes are required for those.
+Since version B2FR v1, the patch is only available for modern versions of Plutonium. Recommended version to play games on is Plutonium R2905 [installation guide](https://youtu.be/tb2gsL12wwI), but it will fully work with versions R3000+. Download most recent version of your choice from [releases](link-here.com) section. DOWNLOADING RAW CODE FILES YOU SEE ON THIS PAGE WILL NOT WORK!
 
-## Modern (R2905 & R3000+)
-
-Download the main script from [releases](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/releases) section, and put it Plutonium script folder
+Put script you downloaded in Plutonium directory (unless you changed it it'll be)
 
 ```C:\Users\{your username}\AppData\Local\Plutonium\storage\t6\scripts\zm```
 
-## Ancient (r353 and similar) and Redacted Nightly
+The appdata directory is hidden by default on windows, in order to access it, press key combination WINDOWS + R on your keyboard and type in `%LOCALAPPDATA%`, press ENTER.
 
-Download the `_clientids.gsc` script from [releases](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/releases) section, and inject it to the game [Video tutorial](https://youtu.be/Qhmful3ZVkE). This script is preprocessed, as there is one particular compatibility issue between main version of the patch and version for Ancient.
+From that point follow patch specified above.
 
-## Redacted LAN
+Since version 2.0, all scripts that are meant to be used by players are available in  section. Downloading raw code from code section will not work!
 
-Download the raw [.gsc file](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/blob/main/first_room_fix_v6.gsc) containing the code (make sure it's downloaded from `main` branch), and insert it in Redacted scripts folder
+# FAQ
 
-```{path to your redacted}\data\scripts```
+1) My game is restarting automatically, how do i fix it?
 
-# Versions
+- You don't, that's intended behavior of the system that's giving you permaperks to prevent a rare bug where permaperks were not taken away from players sometimes. How it works is you load into the game, each player is scanned for missing permaperks, if anyone is missing something, they're awarded missing permaperks, and then the game will force a restart. After the restart you are free to carry on. Do note, most of the time you are going to lose some of the perks almost instantly, so restarts few minutes in will require the process to repeat.
 
-In the past it's been tricky to determine which release of which version was legit to play after some time (due to dynamic period of discoveries that rendered some of the versions unlegit for certain types of games, for instance a set of versions was not legit for coop, but was perfectly fine for solo). Head to [this](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/blob/main/LEGIT.MD) document, where all of those things are explained, and if anything new pops up, it'll also be added there.
+2) I put the patch in the right folder but it does not work
 
-With version 6, it becomes easier, even tho there are 3 separate files for 3 launchers, all of those files contain the exact same code (almost, head to [preprocessing](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/blob/main/README.MD#preprocessing) section for details). Besides that, it is exactly the same code for each of the 3 options, main patch is compiled with new compiler, Ancient Pluto version is compiled with old compiler, and for Redacted you just use uncompiled code.
+- Make sure you downloaded compiled version from [releases](link-here.com) section (DO NOT download the zip file called Source code, it is added to the release automatically by github and contains raw code, that is not going to work).
 
-# First Room Fix changes:
+3) Is there anything i need to worry about regarding legitimacy of my game while using this patch?
 
-List of changes in First Room Fix V6. Detailed information about each of the features can be found further down the file (if it is required)
+- Do not use this patch for categories it's not meant for. I've linked alternatives to other categories in a table above in [Categories](#categories) section. There isn't anything in this patch that is strictly forbidden for let's say a highround, however certain features may not be optimal or seen as grey area stuff by other communities.
+- Always familiarize yourself with rules for a particular room / sub-category, this patch will not all the work for you.
 
-## Fixes
+4) I heard this patch may cause early errors
 
-- Backspeed & Strafespeed scale
-- Host migration (Pluto)
-- Target Assist (Pluto)
-- Prepatch Recoil (Pluto)
-- Network Frame (Pluto)
-- Custom Games
+- Technically any external script you load into your game will cause extra overhead, but B2FR is stable enough for playing out a game. If you notice any issue regarding stability, please let me know. I'm just a human, mistakes can always be made
+
+5) Why support for other launchers has been dropped
+
+- Because it is not needed. If you are playing solo offline games, you should be using Redacted Nightly or Ancient Plutonium without any patches, if you are playing coop or online maps (solo with permaperks), R2905 is the best version to play on
+
+# Steps for basic troubleshooting
+
+- Make sure you're using correct and up to date version and that the downloaded file is compiled (open in Notepad, if it's bunch of gibbrish, you know it's compiled)
+- Remove other patches. B2 Extensions should not cause any issues, but if you are using any, for the sake of troubleshooting remove them as well.
+- Check if the directory the patch is in is correct. Perhaps you have multiple instances of Plutonium or Redacted and you put it in the directory belonging to another instance.
+
+# Features
+
+Features in B2FR patch
+
+## Core features
+
+- Basic anticheat capabilities (DVARs, Box etc.)
+- Fixed network frame (you may know it as a Tickrate issue)
+- Reset backspeed values to the level of a Steam version (consistently with First Room ruleset)
+- Fixed traps & JetGun (disabled for maps that don't need it)
+- Automatic permaperks assignment (consistent with in-game logic)
+- Automatic permaperks removal (if obtained illegaly, for instance during breaks)
+- Full bank
 
 ## HUD
 
-- Game timer
-- Round timer
+- HUD elements scale accordingly to aspect ratio (solo only, because it's dependent on the ratio of hosts game, cannot be changed for clients separately via gsc patch)
+- Timer & Round timer
+- Shows times for key splits (round 20, 30 etc)
 - Velocity meter
-- Splits
-- Round size (hordes)
-- Semtex prenades
+- Horde count is printed out at the beginning of each round (works like zombacus, not a live zombie counter)
+- Permaperks tracker (info when and what was gained / lost)
 
-## Features
+## Town
 
-- Nuketown Mannequins
-- Nuketown eyes & announcer
-- Red dot reticle (Pluto)
-- Anticheat
-- Info prints (Pluto)
-- First Box module
-- Permaperks module
-- Bank balance
-- Fridge
+- Prenades are printed out each round
 
-# First Box module
+## Farm
 
-First Box module, aside from being able to make players obtain certain weapons from the box, is also making sure that use of First Box (even if it's source is another patch) does not go unnoticed. If tempering with box is detected, a red watermark is generated on player screen.
+- Built in support for Top Barn challenge (integrity checks for rules and if players remain within the right area)
 
-## First Box functionality
+## Nuketown
 
-This part can be disabled entirely, and in fact is disabled by default. To obtain version with this enabled, you need to [request customized patch](https://github.com/Zi0MIX/T6-FIRST-ROOM-FIX/blob/main/README.MD#customized-patch).
+- Built it support for Yellow House challenge (integirity checks for rules and if players remain within the right area)
+- Mannequin next to the yellow bus is automatically removed
+- Players are warned if Jugg is going to be in the first room
 
-Once you have patch with this functionality enabled, that doesn't mean you always play with first box. Until it's explicitely invoked, it'll leave your box alone. Here is how to do it:
+## Origins
 
-### New Plutonium
-
-Send following message in the game chat (by default press `t` on your keyboard)
-
-```fb <key>```
-
-### Ancient Plutonium & Redacted
-
-Set following dvar in the game console (by default press `~` on your keyboard)
-
-```fb <key>```
-
-Where key would be the representation of the weapon you want to obtain from the box. Now at this point, the game is considered as played with First Box. Next weapon that'll come out of the box will be the one that's been specified. Any player can specify a weapon, and whoever hits the box, will get said weapon. This does not prevent teddybears from appearing.
-
-First Box is automatically disabled at the end of round 10. Setting box weapon can no longer be triggered, and if there is a weapon set currently, it'll be cancelled.
-
-## First Box weapon keys
-
-Use following keys for setting box weapon. Passing actual weapon code will also work.
-
-| Weapon | Key |
-| --- | --- |
-| Ballistic Knife | bk |
-| Blundergat | blunder |
-| EMP | emp |
-| Monkeys | monk |
-| Paralyzer | paralyzer |
-| RayGun | mk1 |
-| RayGun MK2 | mk2 |
-| Sliquifier | sliq |
-| Time Bomb | time |
-| AK47 | ak47 |
-| B23R | b23re |
-| Chicom CQB | chic |
-| Death Machine | dm |
-| DSR50 | dsr |
-| Executioner | exe |
-| Fal | fal |
-| Five-Seven | 57 |
-| Five-Seven DW | 257 |
-| Galil | galil |
-| HAMR | hamr |
-| KAP-40 | kap |
-| KSG | ksg |
-| LSAT | lsat |
-| M1216 | m1216 |
-| M1927 | tommy |
-| M27 | m27 |
-| M82A1 Barret | barret |
-| M8A1 | m8 |
-| MG08 | mg |
-| MP40 | mp40 |
-| MTAR | mtar |
-| PDW57 | pdw |
-| Python | pyt |
-| RNMA | rnma |
-| RPD | rpd |
-| RPG | rpg |
-| Saiga | s12 |
-| Scar | scar |
-| Skorpion EVO | evo |
-| Type 25 | type |
-| War Machine | wm |
-
-# Fridge
-
-Fridge system works similarly to First Box. 
-
-## Activation
-
-Here is how to operate it:
-
-### New Plutonium
-
-Send either of the following messages in the game chat (by default press `t` on your keyboard)
-
-```fridge all <key>```
-
-```fridge <key>```
-
-First of the commands can only be used by host player. It will set all players fridge weapon to gun specified in key. Second command can be used by anyone, and it sets that players weapon to what is specified in key.
-
-### Ancient Plutonium & Redacted
-
-Set following dvar in the game console (by default press `~` on your keyboard)
-
-```fridge <key>```
-
-In this case `fridge` sets that weapon for every player. It is because off host players cannot set dvars.
-
-## Weapon keys
-
-Keys only differ from First Box module by the fact that some of the weapons cannot be put in fridge, and also wall weapons are now available.
-
-Another change is that in order to put upgraded weapon in the fridge, player has to add a `+` sign in front of the key, so message to give all players upgraded mp5 would look like
-
-``` fridge all +mp5```
-
-| WEAPON | KEY |
-| --- | --- |
-| AK74u | ak74 |
-| AN94 | an94
-| B23R | b23r |
-| Chicom CQB | chic |
-| DSR50 | dsr |
-| Executioner | exe |
-| Fal | fal |
-| Five-Seven | 57 |
-| Five-Seven DW | 257 |
-| Galil | galil |
-| HAMR | hamr |
-| KAP-40 | kap |
-| LSAT | lsat |
-| M1216 | m1216 |
-| M14 | m14 |
-| M82A1 Barret | barret |
-| M8A1 | m8 |
-| MP5 | mp5 |
-| MTAR | mtar |
-| Olympia | oly |
-| PDW57 | pdw |
-| Python | pyt |
-| Remington 870 | remington |
-| RNMA | rnma |
-| RPD | rpd |
-| RPG | rpg |
-| Saiga | s12 |
-| Scar | scar |
-| SVU | svu |
-| Type 25 | type |
-| War Machine | wm |
+- Set reticle to always be default
+- Game is always in custom game mode (zombie blood from reward box)
 
 # Permaperks
 
-Permaperks system is present in the First Room Fix since version 4, and since then there were problems with it. Finally at the long last, i can say that they have been resolved (or at least i hope so).
+Patch does award players with permaperks on connect, but only at the beginning of the game. Players joining in progress will not be given any permaperks. Every player joining the game past round 15 will have PermaJug taken away from him.
+List of permaperks awarded by B2OP
 
-Each player will be awarded permaperks he's missing from the predefined list of permaperks. If all the players in game have their permaperks, the process is skipped. Players will not be awarded any permaperks after they reconnect, furthermore, if game starts on round 20, they won't be given round restricted permaperks, such as jug. In case of games, where players connect to the game after it's initially started (such as Ancient Pluto when most of the time player connects at round 2), they need to obtain their permaperks before connecting to the coop game.
-
-Upon awarding permaperks, a game will restart (or end if it's Ancient Pluto or Redacted, for compatibility reasons. Players then should load the game again and they're good to go).
-
-## Permaperk tracker
-
-There is also a separate feature (can be disabled while requesting a patch without disabling the rest of permaperk system), where patch will inform players when they lose or gain permaperks.
-
-## Awarded permaperks:
-
-| Perk | Map restriction | Round restriction |
-| --- | --- | --- |
-| Jug | - | Below round 15 |
-| Revive | - | - |
-| Deadshot | - | - |
-| Tombstone | - | - |
-| Metal Boards | - | - |
-| Flopper | Only Buried | - |
-| Nube (RayGun) | Only Tranzit & Buried | Below round 10 |
-
-## Removed permaperks:
-
-| Perk | Map | Reason |
-| --- | --- | --- |
-| Better Box | Tranzit & Die Rise | Perk actually decreases the chances of getting MK2 on those maps. |
-| Nube (RayGun) | Die Rise | Could be kinda hard to get to 10 without Ray. If there is a demand, optional plugin will be made to reverse that |
-
-# Customized patch
-
-Let me know which of the optional features you want enabled while requesting the patch. If you like the default settings (table below), use version from releases.
-
-Default settings of First Room Fix:
-
-| FUNCTION | SETTING |
+| Perk | Notes |
 | --- | --- |
-| Vanilla | Disabled |
-| Timer | Constant |
-| Round Timer | End of round |
-| Horde count | Enabled |
-| Semtex Prenades | Enabled |
-| Origins Zombie Blood override | Enabled |
-| Permaperk Award | Enabled |
-| Permaperk Tracker | Enabled |
-| Fridge weapon | Disabled |
-| Nuketown Mannequinns | Disabled |
-| Nuketown Blue Eyes | Disabled |
-| First Box Module | Disabled |
+| Revive | - |
+| Better Headshots | - |
+| Tombstone | - |
+| Mini-Jug | Will not be awarded if game starts past round 15, will also actively be taken from players past round 15 |
+| Flopper | Only on Buried |
+| Nube | Only on Buried. Will be actively taken away on Tranzit & Die Rise and also will be removed past round 10 on Buried |
 
-# Preprocessing
+Map will always restart itself after permaperks are awarded. Do not restart manually if permaperks are being awarded (as the system for permaperks may break).
 
-Version for Ancient (path called `_clientids.gsc` in releases), has 2 function call replacements done on the level of compilation via Python script you can find in the repository. It does not change functionality at all, it's merely due to how different launchers handle certain errors differently.
+# Contributions
 
-# Thanks to
-- [JezuzLizard](https://github.com/JezuzLizard)
-- [5and5](https://github.com/5and5)
-- [Txchno](https://github.com/mbahgatTech)
+If you'd like to contribute to the code, please fork this repository, apply changes / fixes and open a pull request. If the change is in line with rules and the purpose of this patch, it'll be merged and a new version of the patch will be released.
+
+Following things are required:
+
+- [Python](https://www.python.org/downloads/windows/) 3.10 or newer (recommended 3.12)
+- [gsc-tool](https://github.com/xensik/gsc-tool/releases) 1.1.1 or newer (recommended 1.2.0)
+
+Install Python (and make sure to check adding it to the system PATH while doing so). Download gsc-tool, do not change the name of the program, put it in the main directory of the project.
+
+After applying desired changes, run script `compile.py` while in the patch main directory (press on address bar in the folder view, put `cmd` and press enter. A command line will open with that folder already set). Run script by putting in `python compile.py`. If you did everything right, script should compile everything for you and put stuff in right folders.
+
+Please note, as the modding scene for BO2 is still very young, stuff and tech is changing rapidly. Above description may not always be up to date, but i will try to not let that happen too often.
+
+# B2 Extensions
+
+THIS IS FOR ADVANCED USERS ONLY. The patch has few handles for external GSC scripts than can be used to modify certain behaviours in a controlled environment. Examples of such modification can be found in the [B2 Extensions repository](link-here.com) alongside further instructions
