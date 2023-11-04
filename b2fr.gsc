@@ -706,7 +706,7 @@ b2safety()
 		emulate_menu_call("endround");
 	}
 
-	if (isDefined(level.FRFIX_CONFIG) || isDefined(level.B2FR_CONFIG))
+	if (isDefined(level.FRFIX_CONFIG) || isDefined(level.B2FR_VERSION))
 	{
 		print_scheduler("^1ANOTHER B2FR DETECTED!!!");
 		emulate_menu_call("endround");
