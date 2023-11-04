@@ -116,6 +116,8 @@ on_player_spawned_permaperk()
 		self remove_permaperk_wrapper("jugg", 15);
 		if (is_buried())
 			self remove_permaperk_wrapper("nube", 10);
+		else 
+			self remove_permaperk_wrapper("nube");
 	}
 }
 
