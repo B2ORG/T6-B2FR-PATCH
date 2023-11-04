@@ -14,13 +14,13 @@ This patch is meant to be used during games of Highrounds, No Powers & Round Spe
 
 | Category| Patch | Creator | Link |
 | --- | --- | --- | --- |
-| Highrounds / Round speedruns | B2OP | Zi0 & Astrox | [GitHub](link-here.com) |
+| Highrounds / Round speedruns | B2OP | Zi0 & Astrox | [GitHub](https://github.com/B2ORG/T6-B2OP-PATCH) |
 | EE Speedrun | Easter Egg GSC Timer | HuthTV | [GitHub](https://github.com/HuthTV/BO2-Easter-Egg-GSC-timer) |
-| Song Speedruns | Song Auto-Timer | Zi0 | [GitHub](link-here.com) |
+| Song Speedruns | Song Auto-Timer | Zi0 | [GitHub](https://github.com/B2ORG/T6-B2SONG-PATCH) |
 
 # Installation
 
-Since version B2FR v1, the patch is only available for modern versions of Plutonium. Recommended version to play games on is Plutonium R2905 [installation guide](https://youtu.be/tb2gsL12wwI), but it will fully work with versions R3000+. Download most recent version of your choice from [releases](link-here.com) section. DOWNLOADING RAW CODE FILES YOU SEE ON THIS PAGE WILL NOT WORK!
+Since version B2FR v1, the patch is only available for modern versions of Plutonium. Recommended version to play games on is Plutonium R2905 [installation guide](https://youtu.be/tb2gsL12wwI), but it will fully work with versions R3000+ (at least as of writing this readme, Plutonium has a record of breaking random stuff all the time). Download most recent version of your choice from [releases](https://github.com/B2ORG/T6-B2FR-PATCH/releases) section. DOWNLOADING RAW CODE FILES YOU SEE ON THIS PAGE WILL NOT WORK!
 
 Put script you downloaded in Plutonium directory (unless you changed it it'll be)
 
@@ -30,8 +30,6 @@ The appdata directory is hidden by default on windows, in order to access it, pr
 
 From that point follow patch specified above.
 
-Since version 2.0, all scripts that are meant to be used by players are available in  section. Downloading raw code from code section will not work!
-
 # FAQ
 
 1) My game is restarting automatically, how do i fix it?
@@ -40,12 +38,12 @@ Since version 2.0, all scripts that are meant to be used by players are availabl
 
 2) I put the patch in the right folder but it does not work
 
-- Make sure you downloaded compiled version from [releases](link-here.com) section (DO NOT download the zip file called Source code, it is added to the release automatically by github and contains raw code, that is not going to work).
+- Make sure you downloaded compiled version from [releases](https://github.com/B2ORG/T6-B2FR-PATCH/releases) section (DO NOT download the zip file called Source code, it is added to the release automatically by github and contains raw code, that is not going to work).
 
 3) Is there anything i need to worry about regarding legitimacy of my game while using this patch?
 
 - Do not use this patch for categories it's not meant for. I've linked alternatives to other categories in a table above in [Categories](#categories) section. There isn't anything in this patch that is strictly forbidden for let's say a highround, however certain features may not be optimal or seen as grey area stuff by other communities.
-- Always familiarize yourself with rules for a particular room / sub-category, this patch will not all the work for you.
+- Always familiarize yourself with rules for a particular room / sub-category, this patch will not do all the work for you.
 
 4) I heard this patch may cause early errors
 
@@ -84,7 +82,7 @@ Features in B2FR patch
 - Horde count is printed out at the beginning of each round (works like zombacus, not a live zombie counter)
 - Permaperks tracker (info when and what was gained / lost)
 
-## Town
+## Semtex
 
 - Prenades are printed out each round
 
@@ -136,7 +134,7 @@ Please note, as the modding scene for BO2 is still very young, stuff and tech is
 
 # B2 Extensions
 
-THIS IS FOR ADVANCED USERS ONLY. The patch has few handles for external GSC scripts than can be used to modify certain behaviours in a controlled environment. Examples of such modification can be found in the [B2 Extensions repository](link-here.com) alongside further instructions
+THIS IS FOR ADVANCED USERS ONLY. The patch has few handles for external GSC scripts than can be used to modify certain behaviours in a controlled environment. Examples of such modification can be found in the [B2 Extensions repository](https://github.com/B2ORG/T6-B2EXTENSIONS) alongside further instructions
 
 # Legacy info
 

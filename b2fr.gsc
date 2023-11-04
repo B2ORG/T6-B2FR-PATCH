@@ -611,7 +611,7 @@ welcome_prints()
 	self iPrintLn("B2^1FR^7 PATCH ^1V" + level.B2FR_VERSION);
 #endif
 	wait 0.75;
-	self iPrintLn("Source: ^1github.com/Zi0MIX/T6-FIRST-ROOM-FIX");
+	self iPrintLn("Source: ^1github.com/B2ORG/T6-B2FR-PATCH");
 }
 
 gameplay_reminder()
