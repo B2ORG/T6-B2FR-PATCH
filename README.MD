@@ -137,3 +137,33 @@ Please note, as the modding scene for BO2 is still very young, stuff and tech is
 # B2 Extensions
 
 THIS IS FOR ADVANCED USERS ONLY. The patch has few handles for external GSC scripts than can be used to modify certain behaviours in a controlled environment. Examples of such modification can be found in the [B2 Extensions repository](link-here.com) alongside further instructions
+
+# Legacy info
+
+Since some people just don't like updating, I'm leaving this legacy info regarding current state of legitimacy of old versions
+
+## Network Frame
+
+I will not be going deep into how and why Network Frame drama even came to be. But regarding First Room Fix, initial version of the fix has been implemented in Version 4, and remained unchaged until Version 5.2
+
+That initial version of the fix was incorrect.
+
+| VERSION | LEGIT - SOLO | LEGIT - COOP |
+| --- | :---: | :---: |
+| V3 & NO PATCH | NO | YES |
+| V4 & V5.0 & V5.1 | YES | NO |
+| V5.2+ | YES | YES |
+
+## Permaperks
+
+There was a flaw somewhere in the permaperk logic, that was causing the system to malfunction under certain conditions, if the perks are artificially awarded in the same game.
+
+There's been few versions of the system, but up until version 6, the system was more or less malfunctioning
+
+| VERSION | RISK - SOLO | RISK - COOP |
+| --- | :---: | :---: |
+| V4 | HIGH | HIGH |
+| V5.0 - V5.5 | HIGH | HIGH |
+| V5.6 | LOW | HIGH |
+| V5.7 | ZERO (system disabled) | ZERO (system disabled) |
+| V6 | VERY LOW | VERY LOW |
