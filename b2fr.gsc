@@ -125,7 +125,9 @@ b2fr_main_loop()
     while (true)
     {
         level waittill("start_of_round");
+#if NOHUD == 0
         level thread show_hordes();
+#endif
 
         /* Verify based on map, cause someone could sneak a patch that'd give those in offline game */
 		if (is_tranzit() || is_die_rise() || is_buried())
