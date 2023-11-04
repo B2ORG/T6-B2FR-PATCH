@@ -1,4 +1,4 @@
-# T6-B2OP-PATCH
+# T6-B2FR-PATCH
 
 Patch for playing world record games in Black Ops II Zombies for First Room games. It is fully tuned to ensure integrity of every type of First Room games accordingly to most recent ruleset (including vote from April 2023). This patch has previously been known as First Room Fix.
 
