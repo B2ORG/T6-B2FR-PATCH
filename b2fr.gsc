@@ -160,23 +160,18 @@ b2fr_main_loop()
     }
 }
 
-#if PLUTO_CLI == 1
-#if DEBUG == 1
 debug_print(text)
 {
+#if DEBUG == 1 && PLUTO_CLI == 1
 	print("DEBUG: " + text);
-}
-#else
-debug_print(text) 
-{
-
-}
 #endif
+}
 info_print(text)
 {
+#if PLUTO_CLI == 1
 	print("INFO: " + text);
-}
 #endif
+}
 
 generate_watermark_slots()
 {
