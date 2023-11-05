@@ -671,6 +671,8 @@ dvar_watcher(dvars)
 {
     level endon("end_game");
 
+	flag_wait("initial_blackscreen_passed");
+
     values = array();
     foreach (dvar in dvars)
         values[dvar] = getDvar(dvar);
