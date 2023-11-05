@@ -10,7 +10,7 @@ Before reporting a problem, please check out the FAQ section down below, you may
 
 # Categories
 
-This patch is meant to be used during games of Highrounds, No Powers & Round Speedruns. Below you can see alternatives for other categories
+This patch is meant to be used during First Room games. Below you can see alternatives for other categories
 
 | Category| Patch | Creator | Link |
 | --- | --- | --- | --- |
