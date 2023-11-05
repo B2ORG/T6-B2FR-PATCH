@@ -658,6 +658,9 @@ set_dvars()
     setdvar("g_speed", 190);
     setdvar("con_gameMsgWindow0Filter", "gamenotify obituary");
     setdvar("sv_cheats", 0);
+	setdvar("sv_endGameIfISuck", 0); 		// Prevent host migration
+	setdvar("sv_allowAimAssist", 0); 	 	// Removes target assist
+	setdvar("sv_patch_zm_weapons", 1);		// Force post dlc1 patch on recoil
 
 	level.GAMEPLAY_REMINDER = ::gameplay_reminder;
 
