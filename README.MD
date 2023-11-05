@@ -10,13 +10,13 @@ Before reporting a problem, please check out the FAQ section down below, you may
 
 # Categories
 
-This patch is meant to be used during games of Highrounds, No Powers & Round Speedruns. Below you can see alternatives for other categories
+This patch is meant to be used during First Room games. Below you can see alternatives for other categories
 
 | Category| Patch | Creator | Link |
 | --- | --- | --- | --- |
 | Highrounds / Round speedruns | B2OP | Zi0 & Astrox | [GitHub](https://github.com/B2ORG/T6-B2OP-PATCH) |
 | EE Speedrun | Easter Egg GSC Timer | HuthTV | [GitHub](https://github.com/HuthTV/BO2-Easter-Egg-GSC-timer) |
-| Song Speedruns | Song Auto-Timer | Zi0 | [GitHub](https://github.com/B2ORG/T6-B2SONG-PATCH) |
+| Song Speedruns | B2SONG | Zi0 | [GitHub](https://github.com/B2ORG/T6-B2SONG-PATCH) |
 
 # Installation
 
