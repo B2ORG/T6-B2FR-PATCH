@@ -639,6 +639,9 @@ set_dvars()
 {
 	level endon("end_game");
 
+	/* Wait should help when in some instances foreign scripts try to mess with backspeed */
+	wait 0.05;
+
 	if (is_tranzit() || is_die_rise() || is_mob() || is_buried())
     	level.round_start_custom_func = ::trap_fix;
 
