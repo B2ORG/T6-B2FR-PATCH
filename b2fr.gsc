@@ -624,14 +624,14 @@ welcome_prints()
 gameplay_reminder()
 {
 	level endon("end_game");
-	level waittill("connected", player);
-	level waittill("start_of_round");
+
+	wait 1;
 
 	if (level.players.size > 1)
 	{
-		print_scheduler("^1REMINDER ^7You are a host", player);
+		print_scheduler("^1REMINDER ^7You are a host", maps\mp\_utility::gethostplayer());
 		wait 0.25;
-		print_scheduler("Full gameplay is required from host perspective as of April 2023", player);
+		print_scheduler("Full gameplay is required from host perspective as of April 2023", maps\mp\_utility::gethostplayer());
 	}
 }
 
@@ -1832,13 +1832,13 @@ is_player_in_top_barn()
 nuketown_gameplay_reminder()
 {
 	level endon("end_game");
-	level waittill("connected", player);
-	level waittill("start_of_round");
 
 	// 804.1 -56.86
 	// -455.42 617.4
 	// -82.07 740.67
 	// -844.93 60.8
+
+	wait 1;
 
 	if (level.players.size > 1)
 	{
@@ -1878,12 +1878,14 @@ nuketown_gameplay_reminder()
 					jug_in_spawn = true;
 		}
 
-		print_scheduler("^1REMINDER ^7You are a host", player);
-		wait 0.25;
 		if (jug_in_spawn)
 			print_scheduler("JuggerNog in the first room! Full gameplay from all players will be required!");
 		else
-			print_scheduler("Full gameplay is required from host perspective as of April 2023", player);
+		{
+			print_scheduler("^1REMINDER ^7You are a host", maps\mp\_utility::gethostplayer());
+			wait 0.25;
+			print_scheduler("Full gameplay is required from host perspective as of April 2023", maps\mp\_utility::gethostplayer());
+		}
 	}
 }
 
