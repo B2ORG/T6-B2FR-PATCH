@@ -1,3 +1,16 @@
+# B2FR 1.1
+
+## Fixes
+
+- Fixed gameplay reminders
+- Fixed rare possibility of the game failing to restart after awarding permaperks
+
+## Changes
+
+- Dvar sequence has been slightly delayed, which should reduce the emount of foreing scripts triggering the integrity checks
+- Added back dvar rules from V6, including pre-patch recoil and aim assist
+- Added text placeholder for round timer before round 1
+
 # B2FR 1.0
 
 This version marks moving from old First Room Fix codebase (again) to one built for [B2OP](https://github.com/B2ORG/T6-B2OP-PATCH), the two now have similar core functionality (adjusted for each respective category they're meant for). Only most important changes from First Room Fix V6 to B2FR V1 from player perspective are listed here, but under the hood almost all the code has been replaced.

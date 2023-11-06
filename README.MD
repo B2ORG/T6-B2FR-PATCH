@@ -16,7 +16,7 @@ This patch is meant to be used during First Room games. Below you can see altern
 | --- | --- | --- | --- |
 | Highrounds / Round speedruns | B2OP | Zi0 & Astrox | [GitHub](https://github.com/B2ORG/T6-B2OP-PATCH) |
 | EE Speedrun | Easter Egg GSC Timer | HuthTV | [GitHub](https://github.com/HuthTV/BO2-Easter-Egg-GSC-timer) |
-| Song Speedruns | Song Auto-Timer | Zi0 | [GitHub](https://github.com/B2ORG/T6-B2SONG-PATCH) |
+| Song Speedruns | B2SONG | Zi0 | [GitHub](https://github.com/B2ORG/T6-B2SONG-PATCH) |
 
 # Installation
 
@@ -79,7 +79,7 @@ Features in B2FR patch
 - Timer & Round timer
 - Shows times for key splits (round 20, 30 etc)
 - Velocity meter
-- Horde count is printed out at the beginning of each round (works like zombacus, not a live zombie counter)
+- Horde count is printed out at the beginning of each round past 20 (works like zombacus, not a live zombie counter)
 - Permaperks tracker (info when and what was gained / lost)
 
 ## Semtex

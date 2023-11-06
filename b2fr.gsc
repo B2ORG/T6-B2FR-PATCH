@@ -22,7 +22,7 @@ init()
 	flag_init("permaperks_were_set");
 
 	// Patch Config
-	level.B2FR_VERSION = 1;
+	level.B2FR_VERSION = 1.1;
 
 	level thread on_game_start();
 }
@@ -604,7 +604,7 @@ recalculate_x_for_aspect_ratio(xalign, xpos, aspect_ratio)
 emulate_menu_call(content, ent)
 {
 	if (!isDefined(ent))
-		ent = level.players[0];
+		ent = maps\mp\_utility::gethostplayer();
 
 	ent notify ("menuresponse", "", content);
 }
@@ -624,20 +624,23 @@ welcome_prints()
 gameplay_reminder()
 {
 	level endon("end_game");
-	level waittill("connected", player);
-	level waittill("start_of_round");
+
+	wait 1;
 
 	if (level.players.size > 1)
 	{
-		print_scheduler("^1REMINDER ^7You are a host", player);
+		print_scheduler("^1REMINDER ^7You are a host", maps\mp\_utility::gethostplayer());
 		wait 0.25;
-		print_scheduler("Full gameplay is required from host perspective as of April 2023", player);
+		print_scheduler("Full gameplay is required from host perspective as of April 2023", maps\mp\_utility::gethostplayer());
 	}
 }
 
 set_dvars()
 {
 	level endon("end_game");
+
+	/* Wait should help when in some instances foreign scripts try to mess with backspeed */
+	wait 0.05;
 
 	if (is_tranzit() || is_die_rise() || is_mob() || is_buried())
     	level.round_start_custom_func = ::trap_fix;
@@ -655,6 +658,9 @@ set_dvars()
     setdvar("g_speed", 190);
     setdvar("con_gameMsgWindow0Filter", "gamenotify obituary");
     setdvar("sv_cheats", 0);
+	setdvar("sv_endGameIfISuck", 0); 		// Prevent host migration
+	setdvar("sv_allowAimAssist", 0); 	 	// Removes target assist
+	setdvar("sv_patch_zm_weapons", 1);		// Force post dlc1 patch on recoil
 
 	level.GAMEPLAY_REMINDER = ::gameplay_reminder;
 
@@ -664,6 +670,8 @@ set_dvars()
 dvar_watcher(dvars)
 {
     level endon("end_game");
+
+	flag_wait("initial_blackscreen_passed");
 
     values = array();
     foreach (dvar in dvars)
@@ -819,6 +827,8 @@ timers()
 
 	level.round_hud = createserverfontstring("big" , 1.6);
 	level.round_hud set_hud_properties("round_hud", "TOPRIGHT", "TOPRIGHT", 60, 3);
+	level.round_hud.alpha = 1;
+    level.round_hud setText("0:00");
 
     level waittill("start_of_round");
     while (isDefined(level.round_hud))
@@ -1824,13 +1834,13 @@ is_player_in_top_barn()
 nuketown_gameplay_reminder()
 {
 	level endon("end_game");
-	level waittill("connected", player);
-	level waittill("start_of_round");
 
 	// 804.1 -56.86
 	// -455.42 617.4
 	// -82.07 740.67
 	// -844.93 60.8
+
+	wait 1;
 
 	if (level.players.size > 1)
 	{
@@ -1870,12 +1880,14 @@ nuketown_gameplay_reminder()
 					jug_in_spawn = true;
 		}
 
-		print_scheduler("^1REMINDER ^7You are a host", player);
-		wait 0.25;
 		if (jug_in_spawn)
 			print_scheduler("JuggerNog in the first room! Full gameplay from all players will be required!");
 		else
-			print_scheduler("Full gameplay is required from host perspective as of April 2023", player);
+		{
+			print_scheduler("^1REMINDER ^7You are a host", maps\mp\_utility::gethostplayer());
+			wait 0.25;
+			print_scheduler("Full gameplay is required from host perspective as of April 2023", maps\mp\_utility::gethostplayer());
+		}
 	}
 }
 
