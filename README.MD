@@ -79,7 +79,7 @@ Features in B2FR patch
 - Timer & Round timer
 - Shows times for key splits (round 20, 30 etc)
 - Velocity meter
-- Horde count is printed out at the beginning of each round (works like zombacus, not a live zombie counter)
+- Horde count is printed out at the beginning of each round past 20 (works like zombacus, not a live zombie counter)
 - Permaperks tracker (info when and what was gained / lost)
 
 ## Semtex

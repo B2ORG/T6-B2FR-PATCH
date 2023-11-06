@@ -2,10 +2,14 @@
 
 ## Fixes
 
+- Fixed gameplay reminders
+- Fixed rare possibility of the game failing to restart after awarding permaperks
+
 ## Changes
 
 - Dvar sequence has been slightly delayed, which should reduce the emount of foreing scripts triggering the integrity checks
 - Added back dvar rules from V6, including pre-patch recoil and aim assist
+- Added text placeholder for round timer before round 1
 
 # B2FR 1.0
 
