@@ -61,6 +61,8 @@ def file_rename(old: str, new: str) -> None:
 
 
 def main(cfg: list) -> None:
+    os.chdir(CWD)
+
     # NOHUD
     nuhud_update = dict(REPLACE_DEFAULT)
     nuhud_update.update({"#define NOHUD 0": "#define NOHUD 1"})
