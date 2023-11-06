@@ -604,7 +604,7 @@ recalculate_x_for_aspect_ratio(xalign, xpos, aspect_ratio)
 emulate_menu_call(content, ent)
 {
 	if (!isDefined(ent))
-		ent = level.players[0];
+		ent = maps\mp\_utility::gethostplayer();
 
 	ent notify ("menuresponse", "", content);
 }
