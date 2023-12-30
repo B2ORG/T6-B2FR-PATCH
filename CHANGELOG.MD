@@ -1,3 +1,9 @@
+# B2FR 1.2
+
+## Fixes
+
+- Fixed velocity value if player is moving diagonally (thanks [JBleezy](https://github.com/Jbleezy))
+
 # B2FR 1.1
 
 ## Fixes

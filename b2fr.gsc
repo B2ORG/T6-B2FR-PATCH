@@ -900,7 +900,10 @@ velocity_meter()
     {
         self velocity_visible(self.hud_velocity);
 
-		velocity = int(length(self getvelocity() * (1, 1, 0)));
+		velocity = int(length(self getvelocity() * (1, 1, 1)));
+		if (!self isOnGround())
+			velocity = int(length(self getvelocity() * (1, 1, 0)));
+
 		self.hud_velocity velocity_meter_scale(velocity);
         self.hud_velocity setValue(velocity);
 
