@@ -15,7 +15,6 @@ GAME_COMP = "t6"
 MODE_PARSE = "parse"
 MODE_COMP = "comp"
 COMPILER_XENSIK = "gsc-tool.exe"
-COMPILER_XENSIK_11 = "gsc-tool-1.1.exe"
 PARSED_DIR = os.path.join("parsed", GAME_PARSE)
 COMPILED_DIR = os.path.join("compiled", GAME_COMP)
 PLUGIN_DIR = "plugin_templates"

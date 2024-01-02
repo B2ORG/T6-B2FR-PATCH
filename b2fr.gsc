@@ -22,7 +22,7 @@ init()
 	flag_init("permaperks_were_set");
 
 	// Patch Config
-	level.B2FR_VERSION = 1.1;
+	level.B2FR_VERSION = 1.2;
 
 	level thread on_game_start();
 }
@@ -661,6 +661,7 @@ set_dvars()
 	setdvar("sv_endGameIfISuck", 0); 		// Prevent host migration
 	setdvar("sv_allowAimAssist", 0); 	 	// Removes target assist
 	setdvar("sv_patch_zm_weapons", 1);		// Force post dlc1 patch on recoil
+	setdvar("r_dof_enable", 0);				// Remove Depth of Field
 
 	level.GAMEPLAY_REMINDER = ::gameplay_reminder;
 
@@ -900,7 +901,10 @@ velocity_meter()
     {
         self velocity_visible(self.hud_velocity);
 
-		velocity = int(length(self getvelocity() * (1, 1, 0)));
+		velocity = int(length(self getvelocity() * (1, 1, 1)));
+		if (!self isOnGround())
+			velocity = int(length(self getvelocity() * (1, 1, 0)));
+
 		self.hud_velocity velocity_meter_scale(velocity);
         self.hud_velocity setValue(velocity);
 
