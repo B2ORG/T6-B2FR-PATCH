@@ -4,6 +4,10 @@
 
 - Fixed velocity value if player is moving diagonally (thanks [JBleezy](https://github.com/Jbleezy))
 
+## Changes
+
+- Removed DOF
+
 # B2FR 1.1
 
 ## Fixes
