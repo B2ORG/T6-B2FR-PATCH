@@ -72,6 +72,7 @@ Features in B2FR patch
 - Automatic permaperks assignment (consistent with in-game logic)
 - Automatic permaperks removal (if obtained illegaly, for instance during breaks)
 - Full bank
+- Removed Depth of Field
 
 ## HUD
 
@@ -124,7 +125,7 @@ If you'd like to contribute to the code, please fork this repository, apply chan
 Following things are required:
 
 - [Python](https://www.python.org/downloads/windows/) 3.10 or newer (recommended 3.12)
-- [gsc-tool](https://github.com/xensik/gsc-tool/releases) 1.1.1 or newer (recommended 1.2.0)
+- [gsc-tool](https://github.com/xensik/gsc-tool/releases) 1.1.1 or newer (currently i recommend using 1.1.1)
 
 Install Python (and make sure to check adding it to the system PATH while doing so). Download gsc-tool, do not change the name of the program, put it in the main directory of the project.
 
