@@ -1,3 +1,9 @@
+# B2FR 1.3
+
+## Fixes
+
+- Fixed prenades showing up in a regular Nuketown First Room game
+
 # B2FR 1.2
 
 ## Fixes

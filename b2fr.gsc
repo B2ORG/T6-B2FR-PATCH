@@ -967,7 +967,7 @@ semtex_display()
 	level endon("end_game");
 
 	// Town for Semtex, Nuketown for No Magic
-	if (has_magic() && !is_town() && !is_nuketown())
+	if (has_magic() || (!is_town() && !is_nuketown()))
 		return;
 
 	self thread notify_about_prenade_switch();
