@@ -973,14 +973,13 @@ semtex_display()
 	self thread notify_about_prenade_switch();
 
 	num_of_prenades = 0;
-	level waittill("start_of_round");
 
 	while (true)
 	{
-		num_of_prenades = [[get_prenade_mode()]](num_of_prenades);
-
 		level waittill("start_of_round");
 		wait 0.05;
+
+		num_of_prenades = [[get_prenade_mode()]](num_of_prenades);
 
 		if (!num_of_prenades)
 			continue;
@@ -1016,7 +1015,7 @@ semtex_print_on_demand(to_print)
 get_prenade_mode(switch_round)
 {
 	if (!isDefined(switch_round))
-		switch_round = 50;
+		switch_round = 51;
 
 	if (is_round(switch_round))
 	{
@@ -1033,13 +1032,12 @@ get_prenade_from_map(stub_arg)
 	for (i = 0; i < nade_array.size; i++)
 	{
 		index = 22 + i;
-		nade_map["" + index] = nade_array[i]; 
+		nade_map[index] = nade_array[i]; 
 	}
 
-	index = level.round_number + 1;
-	if (isDefined(nade_map["" + index]))
+	if (isDefined(nade_map[level.round_number]))
 	{
-		return nade_map["" + index];
+		return nade_map[level.round_number];
 	}
 	return 0;
 }
