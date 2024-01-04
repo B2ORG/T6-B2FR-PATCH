@@ -3,6 +3,7 @@
 ## Fixes
 
 - Fixed prenades showing up in a regular Nuketown First Room game
+- Fixed delayed split prints
 
 # B2FR 1.2
 

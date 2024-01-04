@@ -866,7 +866,7 @@ show_split()
 
 	if (!IsInArray(split_rounds, level.round_number))
 		return;
-	wait 8.5;
+	wait 6.25;
 
     timestamp = convert_time(int(getTime() / 1000) - level.B2FR_START);
     print_scheduler("Round " + level.round_number + " time: ^1" + timestamp);
