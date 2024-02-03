@@ -1,3 +1,13 @@
+# B2FR 1.4
+
+## Fixes
+
+- Fixed splits showing up early
+
+## Changes
+
+- Increased split frequency
+
 # B2FR 1.3
 
 ## Fixes

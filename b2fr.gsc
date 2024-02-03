@@ -860,13 +860,14 @@ show_split()
 {
 	level endon("end_game");
 
-	split_rounds = array(15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100);
-	if (isDefined(level.B2_SPLITS))
-		split_rounds = level.B2_SPLITS;
+    /* B2 splits used, only use rounds specified */
+	if (isDefined(level.B2_SPLITS) && !IsInArray(level.B2_SPLITS, level.round_number))
+        return;
+    /* By default every 5 rounds past 10 */
+    if (!isDefined(level.B2_SPLITS) && level.round_number <= 10 && level.round_number % 5)
+        return;
 
-	if (!IsInArray(split_rounds, level.round_number))
-		return;
-	wait 6.25;
+    wait 8.25;
 
     timestamp = convert_time(int(getTime() / 1000) - level.B2FR_START);
     print_scheduler("Round " + level.round_number + " time: ^1" + timestamp);
