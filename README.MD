@@ -20,15 +20,15 @@ This patch is meant to be used during First Room games. Below you can see altern
 
 # Installation
 
-Since version B2FR v1, the patch is only available for modern versions of Plutonium. Recommended version to play games on is Plutonium R2905 [installation guide](https://youtu.be/tb2gsL12wwI), but it will fully work with versions R3000+ (at least as of writing this readme, Plutonium has a record of breaking random stuff all the time). Download most recent version of your choice from [releases](https://github.com/B2ORG/T6-B2FR-PATCH/releases) section. DOWNLOADING RAW CODE FILES YOU SEE ON THIS PAGE WILL NOT WORK!
+Since version B2FR v1, the patch is only available for modern versions of Plutonium. Recommended version to play games on is Plutonium R2905 [installation guide](https://youtu.be/_8QjvejOuqU?t=176), but it will fully work with versions R3000+ (at least as of writing this readme, Plutonium has a record of breaking random stuff all the time). Download most recent version of your choice from [releases](https://github.com/B2ORG/T6-B2FR-PATCH/releases) section. DOWNLOADING RAW CODE FILES YOU SEE ON THIS PAGE WILL NOT WORK!
 
 Put script you downloaded in Plutonium directory (unless you changed it it'll be)
 
-```C:\Users\{your username}\AppData\Local\Plutonium\storage\t6\scripts\zm```
+```
+%LOCALAPPDATA%\Plutonium\storage\t6\scripts\zm
+```
 
-The appdata directory is hidden by default on windows, in order to access it, press key combination WINDOWS + R on your keyboard and type in `%LOCALAPPDATA%`, press ENTER.
-
-From that point follow patch specified above.
+Run this in a run window (press CTRL + R), that'll open the Plutonium scripts folder. If your plutonium folder is called differently (for example `Plutonium R2905` instead of `Plutonium`, adjust the path)
 
 # FAQ
 
@@ -125,7 +125,7 @@ If you'd like to contribute to the code, please fork this repository, apply chan
 Following things are required:
 
 - [Python](https://www.python.org/downloads/windows/) 3.10 or newer (recommended 3.12)
-- [gsc-tool](https://github.com/xensik/gsc-tool/releases) 1.1.1 or newer (currently i recommend using 1.1.1)
+- [gsc-tool](https://github.com/xensik/gsc-tool/releases) 1.4 or newer (currently i recommend using 1.4.1)
 
 Install Python (and make sure to check adding it to the system PATH while doing so). Download gsc-tool, do not change the name of the program, put it in the main directory of the project.
 
