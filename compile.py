@@ -66,16 +66,16 @@ def main(cfg: list) -> None:
     nuhud_update = dict(REPLACE_DEFAULT)
     nuhud_update.update({"#define NOHUD 0": "#define NOHUD 1"})
     edit_in_place(os.path.join(CWD, B2FR), **nuhud_update)
-    wrap_subprocess_call(COMPILER_XENSIK, MODE_PARSE, GAME_PARSE, "pc", B2FR)
-    wrap_subprocess_call(COMPILER_XENSIK, MODE_COMP, GAME_COMP, "pc", arg_path(CWD, PARSED_DIR, B2FR))
+    wrap_subprocess_call(COMPILER_XENSIK, "-m", MODE_PARSE, "g", GAME_PARSE, "-s", "pc", B2FR)
+    wrap_subprocess_call(COMPILER_XENSIK, "-m", MODE_COMP, "-g", GAME_COMP, "-s", "pc", arg_path(CWD, PARSED_DIR, B2FR))
     file_rename(os.path.join(CWD, PARSED_DIR, B2FR), os.path.join(CWD, PARSED_DIR, B2FR_PARSED_NOHUD))
     file_rename(os.path.join(CWD, COMPILED_DIR, B2FR), os.path.join(CWD, COMPILED_DIR, B2FR_PARSED_NOHUD))
 
     # HUD
     hud_update = dict(REPLACE_DEFAULT)
     edit_in_place(os.path.join(CWD, B2FR), **hud_update)
-    wrap_subprocess_call(COMPILER_XENSIK, MODE_PARSE, GAME_PARSE, "pc", B2FR)
-    wrap_subprocess_call(COMPILER_XENSIK, MODE_COMP, GAME_COMP, "pc", arg_path(CWD, PARSED_DIR, B2FR))
+    wrap_subprocess_call(COMPILER_XENSIK, "-m", MODE_PARSE, "g", GAME_PARSE, "-s", "pc", B2FR)
+    wrap_subprocess_call(COMPILER_XENSIK, "-m", MODE_COMP, "-g", GAME_COMP, "-s", "pc", arg_path(CWD, PARSED_DIR, B2FR))
     file_rename(os.path.join(CWD, PARSED_DIR, B2FR), os.path.join(CWD, PARSED_DIR, B2FR_PARSED_HUD))
     file_rename(os.path.join(CWD, COMPILED_DIR, B2FR), os.path.join(CWD, COMPILED_DIR, B2FR_PARSED_HUD))
 
