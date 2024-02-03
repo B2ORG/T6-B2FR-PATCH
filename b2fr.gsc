@@ -864,7 +864,7 @@ show_split()
 	if (isDefined(level.B2_SPLITS) && !IsInArray(level.B2_SPLITS, level.round_number))
         return;
     /* By default every 5 rounds past 10 */
-    if (!isDefined(level.B2_SPLITS) && level.round_number <= 10 && level.round_number % 5)
+    if (!isDefined(level.B2_SPLITS) && (level.round_number <= 10 || level.round_number % 5))
         return;
 
     wait 8.25;
