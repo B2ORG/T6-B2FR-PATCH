@@ -1,3 +1,9 @@
+# B2FR 1.5
+
+## Changes
+
+- Added `scr_skip_devblock 1` to fix dev debug code rendering stuff on player screen in R3904
+
 # B2FR 1.4
 
 ## Fixes
