@@ -662,6 +662,7 @@ set_dvars()
 	setdvar("sv_allowAimAssist", 0); 	 	// Removes target assist
 	setdvar("sv_patch_zm_weapons", 1);		// Force post dlc1 patch on recoil
 	setdvar("r_dof_enable", 0);				// Remove Depth of Field
+	setdvar("scr_skip_devblock", 1);		// Fix for devblocks in r3903/3904
 
 	level.GAMEPLAY_REMINDER = ::gameplay_reminder;
 
