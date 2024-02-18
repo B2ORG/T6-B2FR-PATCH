@@ -2,6 +2,7 @@
 #define BETA 0
 #define NOHUD 0
 #define PLUTO_CLI 1
+#define DT_CHECK 0
 
 #include common_scripts\utility;
 #include maps\mp\gametypes_zm\_hud_util;
@@ -43,6 +44,9 @@ on_game_start()
 	b2safety();
 
     level thread b2fr_main_loop();
+#if DT_CHECK == 1
+	level thread origins_doubletap();
+#endif
 #if NOHUD == 0
 	level thread timers();
     level thread semtex_display();
@@ -1895,3 +1899,73 @@ nuketown_gameplay_reminder()
 	}
 }
 
+/* Need a 4p to test it first */
+#if DT_CHECK == 1
+origins_doubletap()
+{
+	level endon("end_game");
+
+	doubletap = [];
+	alert = false;
+
+	while (!alert)
+	{
+		foreach (player in level.players)
+		{
+			if (!isDefined(doubletap[player.name]))
+				douletap = player add_to_doubletap_array(doubletap);
+
+			if (doubletap.size > 4)
+			{
+				alert = true;
+				print_scheduler("^1WARNING ^7More than 4 unique players connected to this game");
+				wait 0.2;
+				print_scheduler("No longer possible to verify double tap!");
+				break;
+			}
+
+			p_stat = maps\_zm_challenges::get_stat("zc_points_spent", player);
+
+			/* Watching disabled (player has dt) and down num increase, mark losing dt */
+			if (!doubletap[player.name].watch && isDefined(doubletap[player.name].downs) && doubletap[player.name].downs < player.downs)
+			{
+				doubletap[player.name].lost = true;
+				doubletap[self.name].lost_uses = doubletap[self.name].uses;
+			}
+
+			/* Watching for reward claim, and claim flag was enabled, mark use and stop watching */
+			if (doubletap[player.name].watch && is_true(p_stat.b_reward_claimed))
+			{
+				doubletap[player.name].uses++;
+				doubletap[player.name].watch = false;
+				doubletap[player.name].downs = player.downs;
+			}
+			/* Not watching for reward claim and claim flag disabled, restart watching */
+			else if (!doubletap[player.name].watch && !is_true(p_stat.b_reward_claimed))
+			{
+				doubletap[player.name].watch = true;
+				doubletap[player.name].downs = undefined;
+			}
+
+			/* Number of uses while losing dt is defined and is lower than current users, raise allert */
+			if (isDefined(doubletap[self.name].lost_uses) && doubletap[self.name].lost_uses < doubletap[self.name].uses)
+			{
+				alert = true;
+				print_scheduler("^1WARNING ^7Second double tap obtained by " + self.name);
+				break;
+			}
+		}
+	}
+}
+
+add_to_doubletap_array(doubletap)
+{
+	doubletap[self.name] = SpawnStruct();
+	doubletap[self.name].watch = true;
+	doubletap[self.name].lost = false;
+	doubletap[self.name].uses = 0;
+	doubletap[self.name].downs = undefined;
+	doubletap[self.name].lost_uses = undefined;
+	return doubletap;
+}
+#endif
