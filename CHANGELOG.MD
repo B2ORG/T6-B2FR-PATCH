@@ -1,3 +1,9 @@
+# B2FR 1.6
+
+## Changes
+
+- Added `velocity_meter` dvar for toggling the visibility of velocity meter
+
 # B2FR 1.5
 
 ## Changes

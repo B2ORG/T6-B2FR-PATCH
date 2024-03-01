@@ -650,6 +650,7 @@ set_dvars()
     has to become a level variable and be manually removed later */
     dvar_rules = array();
 
+	init_dvar("velocity_meter");
     if (has_permaperks_system())
         init_dvar("award_perks", dvar_rules);
 
@@ -916,7 +917,7 @@ velocity_meter()
 
 velocity_visible(hud)
 {
-    if (is_true(self.afterlife))
+    if (getDvar("velocity_meter") == "0" || is_true(self.afterlife))
         hud.alpha = 0;
     else
         hud.alpha = 1;

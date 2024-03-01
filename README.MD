@@ -79,7 +79,7 @@ Features in B2FR patch
 - HUD elements scale accordingly to aspect ratio (solo only, because it's dependent on the ratio of hosts game, cannot be changed for clients separately via gsc patch)
 - Timer & Round timer
 - Shows times for key splits (round 20, 30 etc)
-- Velocity meter
+- Velocity meter (toogleable with `velocity_meter` dvar, set to 1 or 0 respectively)
 - Horde count is printed out at the beginning of each round past 20 (works like zombacus, not a live zombie counter)
 - Permaperks tracker (info when and what was gained / lost)
 
