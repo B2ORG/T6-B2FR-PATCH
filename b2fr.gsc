@@ -639,33 +639,31 @@ set_dvars()
 {
     level endon("end_game");
 
-    /* Wait should help when in some instances foreign scripts try to mess with backspeed */
-    wait 0.05;
-
     if (is_tranzit() || is_die_rise() || is_mob() || is_buried())
         level.round_start_custom_func = ::trap_fix;
 
     level.GAMEPLAY_REMINDER = ::gameplay_reminder;
 
-    dvars = array(
-        register_dvar("velocity_meter",                "1",                    false,    true),
-        register_dvar("award_perks",                "1",                    false,    true,    ::has_permaperks_system),
-        register_dvar("player_strafeSpeedScale",    "0.8",                    true,    false),
-        register_dvar("player_backSpeedScale",        "0.7",                    true,    false),
-        register_dvar("g_speed",                    "190",                    true,    false),
-        register_dvar("con_gameMsgWindow0MsgTime",    "5",                    true,    false),
-        register_dvar(",con_gameMsgWindow0Filter",    "gamenotify obituary",    true,    false),
-        register_dvar("sv_cheats",                    "0",                    true,    false),
-        register_dvar("sv_endGameIfISuck",            "0",                    false,    false),                                    // Prevent host migration
-        register_dvar("sv_allowAimAssist",            "0",                    false,    true),                                    // Removes target assist
-        register_dvar("sv_patch_zm_weapons",        "1",                    false,    false),                                    // Force post dlc1 patch on recoil
-        register_dvar("r_dof_enable",                "0",                    false,    true),                                    // Remove Depth of Field
-        register_dvar("scr_skip_devblock",            "1",                    false,    false,    ::is_plutonium)                    // Fix for devblocks in r3903/3904
-    );
+    dvars = [];
+    dvars[dvars.size] = register_dvar("velocity_meter",             "1",                    false,  true);
+    dvars[dvars.size] = register_dvar("award_perks",                "1",                    false,  true,    ::has_permaperks_system);
+    dvars[dvars.size] = register_dvar("player_strafeSpeedScale",    "0.8",                  true,   false);
+    dvars[dvars.size] = register_dvar("player_backSpeedScale",      "0.7",                  true,   false);
+    dvars[dvars.size] = register_dvar("g_speed",                    "190",                  true,   false);
+    dvars[dvars.size] = register_dvar("con_gameMsgWindow0MsgTime",  "5",                    true,   false);
+    dvars[dvars.size] = register_dvar("con_gameMsgWindow0Filter",   "gamenotify obituary",  true,   false);
+    dvars[dvars.size] = register_dvar("sv_cheats",                  "0",                    true,   false);
+    dvars[dvars.size] = register_dvar("sv_endGameIfISuck",          "0",                    false,  false);                                 // Prevent host migration
+    dvars[dvars.size] = register_dvar("sv_allowAimAssist",          "0",                    false,  true);                                  // Removes target assist
+    dvars[dvars.size] = register_dvar("sv_patch_zm_weapons",        "1",                    false,  false);                                 // Force post dlc1 patch on recoil
+    dvars[dvars.size] = register_dvar("r_dof_enable",               "0",                    false,  true);                                  // Remove Depth of Field
+    dvars[dvars.size] = register_dvar("scr_skip_devblock",          "1",                    false,  false,    ::is_plutonium);               // Fix for devblocks in r3903/3904
 
     protected = [];
     foreach (dvar in dvars)
     {
+        if (!isDefined(dvar))
+            continue;
         if (dvar.init_only && getdvar(dvar.name) != "")
             continue;
         setdvar(dvar.name, dvar.value);
@@ -684,8 +682,12 @@ register_dvar(dvar, set_value, b2_protect, init_only, closure)
     dvar_data = SpawnStruct();
     dvar_data.name = dvar;
     dvar_data.value = set_value;
-    dvar_data.protect = b2_protect;
+    dvar_data.protected = b2_protect;
     dvar_data.init_only = init_only;
+
+#if DEBUG == 1
+    debug_print("registered dvar " + dvar);
+#endif
 
     return dvar_data;
 }
@@ -696,12 +698,17 @@ dvar_watcher(dvars)
 
     flag_wait("initial_blackscreen_passed");
 
+    /* We're setting them once again, to ensure lack of accidental detections */
+    foreach (dvar in dvars )
+        setdvar(dvar.name, dvar.value)
+
     while (true)
     {
         foreach (dvar in dvars)
         {
             if (getDvar(dvar.name) != dvar.value)
             {
+                /* They're not reset here, someone might want to test something related to protected dvars, so they can do so with the watermark */
                 generate_watermark("DVAR " + ToUpper(dvar.name) + " VIOLATED", (1, 0.6, 0.2), 0.66);
                 ArrayRemoveIndex(dvars, dvar, true);
             }
