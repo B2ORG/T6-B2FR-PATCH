@@ -1,3 +1,13 @@
+# B2FR 1.7
+
+## Changes
+
+- Tweaks to anticheat
+
+## Dev
+
+- Updated compilation script to match version from B2OP
+
 # B2FR 1.6
 
 ## Changes
