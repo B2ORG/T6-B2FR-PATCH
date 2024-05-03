@@ -22,7 +22,7 @@ init()
     flag_init("permaperks_were_set");
 
     // Patch Config
-    level.B2FR_VERSION = 1.6;
+    level.B2FR_VERSION = 1.7;
 
     level thread on_game_start();
 }
