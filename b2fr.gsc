@@ -645,29 +645,49 @@ set_dvars()
 	if (is_tranzit() || is_die_rise() || is_mob() || is_buried())
     	level.round_start_custom_func = ::trap_fix;
 
-    /* Rules used in init_dvar() used to disable b2fr dvar by default
-    Try not to use init_dvar() outside of this function, in which case dvar_rules
-    has to become a level variable and be manually removed later */
-    dvar_rules = array();
-
-	init_dvar("velocity_meter");
-    if (has_permaperks_system())
-        init_dvar("award_perks", dvar_rules);
-
-    setdvar("player_strafeSpeedScale", 0.8);
-    setdvar("player_backSpeedScale", 0.7);
-    setdvar("g_speed", 190);
-    setdvar("con_gameMsgWindow0Filter", "gamenotify obituary");
-    setdvar("sv_cheats", 0);
-	setdvar("sv_endGameIfISuck", 0); 		// Prevent host migration
-	setdvar("sv_allowAimAssist", 0); 	 	// Removes target assist
-	setdvar("sv_patch_zm_weapons", 1);		// Force post dlc1 patch on recoil
-	setdvar("r_dof_enable", 0);				// Remove Depth of Field
-	setdvar("scr_skip_devblock", 1);		// Fix for devblocks in r3903/3904
-
 	level.GAMEPLAY_REMINDER = ::gameplay_reminder;
 
-    level thread dvar_watcher(array("sv_cheats", "g_speed", "player_strafeSpeedScale", "player_backSpeedScale", "con_gameMsgWindow0Filter"));
+	dvars = array(
+		register_dvar("velocity_meter",				"1",					false,	true),
+		register_dvar("award_perks",				"1",					false,	true,	::has_permaperks_system),
+		register_dvar("player_strafeSpeedScale",	"0.8",					true,	false),
+		register_dvar("player_backSpeedScale",		"0.7",					true,	false),
+		register_dvar("g_speed",					"190",					true,	false),
+		register_dvar("con_gameMsgWindow0MsgTime",	"5",					true,	false),
+		register_dvar(",con_gameMsgWindow0Filter",	"gamenotify obituary",	true,	false),
+		register_dvar("sv_cheats",					"0",					true,	false),
+		register_dvar("sv_endGameIfISuck",			"0",					false,	false),									// Prevent host migration
+		register_dvar("sv_allowAimAssist",			"0",					false,	true),									// Removes target assist
+		register_dvar("sv_patch_zm_weapons",		"1",					false,	false),									// Force post dlc1 patch on recoil
+		register_dvar("r_dof_enable",				"0",					false,	true),									// Remove Depth of Field
+		register_dvar("scr_skip_devblock",			"1",					false,	false,	::is_plutonium)					// Fix for devblocks in r3903/3904
+	);
+
+	protected = [];
+	foreach (dvar in dvars)
+	{
+		if (dvar.init_only && getdvar(dvar.name) != "")
+			continue;
+		setdvar(dvar.name, dvar.value);
+		if (dvar.protected)
+			protected[protected.size] = dvar;
+	}
+
+    level thread dvar_watcher(protected);
+}
+
+register_dvar(dvar, set_value, b2_protect, init_only, closure)
+{
+	if (isDefined(closure) && ![[closure]]())
+		return undefined;
+
+	dvar_data = SpawnStruct();
+	dvar_data.name = dvar;
+	dvar_data.value = set_value;
+	dvar_data.protect = b2_protect;
+	dvar_data.init_only = init_only;
+
+	return dvar_data;
 }
 
 dvar_watcher(dvars)
@@ -676,34 +696,19 @@ dvar_watcher(dvars)
 
 	flag_wait("initial_blackscreen_passed");
 
-    values = array();
-    foreach (dvar in dvars)
-        values[dvar] = getDvar(dvar);
-
     while (true)
     {
         foreach (dvar in dvars)
         {
-            if (getDvar(dvar) != values[dvar])
+            if (getDvar(dvar.name) != dvar.value)
             {
-                generate_watermark("DVAR " + ToUpper(dvar) + " VIOLATED", (1, 0.6, 0.2), 0.66);
+                generate_watermark("DVAR " + ToUpper(dvar.name) + " VIOLATED", (1, 0.6, 0.2), 0.66);
                 ArrayRemoveIndex(dvars, dvar, true);
             }
         }
 
-        wait 0.25;
+        wait 0.1;
     }
-}
-
-/* It's not explicit, but dvar_rules is optional arg, as long as it's only call remains inside of is_true() */
-init_dvar(dvar_str, dvar_rules)
-{
-	if (getDvar(dvar_str) != "")
-		return;
-
-    setDvar(dvar_str, "1");
-	if (is_true(dvar_rules[dvar_str]))
-		setDvar(dvar_str, "0");
 }
 
 award_points(amount)
