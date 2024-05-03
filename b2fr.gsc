@@ -700,7 +700,7 @@ dvar_watcher(dvars)
 
     /* We're setting them once again, to ensure lack of accidental detections */
     foreach (dvar in dvars )
-        setdvar(dvar.name, dvar.value)
+        setdvar(dvar.name, dvar.value);
 
     while (true)
     {
