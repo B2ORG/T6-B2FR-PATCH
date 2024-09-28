@@ -1,5 +1,5 @@
 from traceback import print_exc
-import subprocess, sys, os, zipfile, re
+import subprocess, sys, os, re, copy
 
 
 class Version:
@@ -72,7 +72,7 @@ class UnknownVersion(Version):
 
 
 class Chunk:
-    def __init__(self, header: str = None) -> None:
+    def __init__(self, header: str | None = None) -> None:
         self.header = header
 
 
@@ -100,13 +100,13 @@ PARSED_DIR = "parsed\\" + GAME_PARSE
 COMPILED_DIR = "compiled\\" + GAME_COMP
 ZMUTILITY_DIR = r"maps\mp\zombies"
 FORCE_SPACES = True
-REPLACE_DEFAULT = {
+REPLACE_DEFAULT: dict[str, str] = {
     
 }
 PRECOMPILED = {
     "pluto": "b2fr_precompiled_pluto.gsc",
 }
-BAD_COMPILER_VERSIONS = []
+BAD_COMPILER_VERSIONS: set["Version"] = set()
 
 
 def edit_in_place(path: str, **replace_pairs) -> None:
@@ -204,7 +204,7 @@ def main() -> None:
 
     # NOHUD
     with Chunk("B2FR - NOHUD:"):
-        nuhud_update = dict(REPLACE_DEFAULT)
+        nuhud_update = copy.deepcopy(REPLACE_DEFAULT)
         nuhud_update.update({"#define NOHUD 0": "#define NOHUD 1"})
         edit_in_place(
             os.path.join(CWD, B2FR), **nuhud_update
@@ -224,7 +224,7 @@ def main() -> None:
 
     # HUD
     with Chunk("B2FR - HUD:"):
-        hud_update = dict(REPLACE_DEFAULT)
+        hud_update = copy.deepcopy(REPLACE_DEFAULT)
         hud_update.update({"#define NOHUD 1": "#define NOHUD 0"})
         edit_in_place(
             os.path.join(CWD, B2FR), **hud_update
