@@ -6,6 +6,7 @@
 #define NUKETOWN_EYES 0
 
 #define B2FR_VER = 2
+#define MAX_VALID_HEALTH 1044606905
 
 #include common_scripts\utility;
 #include maps\mp\gametypes_zm\_hud_util;
@@ -723,7 +724,7 @@ set_dvars()
 {
     level endon("end_game");
 
-    if (is_tranzit() || is_die_rise() || is_mob() || is_buried())
+    if (!is_4k() && (is_tranzit() || is_die_rise() || is_mob() || is_buried()))
         level.round_start_custom_func = ::trap_fix;
 
     level.GAMEPLAY_REMINDER = ::gameplay_reminder;
@@ -900,17 +901,15 @@ evaluate_network_frame()
 
 trap_fix()
 {
-    rnd_155 = 1044606905;
-
-    if (level.zombie_health <= rnd_155)
+    if (level.zombie_health <= MAX_VALID_HEALTH)
         return;
 
-    level.zombie_health = rnd_155;
+    level.zombie_health = MAX_VALID_HEALTH;
 
     foreach (zombie in get_round_enemy_array())
     {
-        if (zombie.health > rnd_155)
-            zombie.heath = rnd_155;
+        if (zombie.health > MAX_VALID_HEALTH)
+            zombie.heath = MAX_VALID_HEALTH;
     }
 }
 
