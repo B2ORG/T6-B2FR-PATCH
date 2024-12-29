@@ -8,6 +8,8 @@
 #define B2FR_VER = 2
 #define MAX_VALID_HEALTH 1044606905
 
+#define CLEAR(__var) __var = undefined;
+
 #include common_scripts\utility;
 #include maps\mp\gametypes_zm\_hud_util;
 #include maps\mp\zombies\_zm_utility;
@@ -63,6 +65,7 @@ on_game_start()
         level thread [[level.B2_POWERUP_TRACKING]]();
 
     level thread [[level.GAMEPLAY_REMINDER]]();
+    level.GAMEPLAY_REMINDER = undefined;
 
 #if DEBUG == 1
     debug_mode();
@@ -730,33 +733,47 @@ set_dvars()
     level.GAMEPLAY_REMINDER = ::gameplay_reminder;
 
     dvars = [];
-    dvars[dvars.size] = register_dvar("velocity_meter",             "1",                    false,  true);
-    dvars[dvars.size] = register_dvar("award_perks",                "1",                    false,  true,    ::has_permaperks_system);
-    dvars[dvars.size] = register_dvar("player_strafeSpeedScale",    "0.8",                  true,   false);
-    dvars[dvars.size] = register_dvar("player_backSpeedScale",      "0.7",                  true,   false);
-    dvars[dvars.size] = register_dvar("g_speed",                    "190",                  true,   false);
-    dvars[dvars.size] = register_dvar("con_gameMsgWindow0MsgTime",  "5",                    true,   false);
-    dvars[dvars.size] = register_dvar("con_gameMsgWindow0Filter",   "gamenotify obituary",  true,   false);
-    dvars[dvars.size] = register_dvar("sv_cheats",                  "0",                    true,   false);
-    dvars[dvars.size] = register_dvar("sv_endGameIfISuck",          "0",                    false,  false);                                 // Prevent host migration
-    dvars[dvars.size] = register_dvar("sv_allowAimAssist",          "0",                    false,  true);                                  // Removes target assist
-    dvars[dvars.size] = register_dvar("sv_patch_zm_weapons",        "1",                    false,  false);                                 // Force post dlc1 patch on recoil
-    dvars[dvars.size] = register_dvar("r_dof_enable",               "0",                    false,  true);                                  // Remove Depth of Field
-    dvars[dvars.size] = register_dvar("scr_skip_devblock",          "1",                    false,  false,    ::is_plutonium);               // Fix for devblocks in r3903/3904
+    /*                                  DVAR                            VALUE                   PROTECT INIT_ONLY   EVAL                    */
+
+    dvars[dvars.size] = register_dvar("velocity_meter",                 "1",                    false,  true);
+    dvars[dvars.size] = register_dvar("award_perks",                    "1",                    false,  true,    ::has_permaperks_system);
+    dvars[dvars.size] = register_dvar("player_strafeSpeedScale",        "0.8",                  true,   false);
+    dvars[dvars.size] = register_dvar("player_backSpeedScale",          "0.7",                  true,   false);
+    dvars[dvars.size] = register_dvar("g_speed",                        "190",                  true,   false);
+    dvars[dvars.size] = register_dvar("con_gameMsgWindow0MsgTime",      "5",                    true,   false);
+    dvars[dvars.size] = register_dvar("con_gameMsgWindow0Filter",       "gamenotify obituary",  true,   false);
+    dvars[dvars.size] = register_dvar("sv_cheats",                      "0",                    true,   false);
+    dvars[dvars.size] = register_dvar("ai_corpseCount",                 "5",                    true,   false);
+    dvars[dvars.size] = register_dvar("sv_endGameIfISuck",              "0",                    false,  false);                                 // Prevent host migration
+    dvars[dvars.size] = register_dvar("sv_allowAimAssist",              "0",                    false,  true);                                  // Removes target assist
+    dvars[dvars.size] = register_dvar("sv_patch_zm_weapons",            "1",                    false,  false);                                 // Force post dlc1 patch on recoil
+    dvars[dvars.size] = register_dvar("r_dof_enable",                   "0",                    false,  true);                                  // Remove Depth of Field
+    dvars[dvars.size] = register_dvar("scr_skip_devblock",              "1",                    false,  false,    ::is_3k);               // Fix for devblocks in r3903/3904
+    dvars[dvars.size] = register_dvar("g_zm_fix_damage_overflow",       "1",                    false,  true,       ::is_4k);                   // Use native health fix, r4516+
+    dvars[dvars.size] = register_dvar("g_fix_entity_leaks",             "0",                    true,   false,      ::is_4k);                   // Defines if Pluto error fixes are applied, r4516+
+    dvars[dvars.size] = register_dvar("cg_flashScriptHashes",           "1",                    true,   false,      ::is_4k);                   // Enables flashing hashes of individual scripts
+    dvars[dvars.size] = register_dvar("cg_debugInfoCornerOffset",       "50 20",                false,  false,      ::should_set_draw_offset);  // Offsets for pluto draws compatibile with b2 timers
 
     protected = [];
     foreach (dvar in dvars)
     {
-        if (!isDefined(dvar))
-            continue;
-        if (dvar.init_only && getdvar(dvar.name) != "")
-            continue;
-        setdvar(dvar.name, dvar.value);
-        if (dvar.protected)
-            protected[protected.size] = dvar;
+        set_dvar_internal(dvar);
+        if (is_true(dvar.protected))
+            protected[dvar.name] = dvar.value;
     }
 
+    CLEAR(dvars)
+
     level thread dvar_watcher(protected);
+}
+
+set_dvar_internal(dvar)
+{
+    if (!isDefined(dvar))
+        return;
+    if (dvar.init_only && getdvar(dvar.name) != "")
+        return;
+    setdvar(dvar.name, dvar.value);
 }
 
 register_dvar(dvar, set_value, b2_protect, init_only, closure)
@@ -784,8 +801,8 @@ dvar_watcher(dvars)
     flag_wait("initial_blackscreen_passed");
 
     /* We're setting them once again, to ensure lack of accidental detections */
-    foreach (dvar in dvars )
-        setdvar(dvar.name, dvar.value);
+    foreach (dvar, value in dvars)
+        setdvar(dvar, dvar);
 
     while (true)
     {
