@@ -5,6 +5,8 @@
 
 #define NUKETOWN_EYES 0
 
+#define B2FR_VER = 2
+
 #include common_scripts\utility;
 #include maps\mp\gametypes_zm\_hud_util;
 #include maps\mp\zombies\_zm_utility;
@@ -694,9 +696,9 @@ welcome_prints()
 {
     wait 0.75;
 #if NOHUD == 1
-    self iPrintLn("B2^1FR^7 PATCH ^1V" + level.B2FR_VERSION + " ^7[NOHUD]");
+    self iPrintLn("B2^1FR^7 PATCH ^1V" + B2FR_VER + " ^7[NOHUD]");
 #else
-    self iPrintLn("B2^1FR^7 PATCH ^1V" + level.B2FR_VERSION);
+    self iPrintLn("B2^1FR^7 PATCH ^1V" + B2FR_VER);
 #endif
     self iPrintLn(" Detected Plutonium version: ^1" + get_plutonium_version());
     wait 0.75;
