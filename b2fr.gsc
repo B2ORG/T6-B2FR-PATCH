@@ -459,12 +459,91 @@ is_round(rnd)
     return is_rnd;
 }
 
+fetch_pluto_definition()
+{
+    dvar_defs = [];
+    dvar_defs["zm_gungame"] = VER_ANCIENT;
+    dvar_defs["zombies_minplayers"] = 920;
+    dvar_defs["sv_allowDof"] = 1137;
+    dvar_defs["g_randomSeed"] = 1205;
+    dvar_defs["g_playerCollision"] = 2016;
+    dvar_defs["sv_allowAimAssist"] = 2107;
+    dvar_defs["cg_weaponCycleDelay"] = 2693;
+    dvar_defs["cl_enableStreamerMode"] = VER_2905;
+    dvar_defs["scr_max_loop_time"] = 3755;
+    dvar_defs["rcon_timeout"] = 3855;
+    dvar_defs["snd_debug"] = 3963;
+    dvar_defs["con_displayRconOutput"] = 4035;
+    dvar_defs["scr_allowFileIo"] = VER_4K;
+    return dvar_defs;
+}
+
+try_parse_pluto_version()
+{
+    dvar = getDvar("version");
+    if (!isSubStr(dvar, "Plutonium"))
+        return 0;
+
+    parsed = getSubStr(dvar, 23, 27);
+    return int(parsed);
+}
+
+get_plutonium_version()
+{
+    parsed = try_parse_pluto_version();
+    if (parsed > 0)
+        return parsed;
+
+    definitions = fetch_pluto_definition();
+    detected_version = 0;
+    foreach (definition in array_reverse(getArrayKeys(definitions)))
+    {
+        version = definitions[definition];
+        // DEBUG_PRINT("definition: " + definition + " version: " + version);
+        if (getDvar(definition) != "")
+            detected_version = version;
+    }
+    return detected_version;
+}
+
+should_set_draw_offset()
+{
+    return (getDvar("cg_debugInfoCornerOffset") == "40 0" && is_4k());
+}
+
+is_redacted()
+{
+    return isSubStr(getDvar("sv_referencedFFNames"), "patch_redacted");
+}
+
 is_plutonium()
 {
-    /* Returns true for Pluto versions r2693 and above */
-    if (getDvar("cg_weaponCycleDelay") == "")
-        return false;
-    return true;
+    return !is_redacted();
+}
+
+is_ancient()
+{
+    return get_plutonium_version() > 0 && get_plutonium_version() <= VER_ANCIENT;
+}
+
+is_2k()
+{
+    return get_plutonium_version() > VER_ANCIENT && get_plutonium_version() <= VER_2905;
+}
+
+is_2905()
+{
+    return get_plutonium_version() == VER_2905;
+}
+
+is_3k()
+{
+    return get_plutonium_version() > VER_2905 && get_plutonium_version() < VER_4K;
+}
+
+is_4k()
+{
+    return get_plutonium_version() >= VER_4K;
 }
 
 safe_restart()
@@ -619,6 +698,7 @@ welcome_prints()
 #else
     self iPrintLn("B2^1FR^7 PATCH ^1V" + level.B2FR_VERSION);
 #endif
+    self iPrintLn(" Detected Plutonium version: ^1" + get_plutonium_version());
     wait 0.75;
     self iPrintLn("Source: ^1github.com/B2ORG/T6-B2FR-PATCH");
 }
