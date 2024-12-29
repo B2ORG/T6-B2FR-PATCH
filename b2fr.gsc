@@ -3,6 +3,8 @@
 #define NOHUD 0
 #define PLUTO_CLI 1
 
+#define NUKETOWN_EYES 0
+
 #include common_scripts\utility;
 #include maps\mp\gametypes_zm\_hud_util;
 #include maps\mp\zombies\_zm_utility;
@@ -1691,6 +1693,10 @@ nuketown_handler()
 
     level.GAMEPLAY_REMINDER = ::nuketown_gameplay_reminder;
 
+#if NUKETOWN_EYES == 1
+    nuketown_switch_eyes();
+#endif
+
     // Bus mannequin
     /* This is bad for highrounds, if this mannequin happens to exist, it'll remove one entity that's otherwise not removable */
     thread remove_mannequin((-30, 13.9031, -47.0411), 1);
@@ -1699,6 +1705,14 @@ nuketown_handler()
     if (!has_magic() && level.start_round >= 5)
         thread yellowhouse_controller();
 }
+
+#if NUKETOWN_EYES == 1
+nuketown_switch_eyes()
+{
+    level setclientfield("zombie_eye_change", 1);
+    sndswitchannouncervox("richtofen");
+}
+#endif
 
 yellowhouse_controller()
 {
