@@ -1,5 +1,5 @@
 from traceback import print_exc
-import subprocess, sys, os, re, copy
+import subprocess, sys, os, re, copy, binascii
 
 
 class Version:
@@ -95,21 +95,15 @@ CWD = os.path.dirname(os.path.abspath(__file__))
 B2FR = "b2fr.gsc"
 B2FR_PARSED_NOHUD = "b2fr_nohud.gsc" 
 B2FR_PARSED_HUD = "b2fr_hud.gsc"
-GAME_PARSE = "iw5"      # Change later once it's actually implemented for t6
+GAME_PARSE = "iw5"                  # Change later once it's actually implemented for t6
 GAME_COMP = "t6"
 MODE_PARSE = "parse"
 MODE_COMP = "comp"
 COMPILER_GSCTOOL = "gsc-tool.exe"
-PARSED_DIR = "parsed\\" + GAME_PARSE
-COMPILED_DIR = "compiled\\" + GAME_COMP
-ZMUTILITY_DIR = r"maps\mp\zombies"
+PARSED_DIR = "parsed/" + GAME_PARSE
+COMPILED_DIR = "compiled/" + GAME_COMP
 FORCE_SPACES = True
-REPLACE_DEFAULT: dict[str, str] = {
-    
-}
-PRECOMPILED = {
-    "pluto": "b2fr_precompiled_pluto.gsc",
-}
+REPLACE_DEFAULT: dict[str, str] = {}
 BAD_COMPILER_VERSIONS: set["Version"] = set()
 
 
@@ -163,16 +157,16 @@ def file_rename(old: str, new: str) -> None:
         os.rename(old, new)
 
 
-# def create_zipfile() -> None:
-#     try:
-#         with zipfile.ZipFile(os.path.join(CWD, COMPILED_DIR, "b2op-ancient.zip"), "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zip:
-#             zip.write(os.path.join(CWD, COMPILED_DIR, "b2op-ancient.gsc"), os.path.join(ZMUTILITY_DIR, "_zm_utility.gsc"))
-#     except FileNotFoundError:
-#         print("WARNING! Failed to create zip file due to missing compiled file")
-
-
 def verify_compiler() -> Version | bool:
     return verify_compiler_version() if os.path.isfile(os.path.join(CWD, COMPILER_GSCTOOL)) else False
+
+
+def flash_hash(file_path: str) -> str:
+    with open(file_path, "rb") as file_io:
+        # Convert to uINT and represent as uppercase hex
+        hash: str = format(binascii.crc32(file_io.read()) & 0xFFFFFFFF, "08X")
+    print(f"Hash of {os.path.basename(file_path)}: '0x{hash}'")
+    return hash
 
 
 def verify_compiler_version() -> Version:
@@ -225,6 +219,7 @@ def main() -> None:
         file_rename(
             os.path.join(CWD, COMPILED_DIR, B2FR), os.path.join(CWD, COMPILED_DIR, B2FR_PARSED_NOHUD)
         )
+        flash_hash(os.path.join(CWD, COMPILED_DIR, B2FR_PARSED_NOHUD))
 
     # HUD
     with Chunk("B2FR - HUD:"):
@@ -245,6 +240,7 @@ def main() -> None:
         file_rename(
             os.path.join(CWD, COMPILED_DIR, B2FR), os.path.join(CWD, COMPILED_DIR, B2FR_PARSED_HUD)
         )
+        flash_hash(os.path.join(CWD, COMPILED_DIR, B2FR_PARSED_HUD))
 
 
 if __name__ == "__main__":
