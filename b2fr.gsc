@@ -926,7 +926,7 @@ dvar_watcher(dvars)
 
     /* We're setting them once again, to ensure lack of accidental detections */
     foreach (dvar, value in dvars)
-        setdvar(dvar, dvar);
+        setdvar(dvar, value);
 
     while (true)
     {
