@@ -2,7 +2,6 @@
 #define DEBUG 0
 #define BETA 0
 #define NOHUD 0
-#define PLUTO_CLI 1
 
 /* Feature flags */
 #define FEATURE_NUKETOWN_EYES 0
@@ -59,10 +58,10 @@ init()
 
 on_game_start()
 {
-    level endon("end_game");
+    LEVEL_ENDON
 
-    level thread set_dvars();
-    level thread on_player_joined();
+    set_dvars();
+    level thread on_player_connecting();
     level thread origins_fix();
 
 #if FEATURE_CHARACTERS == 1
@@ -96,7 +95,7 @@ on_game_start()
         level thread [[level.B2_POWERUP_TRACKING]]();
 
     level thread [[level.GAMEPLAY_REMINDER]]();
-    level.GAMEPLAY_REMINDER = undefined;
+    CLEAR(level.GAMEPLAY_REMINDER)
 
 #if DEBUG == 1
     debug_mode();
@@ -132,8 +131,7 @@ on_player_connected()
 
 on_player_spawned()
 {
-    level endon("end_game");
-    self endon("disconnect");
+    PLAYER_ENDON
 
     self waittill("spawned_player");
 
@@ -154,8 +152,7 @@ on_player_spawned()
 
 on_player_spawned_permaperk()
 {
-    level endon("end_game");
-    self endon("disconnect");
+    PLAYER_ENDON
 
     /* We want to remove the perks before players spawn to prevent health bonus 
     The wait is essential, it allows the game to process permaperks internally before we override them */
@@ -173,7 +170,7 @@ on_player_spawned_permaperk()
 
 b2fr_main_loop()
 {
-    level endon("end_game");
+    LEVEL_ENDON
 
     game_start = getTime();
 
@@ -281,6 +278,9 @@ challenge_loop()
         active_challenges++;
     }
 
+    CLEAR(initial_challenges)
+    CLEAR(in_bounds)
+
     while (active_challenges)
     {
         foreach (challenge in start_challenges)
@@ -322,19 +322,6 @@ duplicate_file()
     iPrintLn("ONLY ONE ^1B2 ^7PATCH CAN RUN AT THE SAME TIME!");
 #if DEBUG == 0
     level notify("end_game");
-#endif
-}
-
-debug_print(text)
-{
-#if DEBUG == 1 && PLUTO_CLI == 1
-    print("DEBUG: " + text);
-#endif
-}
-info_print(text)
-{
-#if PLUTO_CLI == 1
-    print("INFO: " + text);
 #endif
 }
 
@@ -407,7 +394,7 @@ generate_watermark(text, color, alpha_override)
 
 generate_temp_watermark(kill_on, text, color, alpha_override)
 {
-    level endon("end_game");
+    LEVEL_ENDON
 
     if (is_true(flag(text)))
         return;
@@ -451,26 +438,34 @@ generate_temp_watermark(kill_on, text, color, alpha_override)
     for appending first box info to splits */
 }
 
-print_scheduler(content, player)
+print_scheduler(content, player, delay)
 {
+    if (!isDefined(delay))
+    {
+        delay = 0;
+    }
+
     if (isDefined(player))
     {
-        player thread player_print_scheduler(content);
+        player thread player_print_scheduler(content, delay);
     }
     else
     {
         foreach (player in level.players)
-            player thread player_print_scheduler(content);
+            player thread player_print_scheduler(content, delay);
     }
 }
 
-player_print_scheduler(content)
+player_print_scheduler(content, delay)
 {
-    level endon("end_game");
-    self endon("disconnect");
+    PLAYER_ENDON
 
-    while (isDefined(self.scheduled_prints) && self.scheduled_prints >= getDvarInt("con_gameMsgWindow0LineCount"))
+    while (delay > 0 && isDefined(self.scheduled_prints) && getDvarInt("con_gameMsgWindow0LineCount") > 0 && self.scheduled_prints >= getDvarInt("con_gameMsgWindow0LineCount"))
+    {
+        if (delay > 0)
+            delay -= 0.05;
         wait 0.05;
+    }
 
     if (isDefined(self.scheduled_prints))
         self.scheduled_prints++;
@@ -482,7 +477,7 @@ player_print_scheduler(content)
     self.scheduled_prints--;
 
     if (self.scheduled_prints <= 0)
-        self.scheduled_prints = undefined;
+        CLEAR(self.scheduled_prints)
 }
 
 convert_time(seconds)
@@ -527,7 +522,7 @@ convert_time(seconds)
 
 player_wait_for_initial_blackscreen()
 {
-    level endon("end_game");
+    LEVEL_ENDON
 
     while (!flag("game_started"))
         wait 0.05;
@@ -535,86 +530,57 @@ player_wait_for_initial_blackscreen()
 
 is_town()
 {
-    if (level.script == "zm_transit" && level.scr_zm_map_start_location == "town" && level.scr_zm_ui_gametype_group == "zsurvival")
-        return true;
-    return false;
+    return level.script == "zm_transit" && level.scr_zm_map_start_location == "town" && level.scr_zm_ui_gametype_group == "zsurvival";
 }
 
 is_farm()
 {
-    if (level.script == "zm_transit" && level.scr_zm_map_start_location == "farm" && level.scr_zm_ui_gametype_group == "zsurvival")
-        return true;
-    return false;
+    return level.script == "zm_transit" && level.scr_zm_map_start_location == "farm" && level.scr_zm_ui_gametype_group == "zsurvival";
 }
 
 is_depot()
 {
-    if (level.script == "zm_transit" && level.scr_zm_map_start_location == "transit" && level.scr_zm_ui_gametype_group == "zsurvival")
-        return true;
-    return false;
+    return level.script == "zm_transit" && level.scr_zm_map_start_location == "transit" && level.scr_zm_ui_gametype_group == "zsurvival";
 }
 
 is_tranzit()
 {
-    if (level.script == "zm_transit" && level.scr_zm_map_start_location == "transit" && level.scr_zm_ui_gametype_group == "zclassic")
-        return true;
-    return false;
+    return level.script == "zm_transit" && level.scr_zm_map_start_location == "transit" && level.scr_zm_ui_gametype_group == "zclassic";
 }
 
 is_nuketown()
 {
-    if (level.script == "zm_nuked")
-        return true;
-    return false;
+    return level.script == "zm_nuked";
 }
 
 is_die_rise()
 {
-    if (level.script == "zm_highrise")
-        return true;
-    return false;
+    return level.script == "zm_highrise";
 }
 
 is_mob()
 {
-    if (level.script == "zm_prison")
-        return true;
-    return false;
+    return level.script == "zm_prison";
 }
 
 is_buried()
 {
-    if (level.script == "zm_buried")
-        return true;
-    return false;
+    return level.script == "zm_buried";
 }
 
 is_origins()
 {
-    if (level.script == "zm_tomb")
-        return true;
-    return false;
+    return level.script == "zm_tomb";
 }
 
 did_game_just_start()
 {
-    if (!isDefined(level.start_round))
-        return true;
-
-    if (!is_round(level.start_round + 2))
-        return true;
-
-    return false;
+    return !isDefined(level.start_round) || !is_round(level.start_round + 2);
 }
 
 is_round(rnd)
 {
-    if (rnd <= level.round_number)
-        is_rnd = true;
-    else
-        is_rnd = false;
-
-    return is_rnd;
+    return rnd <= level.round_number;
 }
 
 fetch_pluto_definition()
@@ -704,41 +670,20 @@ is_4k()
     return get_plutonium_version() >= VER_4K;
 }
 
-safe_restart()
-{
-    if (is_plutonium())
-        map_restart();
-    else
-        level notify("end_game");
-}
-
 has_magic()
 {
-    if (is_true(level.enable_magic))
-        return true;
-    return false;
+    return is_true(level.enable_magic);
 }
 
 has_permaperks_system()
 {
-#if DEBUG == 1
-    // debug_print("has_permaperks_system()=" + (isDefined(level.pers_upgrade_boards) && is_true(level.onlinegame)));
-#endif
     /* Refer to init_persistent_abilities() */
-    if (isDefined(level.pers_upgrade_boards) && is_true(level.onlinegame))
-        return true;
-    return false;
+    return isDefined(level.pers_upgrade_boards) && is_true(level.onlinegame);
 }
 
 is_special_round()
 {
-    if (is_true(flag("dog_round")))
-        return true;
-
-    if (is_true(flag("leaper_round")))
-        return true;
-
-    return false;
+    return is_true(flag("dog_round")) || is_true(flag("leaper_round"));
 }
 
 get_zombies_left()
@@ -753,6 +698,7 @@ get_hordes_left()
 
 wait_for_message_end()
 {
+    LEVEL_ENDON
     wait getDvarFloat("con_gameMsgWindow0FadeInTime") + getDvarFloat("con_gameMsgWindow0MsgTime") + getDvarFloat("con_gameMsgWindow0FadeOutTime");
 }
 
@@ -804,9 +750,7 @@ set_hud_properties(hud_key, x_align, y_align, x_pos, y_pos, col)
     if (x_pos == int(x_pos))
         x_pos = recalculate_x_for_aspect_ratio(x_align, x_pos, aspect_ratio);
 
-#if DEBUG == 1
-    // debug_print("ratio: " + ratio + " | aspect_ratio: " + aspect_ratio + " | x_pos: " + x_pos + " | w: " + res_components[0] + " | h: " + res_components[1]);
-#endif
+    // DEBUG_PRINT("ratio: " + ratio + " | aspect_ratio: " + aspect_ratio + " | x_pos: " + x_pos + " | w: " + res_components[0] + " | h: " + res_components[1]);
 
     self setpoint(x_align, y_align, x_pos, y_pos);
     self.color = col;
@@ -850,6 +794,8 @@ emulate_menu_call(content, ent)
 
 welcome_prints()
 {
+    PLAYER_ENDON
+
     wait 0.75;
 #if NOHUD == 1
     self iPrintLn("B2^1FR^7 PATCH ^1V" + B2FR_VER + " ^7[NOHUD]");
@@ -863,7 +809,7 @@ welcome_prints()
 
 gameplay_reminder()
 {
-    level endon("end_game");
+    LEVEL_ENDON
 
     wait 1;
 
@@ -898,7 +844,7 @@ cmdexec(arg)
 
 set_dvars()
 {
-    level endon("end_game");
+    LEVEL_ENDON
 
     if (!is_4k() && (is_tranzit() || is_die_rise() || is_mob() || is_buried()))
         level.round_start_custom_func = ::trap_fix;
@@ -915,7 +861,6 @@ set_dvars()
 
     dvars = [];
     /*                                  DVAR                            VALUE                   PROTECT INIT_ONLY   EVAL                    */
-
     dvars[dvars.size] = register_dvar("velocity_meter",                 "1",                    false,  true);
     dvars[dvars.size] = register_dvar("award_perks",                    "1",                    false,  true,    ::has_permaperks_system);
     dvars[dvars.size] = register_dvar("player_strafeSpeedScale",        "0.8",                  true,   false);
@@ -968,16 +913,14 @@ register_dvar(dvar, set_value, b2_protect, init_only, closure)
     dvar_data.protected = b2_protect;
     dvar_data.init_only = init_only;
 
-#if DEBUG == 1
-    debug_print("registered dvar " + dvar);
-#endif
+    DEBUG_PRINT("registered dvar " + dvar);
 
     return dvar_data;
 }
 
 dvar_watcher(dvars)
 {
-    level endon("end_game");
+    LEVEL_ENDON
 
     flag_wait("initial_blackscreen_passed");
 
@@ -987,12 +930,12 @@ dvar_watcher(dvars)
 
     while (true)
     {
-        foreach (dvar in dvars)
+        foreach (dvar, value in dvars)
         {
-            if (getDvar(dvar.name) != dvar.value)
+            if (getDvar(dvar) != value)
             {
                 /* They're not reset here, someone might want to test something related to protected dvars, so they can do so with the watermark */
-                generate_watermark("DVAR " + ToUpper(dvar.name) + " VIOLATED", (1, 0.6, 0.2), 0.66);
+                generate_watermark("DVAR " + ToUpper(dvar) + " VIOLATED", (1, 0.6, 0.2), 0.66);
                 ArrayRemoveIndex(dvars, dvar, true);
             }
         }
@@ -1003,8 +946,7 @@ dvar_watcher(dvars)
 
 award_points(amount)
 {
-    level endon("end_game");
-    self endon("disconnect");
+    PLAYER_ENDON
 
     if (is_mob())
         flag_wait("afterlife_start_over");
@@ -1043,8 +985,7 @@ beta_mode()
 
 evaluate_network_frame()
 {
-    level endon("end_game");
-    self endon("disconnect");
+    PLAYER_ENDON
 
     flag_wait("initial_blackscreen_passed");
 
@@ -1100,8 +1041,6 @@ trap_fix()
 #if NOHUD == 0
 create_timers()
 {
-    level endon("end_game");
-
     level.timer_hud = createserverfontstring("big" , 1.6);
     level.timer_hud set_hud_properties("timer_hud", "TOPRIGHT", "TOPRIGHT", 60, -14);
     level.timer_hud.alpha = 1;
@@ -1115,7 +1054,7 @@ create_timers()
 
 keep_displaying_old_time(time)
 {
-    level endon("end_game");
+    LEVEL_ENDON
     level endon("start_of_round");
 
     while (true)
@@ -1127,7 +1066,7 @@ keep_displaying_old_time(time)
 
 show_split(start_time)
 {
-    level endon("end_game");
+    LEVEL_ENDON
 
     /* B2 splits used, only use rounds specified */
     if (isDefined(level.B2_SPLITS) && !IsInArray(level.B2_SPLITS, level.round_number))
@@ -1144,7 +1083,7 @@ show_split(start_time)
 
 show_hordes()
 {
-    level endon("end_game");
+    LEVEL_ENDON
 
     wait 0.05;
 
@@ -1157,8 +1096,7 @@ show_hordes()
 
 velocity_meter()
 {
-    self endon("disconnect");
-    level endon("end_game");
+    PLAYER_ENDON
 
     player_wait_for_initial_blackscreen();
 
@@ -1234,7 +1172,7 @@ velocity_meter_scale(vel)
 
 semtex_display()
 {
-    level endon("end_game");
+    LEVEL_ENDON
 
     // Town for Semtex, Nuketown for No Magic
     if (has_magic() || (!is_town() && !is_nuketown()))
@@ -1259,13 +1197,13 @@ semtex_display()
         wait_for_message_end();
         self thread semtex_print_on_demand(print_content);
 
-        print_content = undefined;
+        CLEAR(print_content)
     }
 }
 
 semtex_print_on_demand(to_print)
 {
-    level endon("end_game");
+    LEVEL_ENDON
     level endon("end_of_round");
 
     while (is_plutonium())
@@ -1278,7 +1216,7 @@ semtex_print_on_demand(to_print)
             wait_for_message_end();
         }
 
-        text = undefined;
+        CLEAR(text)
     }
 }
 
@@ -1314,7 +1252,7 @@ get_prenade_from_map(stub_arg)
 
 get_prenade_dynamic(previous)
 {
-    level endon("end_game");
+    LEVEL_ENDON
 
     // Failsafe for starting game at 50 or higher
     if (!previous)
@@ -1346,7 +1284,7 @@ get_prenade_dynamic(previous)
 
 notify_about_prenade_switch()
 {
-    level endon("end_game");
+    LEVEL_ENDON
 
     self waittill("changed_prenade_type", prenade_type);
     print_scheduler("Prenade values generation is now: ^3" + prenade_type);
@@ -1377,7 +1315,7 @@ perma_perks_setup()
 
 watch_permaperk_award()
 {
-    level endon("end_game");
+    LEVEL_ENDON
 
     present_players = level.players.size;
 
@@ -1408,7 +1346,7 @@ watch_permaperk_award()
     foreach (player in level.players)
     {
         if (isDefined(player.awarding_permaperks_now))
-            player.awarding_permaperks_now = undefined;
+            CLEAR(player.awarding_permaperks_now)
     }
 }
 
@@ -1432,8 +1370,7 @@ permaperk_array(code, maps_award, maps_take, to_round)
 
 award_permaperks_safe()
 {
-    level endon("end_game");
-    self endon("disconnect");
+    PLAYER_ENDON
 
     while (!isalive(self))
         wait 0.05;
@@ -1457,14 +1394,16 @@ award_permaperks_safe()
     }
 
     wait 0.5;
-    perks_to_process = undefined;
-    self.awarding_permaperks_now = undefined;
-    self.permaperk_display_lock = undefined;
+    CLEAR(perks_to_process)
+    CLEAR(self.awarding_permaperks_now)
+    CLEAR(self.permaperk_display_lock)
     self maps\mp\zombies\_zm_stats::uploadstatssoon();
 }
 
 resolve_permaperk(perk)
 {
+    PLAYER_ENDON
+
     wait 0.05;
 
     perk_code = perk["code"];
@@ -1477,9 +1416,7 @@ resolve_permaperk(perk)
     if (is_round(perk["to_round"]))
         return;
 
-#if DEBUG == 1
-    // debug_print("perk = " + perk_code + " 1st eval = " + isinarray(perk["maps_award"], level.script) + " 2nd eval = " + !self.pers_upgrades_awarded[perk_code]);
-#endif
+    // DEBUG_PRINT("perk = " + perk_code + " 1st eval = " + isinarray(perk["maps_award"], level.script) + " 2nd eval = " + !self.pers_upgrades_awarded[perk_code]);
 
     if (isinarray(perk["maps_award"], level.script) && !self.pers_upgrades_awarded[perk_code])
     {
@@ -1525,8 +1462,7 @@ remove_permaperk(perk_code)
 #if NOHUD == 0
 permaperks_watcher()
 {
-    level endon("end_game");
-    self endon("disconnect");
+    PLAYER_ENDON
 
     self.last_perk_state = array();
     foreach(perk in level.pers_upgrades_keys)
@@ -1567,9 +1503,7 @@ print_permaperk_state(enabled, perk)
     }
 
     self iPrintLn("Permaperk " + permaperk_name(perk) + ": " + print_player);
-#if DEBUG == 1
-    debug_print("print_permaperk_state(): " + self.name + ": Permaperk " + perk + " -> " + print_cli);
-#endif
+    DEBUG_PRINT("print_permaperk_state(): " + self.name + ": Permaperk " + perk + " -> " + print_cli);
 }
 
 permaperk_name(perk)
@@ -1612,7 +1546,7 @@ permaperk_name(perk)
 
 origins_fix()
 {
-    level endon("end_game");
+    LEVEL_ENDON
 
     flag_wait("start_zombie_round_logic");
     wait 0.5;
@@ -1623,7 +1557,7 @@ origins_fix()
 
 scan_in_box()
 {
-    level endon("end_game");
+    LEVEL_ENDON
 
     if (is_town() || is_farm() || is_depot() || is_tranzit())
         should_be_in_box = 25;
@@ -1701,6 +1635,95 @@ get_pap_weapon_options_set_reticle(weapon)
 
     self.pack_a_punch_weapon_options[weapon] = self calcweaponoptions( camo_index, lens_index, reticle_index, reticle_color_index );
     return self.pack_a_punch_weapon_options[weapon];
+}
+
+remove_mannequin(origin, extra_delay)
+{
+    LEVEL_ENDON
+
+    if (isDefined(extra_delay))
+        wait extra_delay;
+
+    all_mannequins = array();
+    foreach (destructible in getentarray("destructible", "targetname"))
+    {
+        if (isSubStr(destructible.destructibledef, "male"))
+            all_mannequins[all_mannequins.size] = destructible;
+    }
+
+    foreach (mannequin in all_mannequins)
+    {
+        if (mannequin.origin == origin)
+        {
+            // Delete collision
+            getent(mannequin.target, "targetname") delete();
+            // Delete model
+            mannequin delete();
+
+            DEBUG_PRINT("Removed mannequin on origin: " + origin);
+            break;
+        }
+    }
+}
+
+nuketown_gameplay_reminder()
+{
+    LEVEL_ENDON
+
+    // 804.1 -56.86
+    // -455.42 617.4
+    // -82.07 740.67
+    // -844.93 60.8
+
+    wait 1;
+
+    if (level.players.size > 1)
+    {
+        spawn_positions = array();
+
+        spawn_positions[0] = SpawnStruct();
+        spawn_positions[0].x_start = 790;
+        spawn_positions[0].x_end = 820;
+        spawn_positions[0].y_start = -70;
+        spawn_positions[0].y_end = 40;
+
+        spawn_positions[1] = SpawnStruct();
+        spawn_positions[1].x_start = -470;
+        spawn_positions[1].x_end = -440;
+        spawn_positions[1].y_start = 600;
+        spawn_positions[1].y_end = 630;
+
+        spawn_positions[2] = SpawnStruct();
+        spawn_positions[2].x_start = -100;
+        spawn_positions[2].x_end = -70;
+        spawn_positions[2].y_start = 725;
+        spawn_positions[2].y_end = 755;
+
+        spawn_positions[3] = SpawnStruct();
+        spawn_positions[3].x_start = -860;
+        spawn_positions[3].x_end = -830;
+        spawn_positions[3].y_start = 45;
+        spawn_positions[3].y_end = 75;
+
+        jug_in_spawn = false;
+        jug_perk = getent("vending_jugg", "targetname");
+
+        foreach(spawn in spawn_positions)
+        {
+            if ((jug_perk.origin[0] > spawn.x_start && jug_perk.origin[0] < spawn.x_end)
+                && jug_perk.origin[1] > spawn.y_start && jug_perk.origin[1] < spawn.y_end)
+                    jug_in_spawn = true;
+        }
+
+        if (jug_in_spawn)
+            print_scheduler("JuggerNog in the first room! Full gameplay from all players will be required!");
+        else
+        {
+            print_scheduler("^1REMINDER ^7You are a host", maps\mp\_utility::gethostplayer());
+            wait 0.25;
+            print_scheduler("Full gameplay is required from host perspective as of April 2023", maps\mp\_utility::gethostplayer());
+        }
+    }
 }
 
 #if FEATURE_CHARACTERS == 1
@@ -1875,8 +1898,8 @@ character_wrapper()
             {
                 player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(stat, number + 1, "zm_highrise");
                 print_scheduler("Successfully updated character settings to: " + getSubStr(message, 5), player);
-                stat = undefined;
-                number = undefined;
+                CLEAR(stat)
+                CLEAR(number)
             }
         }
     }
@@ -1956,95 +1979,3 @@ failed_topbarn(player)
     self.status = CHALLENGE_FAIL;
 }
 #endif
-
-remove_mannequin(origin, extra_delay)
-{
-    level endon("end_game");
-
-    if (isDefined(extra_delay))
-        wait extra_delay;
-
-    all_mannequins = array();
-    foreach (destructible in getentarray("destructible", "targetname"))
-    {
-        if (isSubStr(destructible.destructibledef, "male"))
-            all_mannequins[all_mannequins.size] = destructible;
-    }
-
-    foreach (mannequin in all_mannequins)
-    {
-        if (mannequin.origin == origin)
-        {
-            // Delete collision
-            getent(mannequin.target, "targetname") delete();
-            // Delete model
-            mannequin delete();
-
-#if DEBUG == 1
-            debug_print("Removed mannequin on origin: " + origin);
-#endif
-            break;
-        }
-    }
-}
-
-nuketown_gameplay_reminder()
-{
-    level endon("end_game");
-
-    // 804.1 -56.86
-    // -455.42 617.4
-    // -82.07 740.67
-    // -844.93 60.8
-
-    wait 1;
-
-    if (level.players.size > 1)
-    {
-        spawn_positions = array();
-
-        spawn_positions[0] = SpawnStruct();
-        spawn_positions[0].x_start = 790;
-        spawn_positions[0].x_end = 820;
-        spawn_positions[0].y_start = -70;
-        spawn_positions[0].y_end = 40;
-
-        spawn_positions[1] = SpawnStruct();
-        spawn_positions[1].x_start = -470;
-        spawn_positions[1].x_end = -440;
-        spawn_positions[1].y_start = 600;
-        spawn_positions[1].y_end = 630;
-
-        spawn_positions[2] = SpawnStruct();
-        spawn_positions[2].x_start = -100;
-        spawn_positions[2].x_end = -70;
-        spawn_positions[2].y_start = 725;
-        spawn_positions[2].y_end = 755;
-
-        spawn_positions[3] = SpawnStruct();
-        spawn_positions[3].x_start = -860;
-        spawn_positions[3].x_end = -830;
-        spawn_positions[3].y_start = 45;
-        spawn_positions[3].y_end = 75;
-
-        jug_in_spawn = false;
-        jug_perk = getent("vending_jugg", "targetname");
-
-        foreach(spawn in spawn_positions)
-        {
-            if ((jug_perk.origin[0] > spawn.x_start && jug_perk.origin[0] < spawn.x_end)
-                && jug_perk.origin[1] > spawn.y_start && jug_perk.origin[1] < spawn.y_end)
-                    jug_in_spawn = true;
-        }
-
-        if (jug_in_spawn)
-            print_scheduler("JuggerNog in the first room! Full gameplay from all players will be required!");
-        else
-        {
-            print_scheduler("^1REMINDER ^7You are a host", maps\mp\_utility::gethostplayer());
-            wait 0.25;
-            print_scheduler("Full gameplay is required from host perspective as of April 2023", maps\mp\_utility::gethostplayer());
-        }
-    }
-}
-
