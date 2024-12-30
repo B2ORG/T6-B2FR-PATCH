@@ -44,14 +44,13 @@ on_game_start()
 
     flag_wait("initial_blackscreen_passed");
 
-    level.B2FR_START = int(getTime() / 1000);
     flag_set("game_started");
 
     b2safety();
 
     level thread b2fr_main_loop();
 #if NOHUD == 0
-    level thread timers();
+    create_timers();
     level thread semtex_display();
     if (isDefined(level.B2_NETWORK_HUD))
         level thread [[level.B2_NETWORK_HUD]]();
@@ -133,11 +132,18 @@ b2fr_main_loop()
 {
     level endon("end_game");
 
+    game_start = getTime();
+
     while (true)
     {
         level waittill("start_of_round");
 #if NOHUD == 0
+        round_start = getTime();
         level thread show_hordes();
+        if (isDefined(level.round_hud))
+        {
+            level.round_hud setTimerUp(0);
+        }
 #endif
 
         /* Verify based on map, cause someone could sneak a patch that'd give those in offline game */
@@ -166,7 +172,13 @@ b2fr_main_loop()
         if (isDefined(level.B2FR_CHECK))
             level.B2FR_CHECK = undefined;
 #if NOHUD == 0
-        level thread show_split();
+        round_duration = getTime() - round_start;
+        if (isDefined(level.round_hud))
+        {
+            level.round_hud thread keep_displaying_old_time(round_duration);
+        }
+        level thread show_split(game_start);
+        CLEAR(round_duration)
 #endif
         if (has_permaperks_system())
             setDvar("award_perks", 1);
@@ -931,7 +943,7 @@ trap_fix()
 }
 
 #if NOHUD == 0
-timers()
+create_timers()
 {
     level endon("end_game");
 
@@ -944,18 +956,6 @@ timers()
     level.round_hud set_hud_properties("round_hud", "TOPRIGHT", "TOPRIGHT", 60, 3);
     level.round_hud.alpha = 1;
     level.round_hud setText("0:00");
-
-    level waittill("start_of_round");
-    while (isDefined(level.round_hud))
-    {
-        round_start = int(getTime() / 1000);
-        level.round_hud setTimerUp(0);
-
-        level waittill("end_of_round");
-        round_end = int(getTime() / 1000) - round_start;
-
-        level.round_hud keep_displaying_old_time(round_end);
-    }
 }
 
 keep_displaying_old_time(time)
@@ -970,7 +970,7 @@ keep_displaying_old_time(time)
     }
 }
 
-show_split()
+show_split(start_time)
 {
     level endon("end_game");
 
@@ -983,7 +983,7 @@ show_split()
 
     wait 8.25;
 
-    timestamp = convert_time(int(getTime() / 1000) - level.B2FR_START);
+    timestamp = convert_time(int(getTime() / 1000) - start_time);
     print_scheduler("Round " + level.round_number + " time: ^1" + timestamp);
 }
 
