@@ -83,8 +83,14 @@ on_game_start()
 #endif
     level thread perma_perks_setup();
 
-    level thread nuketown_handler();
-    level thread topbarn_controller();
+    if (is_nuketown())
+    {
+#if FEATURE_NUKETOWN_EYES == 1
+        nuketown_switch_eyes();
+#endif
+        /* This is bad for highrounds, if this mannequin happens to exist, it'll remove one entity that's otherwise not removable */
+        thread remove_mannequin((-30, 13.9031, -47.0411), 1);
+    }
 
     if (isDefined(level.B2_POWERUP_TRACKING))
         level thread [[level.B2_POWERUP_TRACKING]]();
@@ -171,6 +177,10 @@ b2fr_main_loop()
 
     game_start = getTime();
 
+#if FEATURE_CHALLENGES == 1
+    level thread challenge_loop();
+#endif
+
     while (true)
     {
         level waittill("start_of_round");
@@ -224,6 +234,86 @@ b2fr_main_loop()
         {
             level thread print_checksums();
         }
+    }
+}
+
+challenge_loop()
+{
+    LEVEL_ENDON
+
+    initial_challenges = [];
+    if (!has_magic() && is_nuketown() && is_round(5))
+        initial_challenges = add_to_array(initial_challenges, register_challenge(
+            ::check_bounds_yellowhouse,
+            ::setup_yellowhouse,
+            ::failed_yellowhouse
+        ));
+    if (!has_magic() && is_farm() && is_round(5))
+        initial_challenges = add_to_array(initial_challenges, register_challenge(
+            ::check_bounds_topbarn,
+            undefined,
+            ::failed_topbarn
+        ));
+
+    level waittill("start_of_round");
+
+    start_challenges = [];
+    active_challenges = 0;
+    foreach (challenge in initial_challenges)
+    {
+        in_bounds = true;
+        foreach (player in level.players)
+        {
+            if (!player [[challenge.boundry_check]]())
+            {
+                in_bounds = false;
+            }
+        }
+        if (!in_bounds)
+        {
+            continue;
+        }
+        if (isDefined(challenge.setup))
+        {
+            thread [[challenge.setup]]();
+        }
+        start_challenges = add_to_array(start_challenges, challenge);
+        active_challenges++;
+    }
+
+    while (active_challenges)
+    {
+        foreach (challenge in start_challenges)
+        {
+            /* Skip challenge if it has already been failed */
+            if (challenge.status == CHALLENGE_FAIL)
+            {
+                continue;
+            }
+
+            /* Check if players are within boundries */
+            foreach (player in level.players)
+            {
+                if (!player [[challenge.boundry_check]]())
+                {
+                    challenge [[challenge.fail]](player);
+                }
+            }
+
+            /* If additional challenge condition exists, check that as well */
+            if (isDefined(challenge.condition) && [[challenge.condition]]())
+            {
+                challenge [[challenge.fail]]();
+            }
+
+            /* Decrement number of active challenges */
+            if (challenge.status == CHALLENGE_FAIL)
+            {
+                active_challenges--;
+            }
+        }
+
+        wait 0.05;
     }
 }
 
@@ -818,6 +908,10 @@ set_dvars()
 #endif
 
     level.GAMEPLAY_REMINDER = ::gameplay_reminder;
+    if (is_nuketown())
+    {
+        level.GAMEPLAY_REMINDER = ::nuketown_gameplay_reminder;
+    }
 
     dvars = [];
     /*                                  DVAR                            VALUE                   PROTECT INIT_ONLY   EVAL                    */
@@ -1797,36 +1891,7 @@ terminate_character_wrapper()
 }
 #endif
 
-challenge_failed(challenge_name, challenge_name_upper, challenge_zone)
-{
-    print_scheduler(challenge_name + " Challenge: ^1" + self.name + " LEFT " + challenge_zone + "!");
-    info_print(self.name + " failed challenge " + challenge_name + " at " + convert_time(int(GetTime() / 1000) - level.B2FR_START));
-    generate_watermark("FAILED " + challenge_name_upper, (0.8, 0, 0));
-}
-
-nuketown_handler()
-{
-    level endon("end_game");
-
-    if (!is_nuketown())
-        return;
-
-    level.GAMEPLAY_REMINDER = ::nuketown_gameplay_reminder;
-
-#if NUKETOWN_EYES == 1
-    nuketown_switch_eyes();
-#endif
-
-    // Bus mannequin
-    /* This is bad for highrounds, if this mannequin happens to exist, it'll remove one entity that's otherwise not removable */
-    thread remove_mannequin((-30, 13.9031, -47.0411), 1);
-
-    // Yellow House
-    if (!has_magic() && level.start_round >= 5)
-        thread yellowhouse_controller();
-}
-
-#if NUKETOWN_EYES == 1
+#if FEATURE_NUKETOWN_EYES == 1
 nuketown_switch_eyes()
 {
     level setclientfield("zombie_eye_change", 1);
@@ -1834,45 +1899,63 @@ nuketown_switch_eyes()
 }
 #endif
 
-yellowhouse_controller()
+#if FEATURE_CHALLENGES == 1
+register_challenge(boundry_check, setup_function, challenge_failed_function, challenge_condition_function)
 {
-    level endon("end_game");
+    challenge = spawnStruct();
+    challenge.status = CHALLENGE_NEW;
+    challenge.boundry_check = boundry_check;
+    challenge.setup = setup_function;
+    challenge.fail = challenge_failed_function;
+    challenge.condition = challenge_condition_function;
 
-    level waittill("start_of_round");
+    return challenge;
+}
 
-    allowed_zones = array("openhouse2_backyard_zone", "openhouse2_f1_zone");
-
-    foreach (player in level.players)
-    {
-        if (!player is_player_in_yellowhouse())
-        {
-#if DEBUG == 1
-            debug_print("exiting yellowhouse_controller cause zone: '" + player get_current_zone() + "' with coordinates [0] => " + player.origin[0] + " [1] => " + player.origin[1] + " [2] =>" + player.origin[2]);
-#endif
-            return;
-        }
-    }
-
-    print_scheduler("Yellow House Challenge: ^2ACTIVE");
-
+setup_yellowhouse()
+{
     yellow_house_mannequins = array((1058.2, 387.3, -57), (609.28, 315.9, -53.89), (872.48, 461.88, -56.8), (851.1, 156.6, -51), (808, 140.5, -51), (602.53, 281.09, -55));
     foreach (origin in yellow_house_mannequins)
         remove_mannequin(origin);
 
-    while (true)
-    {
-        foreach (player in level.players)
-        {
-            if (!player is_player_in_yellowhouse())
-            {
-                player challenge_failed("Yellow House", "YELLOW HOUSE", "YELLOW HOUSE AREA");
-                return;
-            }
-        }
-
-        wait 0.05;
-    }
+    print_scheduler("Yellow House Challenge: ^2ACTIVE");
 }
+
+setup_topbarn()
+{
+    print_scheduler("Top Barn Challenge: ^2ACTIVE");
+}
+
+check_bounds_yellowhouse()
+{
+    return (self get_current_zone() == "openhouse2_f1_zone"
+        /* Staircase */
+        || (self.origin[0] > 780 && self.origin[1] < 200) && (self.origin[0] < 900 && self.origin[1] > 30)
+        /* Doors */
+        || (self.origin[0] < 1130 && self.origin[1] > 100) && (self.origin[0] > 900 && self.origin[1] < 750) && self.origin[2] < 0);
+}
+
+check_bounds_topbarn()
+{
+    return (self get_current_zone() != "zone_brn"
+        || self.origin[2] < 50 && (self.origin[0] < 7875 || self.origin[0] > 8115)
+        || self.origin[2] < 50 && (self.origin[1] > -5115 || self.origin[1] < -5415));
+}
+
+failed_yellowhouse(player)
+{
+    print_scheduler("Yellow House Challenge: ^1" + player.name + " LEFT THE CHALLENGE AREA!");
+    generate_temp_watermark(20, "FAILED YELLOW HOUSE", (0.8, 0, 0));
+    self.status = CHALLENGE_FAIL;
+}
+
+failed_topbarn(player)
+{
+    print_scheduler("Top Barn Challenge: ^1" + player.name + " LEFT THE CHALLENGE AREA!");
+    generate_temp_watermark(20, "FAILED TOP BARN", (0.8, 0, 0));
+    self.status = CHALLENGE_FAIL;
+}
+#endif
 
 remove_mannequin(origin, extra_delay)
 {
@@ -1903,83 +1986,6 @@ remove_mannequin(origin, extra_delay)
             break;
         }
     }
-}
-
-topbarn_controller()
-{
-    level endon("end_game");
-
-    if (!is_farm() || has_magic() || !is_round(5))
-        return;
-
-    level waittill("start_of_round");
-
-    foreach (player in level.players)
-    {
-        if (!player is_player_in_top_barn())
-        {
-#if DEBUG == 1
-            debug_print("exiting topbarn_controller cause zone: '" + player get_current_zone() + "'");
-#endif
-            return;
-        }
-    }
-
-    print_scheduler("Top Barn Challenge: ^2ACTIVE");
-
-    while (true)
-    {
-        foreach (player in level.players)
-        {
-            if (!player is_player_in_top_barn())
-            {
-                player challenge_failed("Top Barn", "TOP BARN", "TOP BARN AREA");
-                return;
-            }
-        }
-
-        wait 0.05;
-    }
-}
-
-is_player_in_yellowhouse()
-{
-    if (self get_current_zone() == "openhouse2_f1_zone")
-        return true;
-
-    /* Staircase */
-    if ((self.origin[0] > 780 && self.origin[1] < 200)
-        && (self.origin[0] < 900 && self.origin[1] > 30))
-            return true;
-
-    /* Doors */
-    if ((self.origin[0] < 1130 && self.origin[1] > 100)
-        && (self.origin[0] > 900 && self.origin[1] < 750)
-        && self.origin[2] < 0)
-            return true;
-
-#if DEBUG == 1
-    debug_print("what");
-    debug_print("player not in yellowhouse: [zone] => " + self get_current_zone() + " [0] => " + self.origin[0] + " [1] => " + self.origin[1] + " [2] =>" + self.origin[2]);
-#endif
-    return false;
-}
-
-is_player_in_top_barn()
-{
-    if (self get_current_zone() != "zone_brn")
-        return false;
-
-    if (self.origin[2] < 50)
-    {
-        if (self.origin[0] < 7875 || self.origin[0] > 8115)
-            return false;
-        
-        if (self.origin[1] > -5115 || self.origin[1] < -5415)
-            return false;
-    }
-
-    return true;
 }
 
 nuketown_gameplay_reminder()
