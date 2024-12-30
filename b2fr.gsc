@@ -186,6 +186,10 @@ b2fr_main_loop()
 
         level thread sniff();
 
+        if (get_plutonium_version() >= 4522 && !did_game_just_start() && level.round_number % 2 == 1 && level.round_number > 11)
+        {
+            level thread print_checksums();
+        }
     }
 }
 
@@ -745,6 +749,27 @@ gameplay_reminder()
         wait 0.25;
         print_scheduler("Full gameplay is required from host perspective as of April 2023", maps\mp\_utility::gethostplayer());
     }
+}
+
+print_checksums()
+{
+    LEVEL_ENDON
+
+    print_scheduler("Showing patch checksums", maps\mp\_utility::gethostplayer());
+    cmdexec("flashScriptHashes");
+
+    if (getDvar("cg_drawChecksums") != "1")
+    {
+        setDvar("cg_drawChecksums", 1);
+        wait 3;
+        setDvar("cg_drawChecksums", 0);
+    }
+}
+
+/* Stub */
+cmdexec(arg)
+{
+
 }
 
 set_dvars()
