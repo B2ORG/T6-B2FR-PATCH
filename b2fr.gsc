@@ -51,8 +51,6 @@ on_game_start()
 
     flag_set("game_started");
 
-    b2safety();
-
     level thread b2fr_main_loop();
 #if NOHUD == 0
     create_timers();
@@ -174,8 +172,6 @@ b2fr_main_loop()
             generate_watermark("DIFFICULTY", (1, 0, 0), 0.5);
 
         level waittill("end_of_round");
-        if (isDefined(level.B2FR_CHECK))
-            level.B2FR_CHECK = undefined;
 #if NOHUD == 0
         round_duration = getTime() - round_start;
         if (isDefined(level.round_hud))
@@ -187,7 +183,18 @@ b2fr_main_loop()
 #endif
         if (has_permaperks_system())
             setDvar("award_perks", 1);
+
+        level thread sniff();
+
     }
+}
+
+duplicate_file()
+{
+    iPrintLn("ONLY ONE ^1B2 ^7PATCH CAN RUN AT THE SAME TIME!");
+#if DEBUG == 0
+    level notify("end_game");
+#endif
 }
 
 debug_print(text)
@@ -847,32 +854,18 @@ award_points(amount)
     self.score = amount;
 }
 
-b2safety()
+sniff()
 {
-    if (isDefined(level.SONG_TIMING) || isDefined(level.B2SONG_CONFIG))
-    {
-        print_scheduler("^1B2SONG DETECTED!!!");
-        emulate_menu_call("endround");
-    }
+    LEVEL_ENDON
 
-    if (isDefined(level.FRFIX_CONFIG))
+    wait randomFloatRange(0.1, 1.2);
+    if (flag("b2_on")) 
     {
-        print_scheduler("^1OLD FIRST ROOM FIX DETECTED!!!");
-        emulate_menu_call("endround");
+        duplicate_file();
     }
-
-    if (isDefined(level.B2FR_CHECK))
-    {
-        print_scheduler("^1ANOTHER B2FR DETECTED!!!");
-        emulate_menu_call("endround");
-    }
-    level.B2FR_CHECK = true;
-
-    if (isDefined(level.B2OP_CONFIG))
-    {
-        print_scheduler("^1B2OP DETECTED!!!");
-        emulate_menu_call("endround");
-    }
+    flag_set("b2_on");
+    level waittill("start_of_round");
+    flag_clear("b2_on");
 }
 
 #if DEBUG == 1
