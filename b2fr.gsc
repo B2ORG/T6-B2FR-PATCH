@@ -1059,7 +1059,7 @@ keep_displaying_old_time(time)
 
     while (true)
     {
-        self setTimer(time - 0.1);
+        self setTimer(MS_TO_SECONDS(time) - 0.1);
         wait 0.25;
     }
 }
