@@ -14,6 +14,12 @@
 #define MAX_VALID_HEALTH 1044606905
 
 #define CLEAR(__var) __var = undefined;
+#define MS_TO_SECONDS(__ms) int(__ms / 1000)
+#if DEBUG == 1
+#define DEBUG_PRINT(__txt) println("DEBUG: " + __txt);
+#else
+#define DEBUG_PRINT(__txt)
+#endif
 
 #include common_scripts\utility;
 #include maps\mp\gametypes_zm\_hud_util;
@@ -32,9 +38,6 @@ init()
     flag_init("game_started");
     flag_init("box_rigged");
     flag_init("permaperks_were_set");
-
-    // Patch Config
-    level.B2FR_VERSION = 1.7;
 
     level thread on_game_start();
 }
