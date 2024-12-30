@@ -1,19 +1,33 @@
+/* Global code configuration */
 #define DEBUG 0
 #define BETA 0
 #define NOHUD 0
 #define PLUTO_CLI 1
-#define NUKETOWN_EYES 0
-#define FEATURE_CHARACTERS 1
 
+/* Feature flags */
+#define FEATURE_NUKETOWN_EYES 0
+#define FEATURE_CHARACTERS 1
+#define FEATURE_CHALLENGES 1
+
+/* Snippet macros */
 #define LEVEL_ENDON \
     level endon("end_game");
 #define PLAYER_ENDON \
     LEVEL_ENDON \
     self endon("disconnect");
 
-#define B2FR_VER = 2
+/* Const macros */
+#define B2FR_VER 2
+#define VER_ANCIENT 353
+#define VER_2905 2905
+#define VER_4K 4516
+#define NET_FRAME_SOLO 100
+#define NET_FRAME_COOP 50
 #define MAX_VALID_HEALTH 1044606905
+#define CHALLENGE_NEW 1
+#define CHALLENGE_FAIL 0
 
+/* Function macros */
 #define CLEAR(__var) __var = undefined;
 #define MS_TO_SECONDS(__ms) int(__ms / 1000)
 #if DEBUG == 1
