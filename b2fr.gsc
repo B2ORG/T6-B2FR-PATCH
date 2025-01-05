@@ -1,7 +1,18 @@
 /* Global code configuration */
+#define RAW 1
+#define NOHUD 0
 #define DEBUG 0
 #define BETA 0
-#define NOHUD 0
+#define B2FR_VER 2
+
+/* Const macros */
+#define VER_ANCIENT 353
+#define VER_MODERN 1824
+#define VER_2905 2905
+#define VER_4K 4516
+#define NET_FRAME_SOLO 100
+#define NET_FRAME_COOP 50
+#define MAX_VALID_HEALTH 1044606905
 
 /* Feature flags */
 #define FEATURE_NUKETOWN_EYES 0
@@ -15,25 +26,14 @@
     LEVEL_ENDON \
     self endon("disconnect");
 
-/* Const macros */
-#define B2FR_VER 2
-#define VER_ANCIENT 353
-#define VER_2905 2905
-#define VER_4K 4516
-#define NET_FRAME_SOLO 100
-#define NET_FRAME_COOP 50
-#define MAX_VALID_HEALTH 1044606905
-#define CHALLENGE_NEW 1
-#define CHALLENGE_FAIL 0
-
 /* Function macros */
-#define CLEAR(__var) __var = undefined;
-#define MS_TO_SECONDS(__ms) int(__ms / 1000)
 #if DEBUG == 1
-#define DEBUG_PRINT(__txt) println("DEBUG: " + __txt);
+#define DEBUG_PRINT(__txt) printf("DEBUG: ^5" + __txt);
 #else
 #define DEBUG_PRINT(__txt)
 #endif
+#define CLEAR(__var) __var = undefined;
+#define MS_TO_SECONDS(__ms) int(__ms / 1000)
 
 #include common_scripts\utility;
 #include maps\mp\gametypes_zm\_hud_util;
