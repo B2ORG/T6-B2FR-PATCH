@@ -1,66 +1,40 @@
-# B2FR 1.7
-
-## Changes
+# Version 1.7
 
 - Tweaks to anticheat
-
-## Dev
-
 - Updated compilation script to match version from B2OP
 
-# B2FR 1.6
-
-## Changes
+# Version 1.6
 
 - Added `velocity_meter` dvar for toggling the visibility of velocity meter
 
-# B2FR 1.5
-
-## Changes
+# Version 1.5
 
 - Added `scr_skip_devblock 1` to fix dev debug code rendering stuff on player screen in R3904
 
-# B2FR 1.4
-
-## Fixes
+# Version 1.4
 
 - Fixed splits showing up early
-
-## Changes
-
 - Increased split frequency
 
-# B2FR 1.3
-
-## Fixes
+# Version 1.3
 
 - Fixed prenades showing up in a regular Nuketown First Room game
 - Fixed delayed split prints
 
-# B2FR 1.2
-
-## Fixes
+# Version 1.2
 
 - Fixed velocity value if player is moving diagonally (thanks [JBleezy](https://github.com/Jbleezy))
-
-## Changes
-
 - Removed DOF
 
-# B2FR 1.1
-
-## Fixes
+# Version 1.1
 
 - Fixed gameplay reminders
 - Fixed rare possibility of the game failing to restart after awarding permaperks
-
-## Changes
-
 - Dvar sequence has been slightly delayed, which should reduce the emount of foreing scripts triggering the integrity checks
 - Added back dvar rules from V6, including pre-patch recoil and aim assist
 - Added text placeholder for round timer before round 1
 
-# B2FR 1.0
+# Version 1.0
 
 This version marks moving from old First Room Fix codebase (again) to one built for [B2OP](https://github.com/B2ORG/T6-B2OP-PATCH), the two now have similar core functionality (adjusted for each respective category they're meant for). Only most important changes from First Room Fix V6 to B2FR V1 from player perspective are listed here, but under the hood almost all the code has been replaced.
 
