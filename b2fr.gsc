@@ -1,7 +1,7 @@
 /* Global code configuration */
 #define RAW 1
 #define NOHUD 0
-#define DEBUG 0
+#define DEBUG 1
 #define BETA 0
 #define B2FR_VER 2
 
