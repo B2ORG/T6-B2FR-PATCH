@@ -1,5 +1,4 @@
 /* Global code configuration */
-#define RAW 1
 #define NOHUD 0
 #define DEBUG 1
 #define BETA 0
@@ -13,11 +12,15 @@
 #define NET_FRAME_SOLO 100
 #define NET_FRAME_COOP 50
 #define MAX_VALID_HEALTH 1044606905
+#define CHALLENGE_NEW 0
+#define CHALLENGE_SUCCESS 1
+#define CHALLENGE_FAIL 2
 
 /* Feature flags */
 #define FEATURE_NUKETOWN_EYES 0
 #define FEATURE_CHARACTERS 1
 #define FEATURE_CHALLENGES 1
+#define FEATURE_PERMAPERKS 1
 
 /* Snippet macros */
 #define LEVEL_ENDON \
@@ -28,7 +31,7 @@
 
 /* Function macros */
 #if DEBUG == 1
-#define DEBUG_PRINT(__txt) printf("DEBUG: ^5" + __txt);
+#define DEBUG_PRINT(__txt); printf("DEBUG: ^5" + __txt);
 #else
 #define DEBUG_PRINT(__txt)
 #endif
@@ -50,8 +53,8 @@ main()
 init()
 {
     flag_init("game_started");
-    flag_init("box_rigged");
     flag_init("permaperks_were_set");
+    flag_init("b2_on");
 
     level thread on_game_start();
 }
@@ -60,14 +63,16 @@ on_game_start()
 {
     LEVEL_ENDON
 
-    set_dvars();
-    level thread on_player_connecting();
-    level thread origins_fix();
-
+    thread set_dvars();
 #if FEATURE_CHARACTERS == 1
+    level thread reevaluate_character_settings();
     level thread character_wrapper();
-    set_team_settings();
 #endif
+#if FEATURE_PERMAPERKS == 1
+    level thread perma_perks_setup();
+#endif
+    level thread on_player_connected();
+    level thread origins_fix();
 
     flag_wait("initial_blackscreen_passed");
 
@@ -80,7 +85,6 @@ on_game_start()
     if (isDefined(level.B2_NETWORK_HUD))
         level thread [[level.B2_NETWORK_HUD]]();
 #endif
-    level thread perma_perks_setup();
 
     if (is_nuketown())
     {
@@ -105,28 +109,19 @@ on_game_start()
 #endif
 }
 
-on_player_connecting()
+on_player_connected()
 {
     LEVEL_ENDON
 
     while (true)
     {
-        level waittill("connecting", player);
+        level waittill("connected", player);
+        player thread on_player_spawned();
 #if FEATURE_CHARACTERS == 1
-        player thread set_character_settings();
+        if (flag("initial_players_connected"))
+            player thread set_joining_player_character();
 #endif
-        player thread on_player_connected();
     }
-}
-
-on_player_connected()
-{
-    PLAYER_ENDON
-
-    self waittill("begin");
-    waittillframeend;
-    self thread on_player_spawned();
-    self thread on_player_spawned_permaperk();
 }
 
 on_player_spawned()
@@ -141,31 +136,12 @@ on_player_spawned()
 
     self thread welcome_prints();
     self thread evaluate_network_frame();
-
 #if NOHUD == 0
     self thread velocity_meter();
 
     if (isDefined(level.B2_ZONES))
-        self thread [[level.B2_ZONES]]();
+        self thread [[level.B2_ZONES]](true);
 #endif
-}
-
-on_player_spawned_permaperk()
-{
-    PLAYER_ENDON
-
-    /* We want to remove the perks before players spawn to prevent health bonus 
-    The wait is essential, it allows the game to process permaperks internally before we override them */
-    wait 2;
-
-    if (has_permaperks_system())
-    {
-        self remove_permaperk_wrapper("jugg", 15);
-        if (is_buried())
-            self remove_permaperk_wrapper("nube", 10);
-        else 
-            self remove_permaperk_wrapper("nube");
-    }
 }
 
 b2fr_main_loop()
@@ -174,6 +150,7 @@ b2fr_main_loop()
 
     game_start = getTime();
 
+    level thread scan_in_box();
 #if FEATURE_CHALLENGES == 1
     level thread challenge_loop();
 #endif
@@ -183,26 +160,12 @@ b2fr_main_loop()
         level waittill("start_of_round");
 #if NOHUD == 0
         round_start = getTime();
-        level thread show_hordes();
         if (isDefined(level.round_hud))
         {
             level.round_hud setTimerUp(0);
         }
+        level thread show_hordes();
 #endif
-
-        /* Verify based on map, cause someone could sneak a patch that'd give those in offline game */
-        if (is_tranzit() || is_die_rise() || is_buried())
-        {
-            wait 2;
-            foreach(player in level.players)
-            {
-                player remove_permaperk_wrapper("jugg", 15);
-                player remove_permaperk_wrapper("nube", 10);
-            }
-        }
-
-        /* Check first box each round */
-        scan_in_box();
 
         /* Check gamerules */
         if (getgametypesetting("startRound") > 1 && (is_tranzit() || is_mob() || is_die_rise() || is_mob() || is_buried() || is_origins()))
@@ -211,6 +174,8 @@ b2fr_main_loop()
             generate_watermark("STARTING ROUND", (1, 0, 0), 0.5);
         if (!is_true(level.gamedifficulty))
             generate_watermark("DIFFICULTY", (1, 0, 0), 0.5);
+
+        emergency_permaperks_cleanup();
 
         level waittill("end_of_round");
 #if NOHUD == 0
@@ -222,12 +187,16 @@ b2fr_main_loop()
         level thread show_split(game_start);
         CLEAR(round_duration)
 #endif
+#if FEATURE_PERMAPERKS == 1
         if (has_permaperks_system())
+        {
             setDvar("award_perks", 1);
+        }
+#endif
 
         level thread sniff();
 
-        if (get_plutonium_version() >= 4522 && !did_game_just_start() && level.round_number % 2 == 1 && level.round_number > 11)
+        if (get_plutonium_version() >= 4522 && !did_game_just_start() && should_print_checksum())
         {
             level thread print_checksums();
         }
@@ -248,7 +217,7 @@ challenge_loop()
     if (!has_magic() && is_farm() && is_round(5))
         initial_challenges = add_to_array(initial_challenges, register_challenge(
             ::check_bounds_topbarn,
-            undefined,
+            ::setup_topbarn,
             ::failed_topbarn
         ));
 
@@ -297,7 +266,13 @@ challenge_loop()
                 if (!player [[challenge.boundry_check]]())
                 {
                     challenge [[challenge.fail]](player);
+                    break;
                 }
+            }
+
+            if (challenge.status == CHALLENGE_FAIL)
+            {
+                continue;
             }
 
             /* If additional challenge condition exists, check that as well */
@@ -305,16 +280,20 @@ challenge_loop()
             {
                 challenge [[challenge.fail]]();
             }
+        }
 
-            /* Decrement number of active challenges */
-            if (challenge.status == CHALLENGE_FAIL)
-            {
-                active_challenges--;
-            }
+        active_challenges = 0;
+        foreach (challenge in start_challenges)
+        {
+            // DEBUG_PRINT("checking status at " + gettime() + ": " + challenge.status);
+            if (challenge.status != CHALLENGE_FAIL)
+                active_challenges++;
         }
 
         wait 0.05;
     }
+
+    DEBUG_PRINT("end_challenge_loop");
 }
 
 duplicate_file()
@@ -327,14 +306,14 @@ duplicate_file()
 
 generate_watermark_slots()
 {
-    slots = array();
+    slots = [];
 
     positions = array(0, -90, 90, -180, 180, -270, 270, -360, 360, -450, 450, -540, 540, -630, 630);
 
     foreach(pos in positions)
     {
         i = slots.size;
-        slots[i] = array();
+        slots[i] = [];
         slots[i]["pos"] = pos;
         slots[i]["perm_on"] = false;
         slots[i]["temp_on"] = false;
@@ -520,6 +499,38 @@ convert_time(seconds)
     return combined;
 }
 
+array_create(values, keys)
+{
+    new_array = [];
+    for (i = 0; i < values.size; i++)
+    {
+        key = i;
+        if (isDefined(keys[i]))
+            key = keys[i];
+
+        new_array[key] = values[i];
+    }
+
+    return new_array;
+}
+
+array_implode(separator, arr)
+{
+    str = "";
+    len = arr.size;
+    if (len == 0)
+        return "";
+
+    for (i = 0; i < len; i++)
+    {
+        if (i == 0)
+            str += arr[i];
+        else
+            str += separator + arr[i];
+    }
+    return str;
+}
+
 player_wait_for_initial_blackscreen()
 {
     LEVEL_ENDON
@@ -571,6 +582,16 @@ is_buried()
 is_origins()
 {
     return level.script == "zm_tomb";
+}
+
+is_survival_map()
+{
+    return level.scr_zm_ui_gametype_group == "zsurvival";
+}
+
+is_victis_map()
+{
+    return is_tranzit() || is_die_rise() || is_buried();
 }
 
 did_game_just_start()
@@ -842,6 +863,38 @@ cmdexec(arg)
 
 }
 
+should_print_checksum()
+{
+    switch (level.players.size)
+    {
+        case 1:
+        case 2:
+            faster = 30;
+            if (is_town())
+                faster = 60;
+            else if (is_origins())
+                faster = 40;
+            break;
+        default:
+            faster = 25;
+            if (is_town())
+                faster = 50;
+            else if (is_buried())
+                faster = 35;
+            else if (is_origins())
+                faster = 35;
+    }
+
+    /*
+    early = (is_round(20) && !is_round(faster) && level.round_number % 5 == 2);
+    late = (is_round(faster) && level.round_number % 2 == 1);
+    DEBUG_PRINT("early = " + early + " late = " + late);
+    */
+
+    return ((is_round(15) && !is_round(faster) && level.round_number % 5 == 2) 
+        || (is_round(faster) && level.round_number % 2 == 1));
+}
+
 set_dvars()
 {
     LEVEL_ENDON
@@ -861,7 +914,9 @@ set_dvars()
 
     dvars = [];
     /*                                  DVAR                            VALUE                   PROTECT INIT_ONLY   EVAL                    */
+#if NOHUD == 0
     dvars[dvars.size] = register_dvar("velocity_meter",                 "1",                    false,  true);
+#endif
     dvars[dvars.size] = register_dvar("award_perks",                    "1",                    false,  true,    ::has_permaperks_system);
     dvars[dvars.size] = register_dvar("player_strafeSpeedScale",        "0.8",                  true,   false);
     dvars[dvars.size] = register_dvar("player_backSpeedScale",          "0.7",                  true,   false);
@@ -870,15 +925,22 @@ set_dvars()
     dvars[dvars.size] = register_dvar("con_gameMsgWindow0Filter",       "gamenotify obituary",  true,   false);
     dvars[dvars.size] = register_dvar("sv_cheats",                      "0",                    true,   false);
     dvars[dvars.size] = register_dvar("ai_corpseCount",                 "5",                    true,   false);
-    dvars[dvars.size] = register_dvar("sv_endGameIfISuck",              "0",                    false,  false);                                 // Prevent host migration
-    dvars[dvars.size] = register_dvar("sv_allowAimAssist",              "0",                    false,  true);                                  // Removes target assist
-    dvars[dvars.size] = register_dvar("sv_patch_zm_weapons",            "1",                    false,  false);                                 // Force post dlc1 patch on recoil
-    dvars[dvars.size] = register_dvar("r_dof_enable",                   "0",                    false,  true);                                  // Remove Depth of Field
-    dvars[dvars.size] = register_dvar("scr_skip_devblock",              "1",                    false,  false,    ::is_3k);               // Fix for devblocks in r3903/3904
-    dvars[dvars.size] = register_dvar("g_zm_fix_damage_overflow",       "1",                    false,  true,       ::is_4k);                   // Use native health fix, r4516+
-    dvars[dvars.size] = register_dvar("g_fix_entity_leaks",             "0",                    true,   false,      ::is_4k);                   // Defines if Pluto error fixes are applied, r4516+
-    dvars[dvars.size] = register_dvar("cg_flashScriptHashes",           "1",                    true,   false,      ::is_4k);                   // Enables flashing hashes of individual scripts
-    dvars[dvars.size] = register_dvar("cg_debugInfoCornerOffset",       "50 20",                false,  false,      ::should_set_draw_offset);  // Offsets for pluto draws compatibile with b2 timers
+    /* Prevent host migration (redundant nowadays) */
+    dvars[dvars.size] = register_dvar("sv_endGameIfISuck",              "0",                    false,  false);
+    /* Force post dlc1 patch on recoil */
+    dvars[dvars.size] = register_dvar("sv_patch_zm_weapons",            "1",                    false,  false);
+    /* Remove Depth of Field */
+    dvars[dvars.size] = register_dvar("r_dof_enable",                   "0",                    false,  true);
+    /* Fix for devblocks in r3903/3904 */
+    dvars[dvars.size] = register_dvar("scr_skip_devblock",              "1",                    false,  false,      ::is_3k);
+    /* Use native health fix, r4516+ */
+    dvars[dvars.size] = register_dvar("g_zm_fix_damage_overflow",       "1",                    false,  true,       ::is_4k);
+    /* Defines if Pluto error fixes are applied, r4516+ */
+    dvars[dvars.size] = register_dvar("g_fix_entity_leaks",             "0",                    true,   false,      ::is_4k);
+    /* Enables flashing hashes of individual scripts */
+    dvars[dvars.size] = register_dvar("cg_flashScriptHashes",           "1",                    true,   false,      ::is_4k);
+    /* Offsets for pluto draws compatibile with b2 timers */
+    dvars[dvars.size] = register_dvar("cg_debugInfoCornerOffset",       "50 20",                false,  false,      ::should_set_draw_offset);
 
     protected = [];
     foreach (dvar in dvars)
@@ -936,7 +998,7 @@ dvar_watcher(dvars)
             {
                 /* They're not reset here, someone might want to test something related to protected dvars, so they can do so with the watermark */
                 generate_watermark("DVAR " + ToUpper(dvar) + " VIOLATED", (1, 0.6, 0.2), 0.66);
-                ArrayRemoveIndex(dvars, dvar, true);
+                arrayremoveindex(dvars, dvar, true);
             }
         }
 
@@ -989,39 +1051,19 @@ evaluate_network_frame()
 
     flag_wait("initial_blackscreen_passed");
 
-    start_time = int(getTime());
+    start_time = getTime();
     wait_network_frame();
-    end_time = int(getTime());
-    network_frame_len = (end_time - start_time) / 1000;
-    net_frame_good = false;
+    network_frame_len = getTime() - start_time;
 
-    /* To avoid direct float equality evaluation */
-    if (level.players.size == 1)
-    {
-        if (network_frame_len > 0.06 && network_frame_len < 0.14)
-            net_frame_good = true;
-    }
-    else
-    {
-        if (network_frame_len < 0.09)
-            net_frame_good = true;
-    }
-
-    if (net_frame_good)
+    if ((level.players.size == 1 && network_frame_len == NET_FRAME_SOLO) || (level.players.size > 1 && network_frame_len == NET_FRAME_COOP))
     {
         print_scheduler("Network Frame: ^2GOOD", self);
+        return;
     }
-    /* Being extremely nice about it, but after 15 it's fair to say they play on bad network frame */
-    else if (!is_round(15))
-    {
-        print_scheduler("Network Frame: ^1BAD", self);
-        level waittill("start_of_round");
-        self thread evaluate_network_frame();
-    }
-    else
-    {
-        generate_watermark("NETWORK FRAME", (0.8, 0, 0), 0.66);
-    }
+
+    print_scheduler("Network Frame: ^1BAD", self);
+    level waittill("start_of_round");
+    self thread evaluate_network_frame();
 }
 
 trap_fix()
@@ -1077,7 +1119,7 @@ show_split(start_time)
 
     wait 8.25;
 
-    timestamp = convert_time(int(getTime() / 1000) - start_time);
+    timestamp = convert_time(MS_TO_SECONDS((getTime() - start_time)));
     print_scheduler("Round " + level.round_number + " time: ^1" + timestamp);
 }
 
@@ -1174,11 +1216,11 @@ semtex_display()
 {
     LEVEL_ENDON
 
-    // Town for Semtex, Nuketown for No Magic
-    if (has_magic() || (!is_town() && !is_nuketown()))
+    /* Must be no magic, only town and nuketown (only round 10+) */
+    if (has_magic() || (!is_town() && (!is_nuketown() || (is_nuketown() && is_round(5)))))
         return;
 
-    self thread notify_about_prenade_switch();
+    thread notify_about_prenade_switch();
 
     num_of_prenades = 0;
 
@@ -1195,7 +1237,7 @@ semtex_display()
         print_content = "PRENADES ON " + level.round_number + ": ^3" + num_of_prenades;
         print_scheduler(print_content);
         wait_for_message_end();
-        self thread semtex_print_on_demand(print_content);
+        thread semtex_print_on_demand(print_content);
 
         CLEAR(print_content)
     }
@@ -1206,7 +1248,7 @@ semtex_print_on_demand(to_print)
     LEVEL_ENDON
     level endon("end_of_round");
 
-    while (is_plutonium())
+    while (true)
     {
         level waittill("say", text, player);
 
@@ -1236,7 +1278,7 @@ get_prenade_mode(switch_round)
 get_prenade_from_map(stub_arg)
 {
     nade_array = array(1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 17, 19, 22, 24, 28, 29, 34, 39, 42, 46, 52, 57, 61, 69, 78, 86, 96, 103);
-    nade_map = array();
+    nade_map = [];
     for (i = 0; i < nade_array.size; i++)
     {
         index = 22 + i;
@@ -1286,15 +1328,20 @@ notify_about_prenade_switch()
 {
     LEVEL_ENDON
 
-    self waittill("changed_prenade_type", prenade_type);
+    level waittill("changed_prenade_type", prenade_type);
     print_scheduler("Prenade values generation is now: ^3" + prenade_type);
 }
 #endif
 
+#if FEATURE_PERMAPERKS == 1
 perma_perks_setup()
 {
     if (!has_permaperks_system())
         return;
+
+    thread fix_persistent_jug();
+
+    flag_wait("initial_blackscreen_passed");
 
     if (getDvar("award_perks") == "1")
     {
@@ -1311,6 +1358,35 @@ perma_perks_setup()
 #if NOHUD == 0
     array_thread(level.players, ::permaperks_watcher);
 #endif
+}
+
+emergency_permaperks_cleanup()
+{
+    if (!flag("pers_jug_cleared"))
+        return;
+
+    /* This shouldn't be necessary, serves as last resort defence. Will not reset health but will prevent the perk to be active after a down */
+    foreach (player in level.players)
+    {
+        player remove_permaperk_wrapper("pers_jugg");
+        player remove_permaperk_wrapper("pers_jugg_downgrade_count");
+    }
+}
+
+fix_persistent_jug()
+{
+    LEVEL_ENDON
+
+    while (!isDefined(level.pers_upgrades["jugg"]))
+        wait 0.05;
+
+    level.pers_upgrades["jugg"].upgrade_active_func = ::fixed_upgrade_jugg_active;
+    flag_wait("pers_jug_cleared");
+    wait 0.5;
+
+    arrayremoveindex(level.pers_upgrades, "jugg");
+    arrayremovevalue(level.pers_upgrades_keys, "jugg");
+    DEBUG_PRINT("upgrade_keys => " + array_implode(", ", level.pers_upgrades_keys));
 }
 
 watch_permaperk_award()
@@ -1355,11 +1431,11 @@ permaperk_array(code, maps_award, maps_take, to_round)
     if (!isDefined(maps_award))
         maps_award = array("zm_transit", "zm_highrise", "zm_buried");
     if (!isDefined(maps_take))
-        maps_take = array();
+        maps_take = [];
     if (!isDefined(to_round))
         to_round = 255;
 
-    permaperk = array();
+    permaperk = [];
     permaperk["code"] = code;
     permaperk["maps_award"] = maps_award;
     permaperk["maps_take"] = maps_take;
@@ -1377,7 +1453,7 @@ award_permaperks_safe()
 
     wait 0.5;
 
-    perks_to_process = array();
+    perks_to_process = [];
     perks_to_process[perks_to_process.size] = permaperk_array("revive");
     perks_to_process[perks_to_process.size] = permaperk_array("multikill_headshots");
     perks_to_process[perks_to_process.size] = permaperk_array("perk_lose");
@@ -1394,10 +1470,42 @@ award_permaperks_safe()
     }
 
     wait 0.5;
-    CLEAR(perks_to_process)
     CLEAR(self.awarding_permaperks_now)
     CLEAR(self.permaperk_display_lock)
     self maps\mp\zombies\_zm_stats::uploadstatssoon();
+}
+
+fixed_upgrade_jugg_active()
+{
+    PLAYER_ENDON
+
+    wait 1;
+    self maps\mp\zombies\_zm_perks::perk_set_max_health_if_jugg("jugg_upgrade", 1, 0);
+    DEBUG_PRINT("fixed_upgrade_jugg_active() init " + self.name);
+
+    while (true)
+    {
+        level waittill("start_of_round");
+
+        if (maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active())
+        {
+            if (is_round(level.pers_jugg_round_lose_target))
+            {
+                self maps\mp\zombies\_zm_stats::increment_client_stat("pers_jugg_downgrade_count", 0);
+                wait 0.5;
+
+                if (self.pers["pers_jugg_downgrade_count"] >= level.pers_jugg_round_reached_max)
+                    break;
+            }
+        }
+    }
+
+    self maps\mp\zombies\_zm_perks::perk_set_max_health_if_jugg("jugg_upgrade", 1, 1);
+    self maps\mp\zombies\_zm_stats::zero_client_stat("pers_jugg", 0);
+    self maps\mp\zombies\_zm_stats::zero_client_stat("pers_jugg_downgrade_count", 0);
+    flag_set("pers_jug_cleared");
+
+    DEBUG_PRINT("fixed_upgrade_jugg_active() deinit " + self.name);
 }
 
 resolve_permaperk(perk)
@@ -1464,7 +1572,7 @@ permaperks_watcher()
 {
     PLAYER_ENDON
 
-    self.last_perk_state = array();
+    self.last_perk_state = [];
     foreach(perk in level.pers_upgrades_keys)
     {
         while (!isDefined(self.pers_upgrades_awarded[perk]))
@@ -1502,7 +1610,7 @@ print_permaperk_state(enabled, perk)
         print_cli = "disabled";
     }
 
-    self iPrintLn("Permaperk " + permaperk_name(perk) + ": " + print_player);
+    print_scheduler("Permaperk " + permaperk_name(perk) + ": " + print_player, self)
     DEBUG_PRINT("print_permaperk_state(): " + self.name + ": Permaperk " + perk + " -> " + print_cli);
 }
 
@@ -1543,6 +1651,7 @@ permaperk_name(perk)
     }
 }
 #endif
+#endif
 
 origins_fix()
 {
@@ -1576,20 +1685,29 @@ scan_in_box()
     if (is_die_rise() || is_origins())
         offset = 1;
 
-    in_box = 0;
-    foreach (weapon in getarraykeys(level.zombie_weapons))
+    while (isDefined(should_be_in_box))
     {
-        if (maps\mp\zombies\_zm_weapons::get_is_in_box(weapon))
-            in_box++;
+        wait 0.05;
+
+        in_box = 0;
+
+        foreach (weapon in getarraykeys(level.zombie_weapons))
+        {
+            if (maps\mp\zombies\_zm_weapons::get_is_in_box(weapon))
+                in_box++;
+        }
+
+        // DEBUG_PRINT("in_box: " + in_box + " should: " + should_be_in_box);
+
+        if (in_box == should_be_in_box)
+            continue;
+
+        else if ((offset > 0) && (in_box == (should_be_in_box + offset)))
+            continue;
+
+        generate_watermark("FIRST BOX", (0.5, 0.3, 0.7), 0.66);
+        break;
     }
-
-    if (!isDefined(in_box) || !in_box)
-        return;
-
-    if ((in_box == should_be_in_box) || ((offset > 0) && (in_box == (should_be_in_box + offset))))
-        return;
-
-    generate_watermark("FIRST BOX", (0.5, 0.3, 0.7), 0.66);
 }
 
 fixed_wait_network_frame()
@@ -1644,7 +1762,7 @@ remove_mannequin(origin, extra_delay)
     if (isDefined(extra_delay))
         wait extra_delay;
 
-    all_mannequins = array();
+    all_mannequins = [];
     foreach (destructible in getentarray("destructible", "targetname"))
     {
         if (isSubStr(destructible.destructibledef, "male"))
@@ -1679,7 +1797,7 @@ nuketown_gameplay_reminder()
 
     if (level.players.size > 1)
     {
-        spawn_positions = array();
+        spawn_positions = [];
 
         spawn_positions[0] = SpawnStruct();
         spawn_positions[0].x_start = 790;
@@ -1727,69 +1845,163 @@ nuketown_gameplay_reminder()
 }
 
 #if FEATURE_CHARACTERS == 1
-set_team_settings()
+reevaluate_character_settings()
 {
-    if (is_town() || is_farm() || is_depot() || is_nuketown())
-        stat = "lh_clip";
-    else
-        return;
+    LEVEL_ENDON
 
-    preset = maps\mp\_utility::gethostplayer() maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(stat, "zm_highrise");
-    DEBUG_PRINT("team setting: " + preset);
+    flag_wait("start_zombie_round_logic");
+
+    stat = get_stat_for_map();
+    if (stat == "lh_clip")
+    {
+        preset = int(maps\mp\_utility::gethostplayer() maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(stat, "zm_highrise")) - 1;
+        DEBUG_PRINT("survival preset " + preset);
+        return set_team_settings(preset);
+    }
+
+    DEBUG_PRINT("reevaluate_character_settings start");
+
+    wait 0.2;
+
+    free_presets = array(0, 1, 2, 3);
+    allocated = [];
+    /* Force host at the beginning to give conflict resolution priority */
+    players = array(maps\mp\_utility::gethostplayer());
+    foreach (player in level.players)
+    {
+        players = add_to_array(players, player, false);
+    }
+
+    /* Set characters from presets */
+    foreach (player in players)
+    {
+        preset = int(player maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(stat, "zm_highrise"));
+        p = preset - 1;
+        DEBUG_PRINT("preset for " + player.name + ": " + preset);
+        if (preset > 0 && !isDefined(allocated[p]))
+        {
+            DEBUG_PRINT("bind preset " + p + " to " + player.name);
+            player set_character_index_internal(p);
+            allocated[p] = player;
+            /* If there are more than 4 players, we leave characters in the poll */
+            if (players.size <= 4)
+            {
+                arrayremovevalue(free_presets, p);
+            }
+        }
+    }
+
+    /* Assign remaining characters to other players */
+    foreach (player in level.players)
+    {
+        if (!isinarray(allocated, player))
+        {
+            /* Weasel always is on mob coop */
+            if (level.players.size > 1 && is_mob() && isinarray(free_presets, 3))
+            {
+                p = 3;
+            }
+            /* Richtofen always is on origins coop */
+            else if (level.players.size > 1 && is_origins() && isinarray(free_presets, 2))
+            {
+                p = 2;
+            }
+            else
+            {
+                free_presets = array_randomize(free_presets);
+                p = free_presets[0];
+            }
+            // DEBUG_PRINT("randomized: " + array_implode(", ", free_presets));
+            DEBUG_PRINT("bind remaining " + p + " to " + player.name);
+            player set_character_index_internal(p);
+            if (level.players.size <= 4)
+            {
+                arrayremovevalue(free_presets, p);
+            }
+        }
+    }
+}
+
+set_joining_player_character()
+{
+    PLAYER_ENDON
+    DEBUG_PRINT("set_joining_player_character()");
+    stat = get_stat_for_map();
+    /* Skip for survival maps */
+    if (stat == "lh_clip")
+        return;
+    wait 0.2;
+
+    preset = self maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(stat, "zm_highrise");
+    if (preset > 0)
+    {
+        index = preset - 1;
+        if (flag("char_taken_" + index))
+        {
+            DEBUG_PRINT("preset " + preset + " already taken");
+            return;
+        }
+        self set_character_index_internal(index);
+    }
+}
+
+set_team_settings(preset)
+{
+    DEBUG_PRINT("set_team_settings(" + preset + ")");
     switch (preset)
     {
+        case 0:
         case 1:
-        case 2:
-            level.should_use_cia = preset - 1;
+            level.should_use_cia = preset;
+            DEBUG_PRINT("should_use_cia: " + level.should_use_cia);
+            foreach (player in level.players)
+            {
+                player set_character_index_internal(level.should_use_cia);
+            }
             break;
     }
 }
 
-set_character_settings()
+set_character_index_internal(index)
 {
-    PLAYER_ENDON
+    DEBUG_PRINT("set_character_index_internal(" + index + ")");
 
-    if (is_tranzit() || is_die_rise() || is_buried())
+    /* Need to suppress hotjoin callback for the duration of index players */
+    if (isDefined(level.hotjoin_player_setup))
     {
-        stat = "clip";
-    }
-    else if (is_mob())
-    {
-        stat = "stock";
-    }
-    else if (is_origins())
-    {
-        stat = "alt_clip";
-    }
-    else
-    {
-        return;
+        saved_hotjoin_player_setup = level.hotjoin_player_setup;
+        level.hotjoin_player_setup = undefined;
     }
 
-    /* Wait is essential, GSC won't be able to read stats immidiately after connecting signal */
-    wait 0.25;
-    /* Give host a priority */
-    if (!self ishost())
-        wait 0.05;
-
-    preset = self maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(stat, "zm_highrise");
-
-    DEBUG_PRINT("Player " + self.clientid + " with preset " + preset + "-1 at " + getTime());
-
-    switch (preset)
+    switch (index)
     {
+        case 0:
         case 1:
         case 2:
         case 3:
-        case 4:
-            if (!flag("char_taken_" + (preset - 1)))
-            {
-                flag_set("char_taken_" + (preset - 1));
-                self.characterindex = preset - 1;
-                DEBUG_PRINT("set charindex " + self.characterindex + " for " + self.clientid + " at " + getTime());
-            }
+            flag_set("char_taken_" + index);
+            self.characterindex = index;
+            self [[level.givecustomcharacters]]();
+            DEBUG_PRINT(self.name + " set character " + index);
             break;
     }
+
+    /* Now need to restore the callback, as recalculated players should have the normal flow */
+    if (isDefined(saved_hotjoin_player_setup))
+    {
+        level.hotjoin_player_setup = saved_hotjoin_player_setup;
+    }
+}
+
+get_stat_for_map()
+{
+    if (is_victis_map())
+        return "clip";
+    else if (is_mob())
+        return "stock";
+    else if (is_origins())
+        return "alt_clip";
+    return "lh_clip";
 }
 
 character_flag_cleanup()
@@ -1815,75 +2027,74 @@ character_wrapper()
         level waittill("say", message, player);
         if (isSubStr(message, "char"))
         {
-            DEBUG_PRINT("char message detected: " + getSubStr(message, 5));
             switch (getSubStr(message, 5))
             {
-                case "misty":
-                case "farmgirl":
-                    stat = "clip";
-                    number = 2;
-                    break;
                 case "russman":
                 case "oldman":
-                    stat = "clip";
-                    number = 0;
-                    break;
-                case "stuhlinger":
-                case "engineer":
-                    stat = "clip";
-                    number = 3;
+                    player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("clip", 1, "zm_highrise");
+                    print_scheduler("Successfully updated character settings to: ^3Russman", player);
                     break;
                 case "marlton":
                 case "reporter":
-                    stat = "clip";
-                    number = 1;
+                    player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("clip", 4, "zm_highrise");
+                    print_scheduler("Successfully updated character settings to: ^3Stuhlinger", player);
                     break;
-                case "weasel":
-                case "arlington":
-                    stat = "stock";
-                    number = 3;
+                case "misty":
+                case "farmgirl":
+                    player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("clip", 3, "zm_highrise");
+                    print_scheduler("Successfully updated character settings to: ^3Misty", player);
                     break;
-                case "billy":
-                case "handsome":
-                case "sleeveless":
-                    stat = "stock";
-                    number = 2;
-                    break;
-                case "sal":
-                case "deluca":
-                case "longsleeve":
-                    stat = "stock";
-                    number = 1;
+                case "stuhlinger":
+                case "engineer":
+                    player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("clip", 2, "zm_highrise");
+                    print_scheduler("Successfully updated character settings to: ^3Marlton", player);
                     break;
                 case "finn":
                 case "oleary":
                 case "shortsleeve":
-                    stat = "stock";
-                    number = 0;
+                    player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("stock", 1, "zm_highrise");
+                    print_scheduler("Successfully updated character settings to: ^3Finn", player);
+                    break;
+                case "sal":
+                case "deluca":
+                case "longsleeve":
+                    player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("stock", 2, "zm_highrise");
+                    print_scheduler("Successfully updated character settings to: ^3Sal", player);
+                    break;
+                case "billy":
+                case "handsome":
+                case "sleeveless":
+                    player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("stock", 3, "zm_highrise");
+                    print_scheduler("Successfully updated character settings to: ^3Billy", player);
+                    break;
+                case "weasel":
+                case "arlington":
+                    player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("stock", 4, "zm_highrise");
+                    print_scheduler("Successfully updated character settings to: ^3Weasel", player);
                     break;
                 case "dempsey":
-                    stat = "alt_clip";
-                    number = 0;
+                    player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("alt_clip", 1, "zm_highrise");
+                    print_scheduler("Successfully updated character settings to: ^3Dempsey", player);
                     break;
                 case "nikolai":
-                    stat = "alt_clip";
-                    number = 1;
-                    break;
-                case "takeo":
-                    stat = "alt_clip";
-                    number = 3;
+                    player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("alt_clip", 2, "zm_highrise");
+                    print_scheduler("Successfully updated character settings to: ^3Nikolai", player);
                     break;
                 case "richtofen":
-                    stat = "alt_clip";
-                    number = 2;
+                    player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("alt_clip", 3, "zm_highrise");
+                    print_scheduler("Successfully updated character settings to: ^3Richtofen", player);
                     break;
-                case "cia":
-                    stat = "lh_clip";
-                    number = 1;
+                case "takeo":
+                    player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("alt_clip", 4, "zm_highrise");
+                    print_scheduler("Successfully updated character settings to: ^3Takeo", player);
                     break;
                 case "cdc":
-                    stat = "lh_clip";
-                    number = 0;
+                    player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("lh_clip", 1, "zm_highrise");
+                    print_scheduler("Successfully updated character settings to: ^3CDC", player);
+                    break;
+                case "cia":
+                    player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("lh_clip", 2, "zm_highrise");
+                    print_scheduler("Successfully updated character settings to: ^3CIA", player);
                     break;
                 case "reset":
                     player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("clip", 0, "zm_highrise");
@@ -1893,14 +2104,59 @@ character_wrapper()
                     print_scheduler("Character settings have been reset", player);
                     break;
             }
-
-            if (isDefined(stat))
+        }
+        else if (message == "whoami")
+        {
+            switch (player maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(get_stat_for_map(), "zm_highrise"))
             {
-                player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(stat, number + 1, "zm_highrise");
-                print_scheduler("Successfully updated character settings to: " + getSubStr(message, 5), player);
-                CLEAR(stat)
-                CLEAR(number)
+                case 1:
+                    if (is_victis_map())
+                        print_scheduler("Your preset is: ^3Russman", player);
+                    else if (is_mob())
+                        print_scheduler("Your preset is: ^3Finn", player);
+                    else if (is_origins())
+                        print_scheduler("Your preset is: ^3Dempsey", player);
+                    else
+                        print_scheduler("Your preset is: ^3CDC", player);
+                    break;
+                case 2:
+                    if (is_victis_map())
+                        print_scheduler("Your preset is: ^3Stuhlinger", player);
+                    else if (is_mob())
+                        print_scheduler("Your preset is: ^3Sal", player);
+                    else if (is_origins())
+                        print_scheduler("Your preset is: ^3Nikolai", player);
+                    else
+                        print_scheduler("Your preset is: ^3CIA", player);
+                    break;
+                case 3:
+                    if (is_victis_map())
+                        print_scheduler("Your preset is: ^3Misty", player);
+                    else if (is_mob())
+                        print_scheduler("Your preset is: ^3Billy", player);
+                    else if (is_origins())
+                        print_scheduler("Your preset is: ^3Richtofen", player);
+                    else
+                        print_scheduler("You don't currently have any character preset", player);
+                    break;
+                case 4:
+                    if (is_victis_map())
+                        print_scheduler("Your preset is: ^3Marlton", player);
+                    else if (is_mob())
+                        print_scheduler("Your preset is: ^3Weasel", player);
+                    else if (is_origins())
+                        print_scheduler("Your preset is: ^3Takeo", player);
+                    else
+                        print_scheduler("You don't currently have any character preset", player);
+                    break;
+                default:
+                    print_scheduler("You don't currently have any character preset", player);
             }
+
+#if DEBUG == 1
+            print_scheduler("Characterindex: ^1" + player.characterindex, player);
+            // print_scheduler("Shader: ^1" + player.whos_who_shader, player);
+#endif
         }
     }
 }
@@ -1912,6 +2168,7 @@ terminate_character_wrapper()
         wait 0.05;
     level notify("kill_character_wrapper");
 }
+
 #endif
 
 #if FEATURE_NUKETOWN_EYES == 1
@@ -1960,22 +2217,21 @@ check_bounds_yellowhouse()
 
 check_bounds_topbarn()
 {
-    return (self get_current_zone() != "zone_brn"
-        || self.origin[2] < 50 && (self.origin[0] < 7875 || self.origin[0] > 8115)
-        || self.origin[2] < 50 && (self.origin[1] > -5115 || self.origin[1] < -5415));
+    return ((self get_current_zone() == "zone_brn" && self.origin[2] >= 50)
+        || (self.origin[0] > 7875 && self.origin[0] < 8115 && self.origin[1] <= -5115 && self.origin[1] >= -5415));
 }
 
 failed_yellowhouse(player)
 {
     print_scheduler("Yellow House Challenge: ^1" + player.name + " LEFT THE CHALLENGE AREA!");
-    generate_temp_watermark(20, "FAILED YELLOW HOUSE", (0.8, 0, 0));
+    level thread generate_temp_watermark(20, "FAILED YELLOW HOUSE", (0.8, 0, 0));
     self.status = CHALLENGE_FAIL;
 }
 
 failed_topbarn(player)
 {
     print_scheduler("Top Barn Challenge: ^1" + player.name + " LEFT THE CHALLENGE AREA!");
-    generate_temp_watermark(20, "FAILED TOP BARN", (0.8, 0, 0));
+    level thread generate_temp_watermark(20, "FAILED TOP BARN", (0.8, 0, 0));
     self.status = CHALLENGE_FAIL;
 }
 #endif
