@@ -1,3 +1,13 @@
+# Version 2.0
+
+- Patch now shows currently detected Plutonium version on load (may be inaccurate in older Plutonium versions)
+- On Plutonium R4516+, the patch no longer applies the trap fix, instead enabling Plutonium fix. For older versions (R2905) the fix is still enabled.
+- On Plutonium 4522+, the patch manages automatic display of patch and memory checksums (beginning of the game and end of every even round 20+)
+- Added some optimizations to variable and thread allocations
+- Added new system for setting playable character (check readme for details)
+- Updated compilation script to match version from B2OP
+- Preprocessor directives refactor (not affecting the gameplay directly)
+
 # Version 1.7
 
 - Tweaks to anticheat
