@@ -2,7 +2,7 @@
 
 - Patch now shows currently detected Plutonium version on load (may be inaccurate in older Plutonium versions)
 - On Plutonium R4516+, the patch no longer applies the trap fix, instead enabling Plutonium fix. For older versions (R2905) the fix is still enabled.
-- On Plutonium 4522+, the patch manages automatic display of patch and memory checksums (beginning of the game and end of every even round 20+)
+- On Plutonium 4522+, the patch manages automatic display of patch and memory checksums
 - Added some optimizations to variable and thread allocations
 - Added new system for setting playable character (check readme for details)
 - Updated compilation script to match version from B2OP
@@ -33,7 +33,7 @@
 
 # Version 1.2
 
-- Fixed velocity value if player is moving diagonally (thanks [JBleezy](https://github.com/Jbleezy))
+- Fixed velocity meter while in the air (thanks [JBleezy](https://github.com/Jbleezy))
 - Removed DOF
 
 # Version 1.1
