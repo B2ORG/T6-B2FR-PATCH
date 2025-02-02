@@ -955,13 +955,13 @@ set_dvars()
 #if NOHUD == 0
     dvars[dvars.size] = register_dvar("velocity_meter",                 "1",                    false,  true);
 #endif
+    dvars[dvars.size] = register_dvar("sv_cheats",                      "0",                    true,   false);
     dvars[dvars.size] = register_dvar("award_perks",                    "1",                    false,  true,    ::has_permaperks_system);
     dvars[dvars.size] = register_dvar("player_strafeSpeedScale",        "0.8",                  true,   false);
     dvars[dvars.size] = register_dvar("player_backSpeedScale",          "0.7",                  true,   false);
     dvars[dvars.size] = register_dvar("g_speed",                        "190",                  true,   false);
     dvars[dvars.size] = register_dvar("con_gameMsgWindow0MsgTime",      "5",                    true,   false);
     dvars[dvars.size] = register_dvar("con_gameMsgWindow0Filter",       "gamenotify obituary",  true,   false);
-    dvars[dvars.size] = register_dvar("sv_cheats",                      "0",                    true,   false);
     dvars[dvars.size] = register_dvar("ai_corpseCount",                 "5",                    true,   false);
     /* Prevent host migration (redundant nowadays) */
     dvars[dvars.size] = register_dvar("sv_endGameIfISuck",              "0",                    false,  false);
@@ -1026,7 +1026,13 @@ dvar_watcher(dvars)
 
     /* We're setting them once again, to ensure lack of accidental detections */
     foreach (dvar, value in dvars)
-        setdvar(dvar, value);
+    {
+        /* R4542 requires this */
+        if (get_plutonium_version() < 4542 || name != "sv_cheats")
+        {
+            setdvar(name, dvars[name]);
+        }
+    }
 
     while (true)
     {
