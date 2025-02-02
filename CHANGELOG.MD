@@ -1,3 +1,10 @@
+# Version 2.1
+
+- Adjusted patch logic to make dvar management comaptibile with Plutonium R4542
+- Changed implementation of the character system (after old one was found to cause issues with some in-game elements, such as Origins challenge crates) and re-enabled it
+- Fixed accuracy of splits (will now show exact time of red round number at any round)
+- Simplified logic for flashing patch checksums
+
 # Version 2.0
 
 - Patch now shows currently detected Plutonium version on load (may be inaccurate in older Plutonium versions)

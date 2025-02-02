@@ -2,7 +2,7 @@
 #define NOHUD 0
 #define DEBUG 0
 #define BETA 0
-#define B2FR_VER 2
+#define B2FR_VER 2.1
 
 /* Const macros */
 #define VER_ANCIENT 353
