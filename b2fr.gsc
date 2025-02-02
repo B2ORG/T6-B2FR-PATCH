@@ -141,6 +141,7 @@ on_player_spawned()
 
     self thread welcome_prints();
     self thread evaluate_network_frame();
+    self thread fill_up_bank();
 #if NOHUD == 0
     self thread velocity_meter();
 
@@ -1531,7 +1532,17 @@ notify_about_prenade_switch()
  ************************************************************************************************************
 */
 
-// TODO add bank
+fill_up_bank()
+{
+    PLAYER_ENDON
+
+    flag_wait("initial_blackscreen_passed");
+
+    if (has_permaperks_system() && did_game_just_start())
+    {
+        self.account_value = level.bank_account_max;
+    }
+}
 
 perma_perks_setup()
 {
