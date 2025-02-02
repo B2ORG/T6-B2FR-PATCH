@@ -196,7 +196,7 @@ b2fr_main_loop()
 
         level thread sniff();
 
-        if (get_plutonium_version() >= 4522 && !did_game_just_start() && should_print_checksum())
+        if (should_print_checksum())
         {
             level thread print_checksums();
         }
@@ -913,34 +913,24 @@ cmdexec(arg)
 
 should_print_checksum()
 {
-    switch (level.players.size)
-    {
-        case 1:
-        case 2:
-            faster = 30;
-            if (is_town())
-                faster = 60;
-            else if (is_origins())
-                faster = 40;
-            break;
-        default:
-            faster = 25;
-            if (is_town())
-                faster = 50;
-            else if (is_buried())
-                faster = 35;
-            else if (is_origins())
-                faster = 35;
-    }
+    if (get_plutonium_version() < 4522 || did_game_just_start())
+        return false;
 
-    /*
-    early = (is_round(20) && !is_round(faster) && level.round_number % 5 == 2);
-    late = (is_round(faster) && level.round_number % 2 == 1);
-    DEBUG_PRINT("early = " + early + " late = " + late);
-    */
+    /* 50, 45, 40, 35 */
+    faster = 50 - (5 * level.players.size);
+    /* 70, 65, 60, 55 */
+    if (is_town())
+        faster = 75 - (5 * level.players.size);
+    if (faster < 35)
+        faster = 35;
 
-    return ((is_round(15) && !is_round(faster) && level.round_number % 5 == 2) 
-        || (is_round(faster) && level.round_number % 2 == 1));
+    /* 19, 29, 39 and so on */
+    if (level.round_number > 10 && level.round_number % 10 == 9)
+        return true;
+    /* Add .4 rounds past faster round */
+    if (is_survival_map() && level.round_number > faster && level.round_number % 10 == 4)
+        return true;
+    return false;
 }
 
 set_dvars()
