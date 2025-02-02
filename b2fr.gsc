@@ -122,10 +122,6 @@ on_player_connected()
     {
         level waittill("connected", player);
         player thread on_player_spawned();
-#if FEATURE_CHARACTERS == 1
-        if (flag("initial_players_connected"))
-            player thread set_joining_player_character();
-#endif
     }
 }
 
@@ -1037,9 +1033,9 @@ dvar_watcher(dvars)
     foreach (dvar, value in dvars)
     {
         /* R4542 requires this */
-        if (get_plutonium_version() < 4542 || name != "sv_cheats")
+        if (get_plutonium_version() < 4542 || dvar != "sv_cheats")
         {
-            setdvar(name, dvars[name]);
+            setdvar(dvar, dvars[dvar]);
         }
     }
 
