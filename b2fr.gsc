@@ -296,13 +296,11 @@ challenge_loop()
     DEBUG_PRINT("end_challenge_loop");
 }
 
-duplicate_file()
-{
-    iPrintLn("ONLY ONE ^1B2 ^7PATCH CAN RUN AT THE SAME TIME!");
-#if DEBUG == 0
-    level notify("end_game");
-#endif
-}
+/*
+ ************************************************************************************************************
+ ************************************************ UTILITIES *************************************************
+ ************************************************************************************************************
+*/
 
 generate_watermark_slots()
 {
@@ -723,94 +721,84 @@ wait_for_message_end()
     wait getDvarFloat("con_gameMsgWindow0FadeInTime") + getDvarFloat("con_gameMsgWindow0MsgTime") + getDvarFloat("con_gameMsgWindow0FadeOutTime");
 }
 
-set_hud_properties(hud_key, x_align, y_align, x_pos, y_pos, col)
-{
-    if (!isDefined(col))
-        col = (1, 1, 1);
-
-    if (isDefined(level.B2_HUD))
-    {
-        data = level.B2_HUD[hud_key];
-        if (isDefined(data))
-        {
-            if (isDefined(data["x_align"]))
-                x_align = data["x_align"];
-            if (isDefined(data["y_align"]))
-                y_align = data["y_align"];
-            if (isDefined(data["x_pos"]))
-                x_pos = data["x_pos"];
-            if (isDefined(data["y_pos"]))
-                y_pos = data["y_pos"];
-            if (isDefined(data["color"]))
-                col = data["color"];
-        }
-    }
-
-    res_components = strTok(getDvar("r_mode"), "x");
-    ratio = int((int(res_components[0]) / int(res_components[1])) * 100);
-    aspect_ratio = 1609;
-    switch (ratio)
-    {
-        case 160:       // 16:10
-            aspect_ratio = 1610;
-            break;
-        case 125:       // 5:4
-        case 133:       // 4:3
-        case 149:       // 3:2
-        case 150:       // 3:2
-            aspect_ratio = 43;
-            break;
-        case 237:       // 21:9
-        case 238:       // 21:9
-        case 240:       // 21:9
-        case 355:       // 32:9
-            aspect_ratio = 2109;
-            break;
-    }
-
-    if (x_pos == int(x_pos))
-        x_pos = recalculate_x_for_aspect_ratio(x_align, x_pos, aspect_ratio);
-
-    // DEBUG_PRINT("ratio: " + ratio + " | aspect_ratio: " + aspect_ratio + " | x_pos: " + x_pos + " | w: " + res_components[0] + " | h: " + res_components[1]);
-
-    self setpoint(x_align, y_align, x_pos, y_pos);
-    self.color = col;
-}
-
-recalculate_x_for_aspect_ratio(xalign, xpos, aspect_ratio)
-{
-    if (level.players.size > 1)
-        return xpos;
-
-    if (isSubStr(tolower(xalign), "left") && xpos < 0)
-    {
-        if (aspect_ratio == 1610)
-            return xpos + 6;
-        if (aspect_ratio == 43)
-            return xpos + 14;
-        if (aspect_ratio == 2109)
-            return xpos - 21;
-    }
-
-    else if (isSubStr(tolower(xalign), "right") && xpos > 0)
-    {
-        if (aspect_ratio == 1610)
-            return xpos - 6;
-        if (aspect_ratio == 43)
-            return xpos - 14;
-        if (aspect_ratio == 2109)
-            return xpos + 21;
-    }
-
-    return xpos;
-}
-
 emulate_menu_call(content, ent)
 {
     if (!isDefined(ent))
         ent = maps\mp\_utility::gethostplayer();
 
     ent notify ("menuresponse", "", content);
+}
+
+remove_mannequin(origin, extra_delay)
+{
+    LEVEL_ENDON
+
+    if (isDefined(extra_delay))
+        wait extra_delay;
+
+    all_mannequins = [];
+    foreach (destructible in getentarray("destructible", "targetname"))
+    {
+        if (isSubStr(destructible.destructibledef, "male"))
+            all_mannequins[all_mannequins.size] = destructible;
+    }
+
+    foreach (mannequin in all_mannequins)
+    {
+        if (mannequin.origin == origin)
+        {
+            // Delete collision
+            getent(mannequin.target, "targetname") delete();
+            // Delete model
+            mannequin delete();
+
+            DEBUG_PRINT("Removed mannequin on origin: " + origin);
+            break;
+        }
+    }
+}
+
+/*
+ ************************************************************************************************************
+ ****************************************** SINGLE PURPOSE FUNCTIONS ****************************************
+ ************************************************************************************************************
+*/
+
+fixed_wait_network_frame()
+{
+    if (level.players.size == 1)
+        wait 0.1;
+    else if (numremoteclients())
+    {
+        snapshot_ids = getsnapshotindexarray();
+
+        for (acked = undefined; !isdefined(acked); acked = snapshotacknowledged(snapshot_ids))
+            level waittill("snapacknowledged");
+    }
+    else
+        wait 0.1;
+}
+
+duplicate_file()
+{
+    iPrintLn("ONLY ONE ^1B2 ^7PATCH CAN RUN AT THE SAME TIME!");
+#if DEBUG == 0
+    level notify("end_game");
+#endif
+}
+
+sniff()
+{
+    LEVEL_ENDON
+
+    wait randomFloatRange(0.1, 1.2);
+    if (flag("b2_on")) 
+    {
+        duplicate_file();
+    }
+    flag_set("b2_on");
+    level waittill("start_of_round");
+    flag_clear("b2_on");
 }
 
 welcome_prints()
@@ -839,6 +827,66 @@ gameplay_reminder()
         print_scheduler("^1REMINDER ^7You are a host", maps\mp\_utility::gethostplayer());
         wait 0.25;
         print_scheduler("Full gameplay is required from host perspective as of April 2023", maps\mp\_utility::gethostplayer());
+    }
+}
+
+nuketown_gameplay_reminder()
+{
+    LEVEL_ENDON
+
+    // 804.1 -56.86
+    // -455.42 617.4
+    // -82.07 740.67
+    // -844.93 60.8
+
+    wait 1;
+
+    if (level.players.size > 1)
+    {
+        spawn_positions = [];
+
+        spawn_positions[0] = SpawnStruct();
+        spawn_positions[0].x_start = 790;
+        spawn_positions[0].x_end = 820;
+        spawn_positions[0].y_start = -70;
+        spawn_positions[0].y_end = 40;
+
+        spawn_positions[1] = SpawnStruct();
+        spawn_positions[1].x_start = -470;
+        spawn_positions[1].x_end = -440;
+        spawn_positions[1].y_start = 600;
+        spawn_positions[1].y_end = 630;
+
+        spawn_positions[2] = SpawnStruct();
+        spawn_positions[2].x_start = -100;
+        spawn_positions[2].x_end = -70;
+        spawn_positions[2].y_start = 725;
+        spawn_positions[2].y_end = 755;
+
+        spawn_positions[3] = SpawnStruct();
+        spawn_positions[3].x_start = -860;
+        spawn_positions[3].x_end = -830;
+        spawn_positions[3].y_start = 45;
+        spawn_positions[3].y_end = 75;
+
+        jug_in_spawn = false;
+        jug_perk = getent("vending_jugg", "targetname");
+
+        foreach(spawn in spawn_positions)
+        {
+            if ((jug_perk.origin[0] > spawn.x_start && jug_perk.origin[0] < spawn.x_end)
+                && jug_perk.origin[1] > spawn.y_start && jug_perk.origin[1] < spawn.y_end)
+                    jug_in_spawn = true;
+        }
+
+        if (jug_in_spawn)
+            print_scheduler("JuggerNog in the first room! Full gameplay from all players will be required!");
+        else
+        {
+            print_scheduler("^1REMINDER ^7You are a host", maps\mp\_utility::gethostplayer());
+            wait 0.25;
+            print_scheduler("Full gameplay is required from host perspective as of April 2023", maps\mp\_utility::gethostplayer());
+        }
     }
 }
 
@@ -1015,20 +1063,6 @@ award_points(amount)
     self.score = amount;
 }
 
-sniff()
-{
-    LEVEL_ENDON
-
-    wait randomFloatRange(0.1, 1.2);
-    if (flag("b2_on")) 
-    {
-        duplicate_file();
-    }
-    flag_set("b2_on");
-    level waittill("start_of_round");
-    flag_clear("b2_on");
-}
-
 #if DEBUG == 1
 debug_mode()
 {
@@ -1080,7 +1114,144 @@ trap_fix()
     }
 }
 
+origins_fix()
+{
+    LEVEL_ENDON
+
+    flag_wait("start_zombie_round_logic");
+    wait 0.5;
+
+    if (is_origins())
+        level.is_forever_solo_game = 0;
+}
+
+get_pap_weapon_options_set_reticle(weapon)
+{
+    if (!isdefined(self.pack_a_punch_weapon_options))
+        self.pack_a_punch_weapon_options = [];
+
+    if (!is_weapon_upgraded(weapon))
+        return self calcweaponoptions(0, 0, 0, 0, 0);
+
+    if (isdefined(self.pack_a_punch_weapon_options[weapon]))
+        return self.pack_a_punch_weapon_options[weapon];
+
+    base = get_base_name(weapon);
+    camo_index = 39;
+
+    if ("zm_prison" == level.script)
+        camo_index = 40;
+    else if ("zm_tomb" == level.script)
+        camo_index = 45;
+
+    lens_index = randomintrange(0, 6);
+    reticle_index = 16;
+    reticle_color_index = randomintrange(0, 6);
+
+    if ("saritch_upgraded_zm" == base)
+        reticle_index = 1;
+
+    self.pack_a_punch_weapon_options[weapon] = self calcweaponoptions( camo_index, lens_index, reticle_index, reticle_color_index );
+    return self.pack_a_punch_weapon_options[weapon];
+}
+
+#if FEATURE_NUKETOWN_EYES == 1
+nuketown_switch_eyes()
+{
+    level setclientfield("zombie_eye_change", 1);
+    sndswitchannouncervox("richtofen");
+}
+#endif
+
+/*
+ ************************************************************************************************************
+ *************************************************** HUD ****************************************************
+ ************************************************************************************************************
+*/
+
 #if NOHUD == 0
+set_hud_properties(hud_key, x_align, y_align, x_pos, y_pos, col)
+{
+    if (!isDefined(col))
+        col = (1, 1, 1);
+
+    if (isDefined(level.B2_HUD))
+    {
+        data = level.B2_HUD[hud_key];
+        if (isDefined(data))
+        {
+            if (isDefined(data["x_align"]))
+                x_align = data["x_align"];
+            if (isDefined(data["y_align"]))
+                y_align = data["y_align"];
+            if (isDefined(data["x_pos"]))
+                x_pos = data["x_pos"];
+            if (isDefined(data["y_pos"]))
+                y_pos = data["y_pos"];
+            if (isDefined(data["color"]))
+                col = data["color"];
+        }
+    }
+
+    res_components = strTok(getDvar("r_mode"), "x");
+    ratio = int((int(res_components[0]) / int(res_components[1])) * 100);
+    aspect_ratio = 1609;
+    switch (ratio)
+    {
+        case 160:       // 16:10
+            aspect_ratio = 1610;
+            break;
+        case 125:       // 5:4
+        case 133:       // 4:3
+        case 149:       // 3:2
+        case 150:       // 3:2
+            aspect_ratio = 43;
+            break;
+        case 237:       // 21:9
+        case 238:       // 21:9
+        case 240:       // 21:9
+        case 355:       // 32:9
+            aspect_ratio = 2109;
+            break;
+    }
+
+    if (x_pos == int(x_pos))
+        x_pos = recalculate_x_for_aspect_ratio(x_align, x_pos, aspect_ratio);
+
+    // DEBUG_PRINT("ratio: " + ratio + " | aspect_ratio: " + aspect_ratio + " | x_pos: " + x_pos + " | w: " + res_components[0] + " | h: " + res_components[1]);
+
+    self setpoint(x_align, y_align, x_pos, y_pos);
+    self.color = col;
+}
+
+recalculate_x_for_aspect_ratio(xalign, xpos, aspect_ratio)
+{
+    if (level.players.size > 1)
+        return xpos;
+
+    if (isSubStr(tolower(xalign), "left") && xpos < 0)
+    {
+        if (aspect_ratio == 1610)
+            return xpos + 6;
+        if (aspect_ratio == 43)
+            return xpos + 14;
+        if (aspect_ratio == 2109)
+            return xpos - 21;
+    }
+
+    else if (isSubStr(tolower(xalign), "right") && xpos > 0)
+    {
+        if (aspect_ratio == 1610)
+            return xpos - 6;
+        if (aspect_ratio == 43)
+            return xpos - 14;
+        if (aspect_ratio == 2109)
+            return xpos + 21;
+    }
+
+    return xpos;
+}
+
 create_timers()
 {
     level.timer_hud = createserverfontstring("big" , 1.6);
@@ -1333,7 +1504,14 @@ notify_about_prenade_switch()
 }
 #endif
 
-#if FEATURE_PERMAPERKS == 1
+/*
+ ************************************************************************************************************
+ ******************************************* PERMAPERKS / BANK **********************************************
+ ************************************************************************************************************
+*/
+
+// TODO add bank
+
 perma_perks_setup()
 {
     if (!has_permaperks_system())
@@ -1341,6 +1519,7 @@ perma_perks_setup()
 
     thread fix_persistent_jug();
 
+#if FEATURE_PERMAPERKS == 1
     flag_wait("initial_blackscreen_passed");
 
     if (getDvar("award_perks") == "1")
@@ -1358,6 +1537,25 @@ perma_perks_setup()
 #if NOHUD == 0
     array_thread(level.players, ::permaperks_watcher);
 #endif
+#endif
+}
+
+/* If client stat (prefixed with 'pers_') is passed to perk_code, it tries to do it with existing system */
+remove_permaperk_wrapper(perk_code, round)
+{
+    if (!isDefined(round))
+        round = 1;
+
+    if (is_round(round) && isSubStr(perk_code, "pers_"))
+        self maps\mp\zombies\_zm_stats::zero_client_stat(perk_code, 0);
+    else if (is_round(round) && is_true(self.pers_upgrades_awarded[perk_code]))
+        self remove_permaperk(perk_code);
+}
+
+remove_permaperk(perk_code)
+{
+    self.pers_upgrades_awarded[perk_code] = 0;
+    self playsoundtoplayer("evt_player_downgrade", self);
 }
 
 emergency_permaperks_cleanup()
@@ -1389,6 +1587,40 @@ fix_persistent_jug()
     DEBUG_PRINT("upgrade_keys => " + array_implode(", ", level.pers_upgrades_keys));
 }
 
+fixed_upgrade_jugg_active()
+{
+    PLAYER_ENDON
+
+    wait 1;
+    self maps\mp\zombies\_zm_perks::perk_set_max_health_if_jugg("jugg_upgrade", 1, 0);
+    DEBUG_PRINT("fixed_upgrade_jugg_active() init " + self.name);
+
+    while (true)
+    {
+        level waittill("start_of_round");
+
+        if (maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active())
+        {
+            if (is_round(level.pers_jugg_round_lose_target))
+            {
+                self maps\mp\zombies\_zm_stats::increment_client_stat("pers_jugg_downgrade_count", 0);
+                wait 0.5;
+
+                if (self.pers["pers_jugg_downgrade_count"] >= level.pers_jugg_round_reached_max)
+                    break;
+            }
+        }
+    }
+
+    self maps\mp\zombies\_zm_perks::perk_set_max_health_if_jugg("jugg_upgrade", 1, 1);
+    self maps\mp\zombies\_zm_stats::zero_client_stat("pers_jugg", 0);
+    self maps\mp\zombies\_zm_stats::zero_client_stat("pers_jugg_downgrade_count", 0);
+    flag_set("pers_jug_cleared");
+
+    DEBUG_PRINT("fixed_upgrade_jugg_active() deinit " + self.name);
+}
+
+#if FEATURE_PERMAPERKS == 1
 watch_permaperk_award()
 {
     LEVEL_ENDON
@@ -1475,39 +1707,6 @@ award_permaperks_safe()
     self maps\mp\zombies\_zm_stats::uploadstatssoon();
 }
 
-fixed_upgrade_jugg_active()
-{
-    PLAYER_ENDON
-
-    wait 1;
-    self maps\mp\zombies\_zm_perks::perk_set_max_health_if_jugg("jugg_upgrade", 1, 0);
-    DEBUG_PRINT("fixed_upgrade_jugg_active() init " + self.name);
-
-    while (true)
-    {
-        level waittill("start_of_round");
-
-        if (maps\mp\zombies\_zm_pers_upgrades::is_pers_system_active())
-        {
-            if (is_round(level.pers_jugg_round_lose_target))
-            {
-                self maps\mp\zombies\_zm_stats::increment_client_stat("pers_jugg_downgrade_count", 0);
-                wait 0.5;
-
-                if (self.pers["pers_jugg_downgrade_count"] >= level.pers_jugg_round_reached_max)
-                    break;
-            }
-        }
-    }
-
-    self maps\mp\zombies\_zm_perks::perk_set_max_health_if_jugg("jugg_upgrade", 1, 1);
-    self maps\mp\zombies\_zm_stats::zero_client_stat("pers_jugg", 0);
-    self maps\mp\zombies\_zm_stats::zero_client_stat("pers_jugg_downgrade_count", 0);
-    flag_set("pers_jug_cleared");
-
-    DEBUG_PRINT("fixed_upgrade_jugg_active() deinit " + self.name);
-}
-
 resolve_permaperk(perk)
 {
     PLAYER_ENDON
@@ -1547,24 +1746,6 @@ award_permaperk(stat_name, perk_code, stat_value)
     self.stats_this_frame[stat_name] = 1;
     self maps\mp\zombies\_zm_stats::set_global_stat(stat_name, stat_value);
     self playsoundtoplayer("evt_player_upgrade", self);
-}
-
-/* If client stat (prefixed with 'pers_') is passed to perk_code, it tries to do it with existing system */
-remove_permaperk_wrapper(perk_code, round)
-{
-    if (!isDefined(round))
-        round = 1;
-
-    if (is_round(round) && isSubStr(perk_code, "pers_"))
-        self maps\mp\zombies\_zm_stats::zero_client_stat(perk_code, 0);
-    else if (is_round(round) && is_true(self.pers_upgrades_awarded[perk_code]))
-        self remove_permaperk(perk_code);
-}
-
-remove_permaperk(perk_code)
-{
-    self.pers_upgrades_awarded[perk_code] = 0;
-    self playsoundtoplayer("evt_player_downgrade", self);
 }
 
 #if NOHUD == 0
@@ -1653,16 +1834,11 @@ permaperk_name(perk)
 #endif
 #endif
 
-origins_fix()
-{
-    LEVEL_ENDON
-
-    flag_wait("start_zombie_round_logic");
-    wait 0.5;
-
-    if (is_origins())
-        level.is_forever_solo_game = 0;
-}
+/*
+ ************************************************************************************************************
+ *********************************************** BOX LOGIC **************************************************
+ ************************************************************************************************************
+*/
 
 scan_in_box()
 {
@@ -1710,139 +1886,11 @@ scan_in_box()
     }
 }
 
-fixed_wait_network_frame()
-{
-    if (level.players.size == 1)
-        wait 0.1;
-    else if (numremoteclients())
-    {
-        snapshot_ids = getsnapshotindexarray();
-
-        for (acked = undefined; !isdefined(acked); acked = snapshotacknowledged(snapshot_ids))
-            level waittill("snapacknowledged");
-    }
-    else
-        wait 0.1;
-}
-
-get_pap_weapon_options_set_reticle(weapon)
-{
-    if (!isdefined(self.pack_a_punch_weapon_options))
-        self.pack_a_punch_weapon_options = [];
-
-    if (!is_weapon_upgraded(weapon))
-        return self calcweaponoptions(0, 0, 0, 0, 0);
-
-    if (isdefined(self.pack_a_punch_weapon_options[weapon]))
-        return self.pack_a_punch_weapon_options[weapon];
-
-    base = get_base_name(weapon);
-    camo_index = 39;
-
-    if ("zm_prison" == level.script)
-        camo_index = 40;
-    else if ("zm_tomb" == level.script)
-        camo_index = 45;
-
-    lens_index = randomintrange(0, 6);
-    reticle_index = 16;
-    reticle_color_index = randomintrange(0, 6);
-
-    if ("saritch_upgraded_zm" == base)
-        reticle_index = 1;
-
-    self.pack_a_punch_weapon_options[weapon] = self calcweaponoptions( camo_index, lens_index, reticle_index, reticle_color_index );
-    return self.pack_a_punch_weapon_options[weapon];
-}
-
-remove_mannequin(origin, extra_delay)
-{
-    LEVEL_ENDON
-
-    if (isDefined(extra_delay))
-        wait extra_delay;
-
-    all_mannequins = [];
-    foreach (destructible in getentarray("destructible", "targetname"))
-    {
-        if (isSubStr(destructible.destructibledef, "male"))
-            all_mannequins[all_mannequins.size] = destructible;
-    }
-
-    foreach (mannequin in all_mannequins)
-    {
-        if (mannequin.origin == origin)
-        {
-            // Delete collision
-            getent(mannequin.target, "targetname") delete();
-            // Delete model
-            mannequin delete();
-
-            DEBUG_PRINT("Removed mannequin on origin: " + origin);
-            break;
-        }
-    }
-}
-
-nuketown_gameplay_reminder()
-{
-    LEVEL_ENDON
-
-    // 804.1 -56.86
-    // -455.42 617.4
-    // -82.07 740.67
-    // -844.93 60.8
-
-    wait 1;
-
-    if (level.players.size > 1)
-    {
-        spawn_positions = [];
-
-        spawn_positions[0] = SpawnStruct();
-        spawn_positions[0].x_start = 790;
-        spawn_positions[0].x_end = 820;
-        spawn_positions[0].y_start = -70;
-        spawn_positions[0].y_end = 40;
-
-        spawn_positions[1] = SpawnStruct();
-        spawn_positions[1].x_start = -470;
-        spawn_positions[1].x_end = -440;
-        spawn_positions[1].y_start = 600;
-        spawn_positions[1].y_end = 630;
-
-        spawn_positions[2] = SpawnStruct();
-        spawn_positions[2].x_start = -100;
-        spawn_positions[2].x_end = -70;
-        spawn_positions[2].y_start = 725;
-        spawn_positions[2].y_end = 755;
-
-        spawn_positions[3] = SpawnStruct();
-        spawn_positions[3].x_start = -860;
-        spawn_positions[3].x_end = -830;
-        spawn_positions[3].y_start = 45;
-        spawn_positions[3].y_end = 75;
-
-        jug_in_spawn = false;
-        jug_perk = getent("vending_jugg", "targetname");
-
-        foreach(spawn in spawn_positions)
-        {
-            if ((jug_perk.origin[0] > spawn.x_start && jug_perk.origin[0] < spawn.x_end)
-                && jug_perk.origin[1] > spawn.y_start && jug_perk.origin[1] < spawn.y_end)
-                    jug_in_spawn = true;
-        }
-
-        if (jug_in_spawn)
-            print_scheduler("JuggerNog in the first room! Full gameplay from all players will be required!");
-        else
-        {
-            print_scheduler("^1REMINDER ^7You are a host", maps\mp\_utility::gethostplayer());
-            wait 0.25;
-            print_scheduler("Full gameplay is required from host perspective as of April 2023", maps\mp\_utility::gethostplayer());
-        }
-    }
-}
+/*
+ ************************************************************************************************************
+ *********************************************** CHARACTERS *************************************************
+ ************************************************************************************************************
+*/
 
 #if FEATURE_CHARACTERS == 1
 reevaluate_character_settings()
@@ -2171,13 +2219,11 @@ terminate_character_wrapper()
 
 #endif
 
-#if FEATURE_NUKETOWN_EYES == 1
-nuketown_switch_eyes()
-{
-    level setclientfield("zombie_eye_change", 1);
-    sndswitchannouncervox("richtofen");
-}
-#endif
+/*
+ ************************************************************************************************************
+ *********************************************** CHALLENGES *************************************************
+ ************************************************************************************************************
+*/
 
 #if FEATURE_CHALLENGES == 1
 register_challenge(boundry_check, setup_function, challenge_failed_function, challenge_condition_function)
