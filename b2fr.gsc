@@ -65,7 +65,7 @@ on_game_start()
 
     thread set_dvars();
 #if FEATURE_CHARACTERS == 1
-    level thread reevaluate_character_settings();
+    thread hijack_personality_character();
     level thread character_wrapper();
 #endif
 #if FEATURE_PERMAPERKS == 1
@@ -941,7 +941,10 @@ set_dvars()
         level.round_start_custom_func = ::trap_fix;
 
 #if FEATURE_CHARACTERS == 1
-    level.callbackplayerdisconnect = ::character_flag_cleanup;
+    if (!is_survival_map())
+    {
+        level.callbackplayerdisconnect = ::character_flag_cleanup;
+    }
 #endif
 
     level.GAMEPLAY_REMINDER = ::gameplay_reminder;
@@ -1889,152 +1892,75 @@ scan_in_box()
 */
 
 #if FEATURE_CHARACTERS == 1
-reevaluate_character_settings()
+hijack_personality_character()
 {
     LEVEL_ENDON
 
-    flag_wait("start_zombie_round_logic");
-
-    stat = get_stat_for_map();
-    if (stat == "lh_clip")
+    while (!isDefined(level.givecustomcharacters))
+        wait 0.05;
+    if (is_survival_map())
     {
-        preset = int(maps\mp\_utility::gethostplayer() maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(stat, "zm_highrise")) - 1;
-        DEBUG_PRINT("survival preset " + preset);
-        return set_team_settings(preset);
-    }
-
-    DEBUG_PRINT("reevaluate_character_settings start");
-
-    wait 0.2;
-
-    free_presets = array(0, 1, 2, 3);
-    allocated = [];
-    /* Force host at the beginning to give conflict resolution priority */
-    players = array(maps\mp\_utility::gethostplayer());
-    foreach (player in level.players)
-    {
-        players = add_to_array(players, player, false);
-    }
-
-    /* Set characters from presets */
-    foreach (player in players)
-    {
-        preset = int(player maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(stat, "zm_highrise"));
-        p = preset - 1;
-        DEBUG_PRINT("preset for " + player.name + ": " + preset);
-        if (preset > 0 && !isDefined(allocated[p]))
-        {
-            DEBUG_PRINT("bind preset " + p + " to " + player.name);
-            player set_character_index_internal(p);
-            allocated[p] = player;
-            /* If there are more than 4 players, we leave characters in the poll */
-            if (players.size <= 4)
-            {
-                arrayremovevalue(free_presets, p);
-            }
-        }
-    }
-
-    /* Assign remaining characters to other players */
-    foreach (player in level.players)
-    {
-        if (!isinarray(allocated, player))
-        {
-            /* Weasel always is on mob coop */
-            if (level.players.size > 1 && is_mob() && isinarray(free_presets, 3))
-            {
-                p = 3;
-            }
-            /* Richtofen always is on origins coop */
-            else if (level.players.size > 1 && is_origins() && isinarray(free_presets, 2))
-            {
-                p = 2;
-            }
-            else
-            {
-                free_presets = array_randomize(free_presets);
-                p = free_presets[0];
-            }
-            // DEBUG_PRINT("randomized: " + array_implode(", ", free_presets));
-            DEBUG_PRINT("bind remaining " + p + " to " + player.name);
-            player set_character_index_internal(p);
-            if (level.players.size <= 4)
-            {
-                arrayremovevalue(free_presets, p);
-            }
-        }
-    }
-}
-
-set_joining_player_character()
-{
-    PLAYER_ENDON
-    DEBUG_PRINT("set_joining_player_character()");
-    stat = get_stat_for_map();
-    /* Skip for survival maps */
-    if (stat == "lh_clip")
+        level.old_givecustomcharacters = level.givecustomcharacters;
+        level.givecustomcharacters = ::override_team_character;
         return;
-    wait 0.2;
-
-    preset = self maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(stat, "zm_highrise");
-    if (preset > 0)
-    {
-        index = preset - 1;
-        if (flag("char_taken_" + index))
-        {
-            DEBUG_PRINT("preset " + preset + " already taken");
-            return;
-        }
-        self set_character_index_internal(index);
     }
+    level.old_givecustomcharacters = level.givecustomcharacters;
+    level.givecustomcharacters = ::override_personality_character;
 }
 
-set_team_settings(preset)
+override_personality_character()
 {
-    DEBUG_PRINT("set_team_settings(" + preset + ")");
-    switch (preset)
+    /* I need to run this check as original function also does it and it prevents setting the index too quick ... i think */
+    if (run_default_character_hotjoin_safety())
+        return;
+
+    preset = self parse_preset(get_stat_for_map(), array(1, 2, 3, 4));
+    charindex = preset - 1;
+    if (preset > 0 && !flag("b2_char_taken_" + charindex))
     {
-        case 0:
-        case 1:
-            level.should_use_cia = preset;
-            DEBUG_PRINT("should_use_cia: " + level.should_use_cia);
-            foreach (player in level.players)
-            {
-                player set_character_index_internal(level.should_use_cia);
-            }
-            break;
+        /* Need to assign level checks for coop specific logic in original callbacks */
+        if (is_mob() && charindex == 3)
+            level.has_weasel = true;
+        else if (is_origins() && charindex == 2)
+            level.has_richtofen = true;
+
+        self.characterindex = charindex;
+        DEBUG_PRINT(self.name + " set character " + charindex);
     }
+
+    self [[level.old_givecustomcharacters]]();
+    /* Set it here, to avoid duplicates when some players don't have presets */
+    flag_set("b2_char_taken_" + self.characterindex);
 }
 
-set_character_index_internal(index)
+override_team_character()
 {
-    DEBUG_PRINT("set_character_index_internal(" + index + ")");
+    /* I need to run this check as original function also does it and it prevents setting the index too quick ... i think */
+    if (run_default_character_hotjoin_safety())
+        return;
 
-    /* Need to suppress hotjoin callback for the duration of index players */
-    if (isDefined(level.hotjoin_player_setup))
+    if (!flag("b2_char_taken_0") && !flag("b2_char_taken_1"))
     {
-        saved_hotjoin_player_setup = level.hotjoin_player_setup;
-        level.hotjoin_player_setup = undefined;
+        preset = maps\mp\_utility::gethostplayer() parse_preset(get_stat_for_map(), array(1, 2));
+        charindex = preset - 1;
+        flag_set("b2_char_taken_" + charindex);
+        level.should_use_cia = charindex;
+        DEBUG_PRINT("Set character " + level.should_use_cia);
     }
 
-    switch (index)
-    {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
-            flag_set("char_taken_" + index);
-            self.characterindex = index;
-            self [[level.givecustomcharacters]]();
-            DEBUG_PRINT(self.name + " set character " + index);
-            break;
-    }
+    self [[level.old_givecustomcharacters]]();
+}
 
-    /* Now need to restore the callback, as recalculated players should have the normal flow */
-    if (isDefined(saved_hotjoin_player_setup))
+parse_preset(stat, allowed_presets)
+{
+    preset = int(self maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(stat, "zm_highrise"));
+
+    /* Validation */
+    if (isinarray(allowed_presets, preset))
     {
-        level.hotjoin_player_setup = saved_hotjoin_player_setup;
+        return preset;
     }
+    return 0;
 }
 
 get_stat_for_map()
@@ -2050,12 +1976,40 @@ get_stat_for_map()
 
 character_flag_cleanup()
 {
-    flag = "char_taken_" + self.characterindex;
-    flag_clear(flag);
-    DEBUG_PRINT("clearing flag: " + flag);
+    flag_clear("b2_char_taken_" + self.characterindex);
+    DEBUG_PRINT("clearing flag: b2_char_taken_" + self.characterindex);
 
     /* Need to invoke original callback afterwards */
     self maps\mp\gametypes_zm\_globallogic_player::callback_playerdisconnect();
+}
+
+terminate_character_wrapper()
+{
+    LEVEL_ENDON;
+    while (did_game_just_start())
+        wait 0.05;
+    level notify("kill_character_wrapper");
+}
+
+run_default_character_hotjoin_safety()
+{
+    if (is_survival_map())
+    {
+        if (isdefined(level.hotjoin_player_setup) && [[level.hotjoin_player_setup]]("c_zom_suit_viewhands"))
+            return true;
+    }
+    else if (is_tranzit() || is_die_rise() || is_buried())
+    {
+        if (isdefined(level.hotjoin_player_setup) && [[level.hotjoin_player_setup]]("c_zom_farmgirl_viewhands"))
+            return true;
+    }
+    /* Origins is not a mistake, they do use arlington there originally */
+    else if (is_mob() || is_origins())
+    {
+        if (isdefined(level.hotjoin_player_setup) && [[level.hotjoin_player_setup]]("c_zom_arlington_coat_viewhands"))
+            return true;
+    }
+    return false;
 }
 
 character_wrapper()
@@ -2204,15 +2158,6 @@ character_wrapper()
         }
     }
 }
-
-terminate_character_wrapper()
-{
-    LEVEL_ENDON;
-    while (did_game_just_start())
-        wait 0.05;
-    level notify("kill_character_wrapper");
-}
-
 #endif
 
 /*
