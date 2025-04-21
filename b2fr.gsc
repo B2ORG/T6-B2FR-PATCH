@@ -2,7 +2,7 @@
 #define NOHUD 0
 #define DEBUG 0
 #define BETA 0
-#define B2FR_VER 2.1
+#define B2FR_VER 2.2
 
 /* Const macros */
 #define VER_ANCIENT 353
@@ -967,7 +967,7 @@ set_dvars()
     dvars[dvars.size] = register_dvar("g_speed",                        "190",                  true,   false);
     dvars[dvars.size] = register_dvar("con_gameMsgWindow0MsgTime",      "5",                    true,   false);
     dvars[dvars.size] = register_dvar("con_gameMsgWindow0Filter",       "gamenotify obituary",  true,   false);
-    dvars[dvars.size] = register_dvar("ai_corpseCount",                 "5",                    true,   false);
+    dvars[dvars.size] = register_dvar("ai_corpseCount",                 "8",                    true,   false);
     /* Prevent host migration (redundant nowadays) */
     dvars[dvars.size] = register_dvar("sv_endGameIfISuck",              "0",                    false,  false);
     /* Force post dlc1 patch on recoil */

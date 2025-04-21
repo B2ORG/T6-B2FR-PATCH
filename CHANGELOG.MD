@@ -1,3 +1,7 @@
+# Version 2.2
+
+- Restore correct default value for `ai_corpseCount` dvar
+
 # Version 2.1
 
 - Adjusted patch logic to make dvar management comaptibile with Plutonium R4542
