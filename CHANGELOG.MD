@@ -1,3 +1,7 @@
+# Version 2.3
+
+- Add enabling `cg_drawIdentifier` dvar for future Pluto update
+
 # Version 2.2
 
 - Restore correct default value for `ai_corpseCount` dvar
