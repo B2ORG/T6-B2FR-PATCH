@@ -19,6 +19,9 @@ This patch is meant to be used during First Room games. Below you can see altern
 | Song Speedruns | B2SONG | Zi0 | [GitHub](https://github.com/B2ORG/T6-B2SONG-PATCH) |
 
 > [!TIP]
+> For World at War you can check [Evelyn's community patch](https://gitlab.com/EvelynYuki/WAW-Community-Patch/)
+
+> [!TIP]
 > For Black Ops III you can check [oJumpy's community patches](https://steamcommunity.com/profiles/76561199211441639/myworkshopfiles/?appid=311210)
 
 # Installation
