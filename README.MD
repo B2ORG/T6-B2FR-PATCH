@@ -4,7 +4,7 @@ Patch for playing world record games in Black Ops II Zombies for First Room game
 
 # Info
 
-Please inform me about any issues you may encounter with the patch, so they can be fixed, preferably with decent amount of information in what circumstances an issue occured. The main channel for issues is GitHubs Issues section, although it won't hurt to ask about it on [Discord](https://discord.gg/fDY4VR6rNE) first
+Please inform me about any issues you may encounter with the patch, so they can be fixed, preferably with decent amount of information in what circumstances an issue occured. The main channel for issues is GitHubs Issues section, although it won't hurt to ask about it on [Discord](https://b2.wtf/discord/) first
 
 Before reporting a problem, please check out the FAQ section down below, you may find answers you're looking for there
 
@@ -31,20 +31,41 @@ Since version B2FR v1, the patch is only available for modern versions of Pluton
 Download either of the scripts `b2fr-hud.gsc` or `b2fr-nohud.gsc` and put them in your Plutonium folder, which is located here by default:
 
 ```
-%LOCALAPPDATA%\Plutonium\storage\t6\scripts\zm
+%LOCALAPPDATA%\Plutonium\storage\t6\raw\scripts\zm
 ```
 
 > [!TIP]
 > You can press CTRL + R on your keyboard and paste this string there. Assuming you haven't changed any Plutonium paths, directory with scripts should open right away.
 
+> [!WARNING]
+> Prior to patch version 3.0, the directory we recommended here was `Plutonium\storage\t6\scripts\zm` (the only difference is that `raw` folder in the middle), you should still use that directory if you want to use the patch in 2905. On modern Plutonium, it is recommended to start using the new location (remove the patch you currently have in the old location and place the updated version in the new directory specified above)
+
 > [!TIP]
 > I've created a video on [how to install these patches](https://youtu.be/yjNbmlya6ik) in case instructions here are unclear
+
+> [!CAUTION]
+> Whenever there's a new major patch release (eg. 2.* to 3.0 or 3.* to 4.0), please note that a lot of internal logic changes, therefore stability may not be up to the full standard. While we recommend you update your patch as we fix issues and add new features, we acknowledge increased risk with new major versions, which is why we usually leave most recent release of last major version in releases for some time, so players can access it until new version was battletested and issues have been fixed. We appreciate early adopters, who by reporting any problems help us provide the stable experience.
+
+# B2FR Features
+
+- Basic anticheat capabilities (DVARs, Box etc.)
+- Fixed network frame (you may know it as a Tickrate issue)
+- Full bank
+- Reset backspeed values to the level of a Steam version (consistently with First Room ruleset)
+- Automatic permaperks assignment (consistent with in-game logic)
+- Automatic permaperks removal (if obtained illegaly, for instance during breaks)
+- Optional character/viewmodel setting
+- Disabled DOF (Depth of Field)
+- On Nuketown, the mannequin next to the yellow bus is automatically removed
+- On Nuketown, players are warned if Jugg is going to be in the first room
+- On Origins, reticle is always default
+- On Origins, game is always in custom game mode (zombie blood from reward box)
 
 # Patch checksum
 
 Starting on Plutonium version R4516, the launcher is able to show checksum of each of the patches you have as well as the entire game memory (i'm massively oversimplifying here, geeks give me a break). [Here as an article about what a checksum is](https://www.howtogeek.com/363735/what-is-a-checksum-and-why-should-you-care/). Every file has a different signature, and changing as much as a single letter in the patch changes it's signature entirely.
 
-![checksum example](https://i.imgur.com/3rn7fPP.jpeg)
+![checksum example](https://b2.wtf/images/checksum-img-example.jpg)
 
 As you can see on the screenshot above, each of the GSC files you have loaded into the game is listed by the game. Occurance of this data is navigated by `cg_flashScriptHashes` DVAR (do not worry, the patch will set this DVAR for you automatically, no action required).
 
@@ -60,9 +81,9 @@ Again, i use this term to help people understand the concept, please do not get 
 
 Checksum of each new B2 patch version will be attached to the release, which will allow you to verify whether a valid patch is used yourself. In terms of what the patch do, it force enables displaying those checksums certain rounds (details on that below). They are only shown for few seconds and not on milestone rounds (to not ruin screenshots etc.)
 
-## There are no linked resources or tools in this section
+## How can i use checksums to validate patch in my own or someone elses game
 
-Yes, I'm currently deep into the process of the development of a tool that'll make managing this whole new concept simpler for both players and patch creators. It should be out in Q1 of 2025 (really depends how much time i have to work on it) and I'll be notifying people on B2 Discord so make sure to join (you'll find the invitation above), so this notice will be replaces with links to access the tools at that time.
+I've [created a tool](https://b2.wtf/gsc/hash) for doing just that, type in the checksum (one highlighted on the screenshot above) and press `Check`. If checksum is registered in the system, you'll see all the relevant details about the file. Altenatively, you can drag the file itself into the page to see it's checksum (and details if the system has them).
 
 ## For game verificators
 
@@ -98,7 +119,7 @@ End of 18, 28, 38 onwards up to the end, and additionally
 
 5) Why support for other launchers has been dropped
 
-- Because it is not needed. If you are playing solo offline games, you should be using Redacted Nightly or Ancient Plutonium without any patches, otherwise Plutonium (2905 or live) are the best option to play on.
+- Because it is not needed. The best option for playing Black Ops II zombies is currently [live Plutonium version](https://plutonium.pw/docs/install/), there's no need for using other launchers or even version 2905.
 
 6) What is a DVAR
 
@@ -108,35 +129,29 @@ End of 18, 28, 38 onwards up to the end, and additionally
 velocity_meter 1
 ```
 
+7) There is a bunch of text showing up on my screen while playing on Plutonium with this patch
+
+- Yes, most of it is either Plutonium anticheat stuff that the patch triggers, or data about the game that is useful for both you the player and also people who watch/validate your game. Even tho it may look like a lot, the patch was built to show as little as possible while providing all important info.
+
+8) I'm getting an error about having 2 patches loaded at the same time.
+
+- Plutonium have changed their go-to directory for scripts, but they maintain them for backwards compatibility. Try the following
+    - Check if you still have a `t6r` folder in your Plutonium directory, if so, just remove it (it's a leftover from earliest versions of Plutonium)
+    - Check if you have anything in `Plutonium\storage\t6\scripts\zm`, if so, just remove it. The patch should be in `Plutonium\storage\t6\raw\scripts\zm` alongside `ranked.gsc` file according to current Plutonium guidelines.
+
 # Steps for basic troubleshooting
 
 - Make sure you're using correct and up to date version and that the downloaded file is compiled (open in Notepad, if it's bunch of gibbrish, you know it's compiled)
 - Remove other patches. B2 Extensions should not cause any issues, but if you are using any, for the sake of troubleshooting remove them as well.
 - Check if the directory the patch is in is correct. Perhaps you have multiple instances of Plutonium or Redacted and you put it in the directory belonging to another instance.
 
-# B2FR Features
-
-- Basic anticheat capabilities (DVARs, Box etc.)
-- Fixed network frame (you may know it as a Tickrate issue)
-- Full bank
-- Reset backspeed values to the level of a Steam version (consistently with First Room ruleset)
-- Fixed traps & JetGun (disabled for maps that don't need it)
-- Automatic permaperks assignment (consistent with in-game logic)
-- Automatic permaperks removal (if obtained illegaly, for instance during breaks)
-- Optional character setting
-- Disabled DOF (Depth of Field)
-- On nuketown, the mannequin next to the yellow bus is automatically removed
-- On Nuketown, players are warned if Jugg is going to be in the first room
-- On Origins, reticle is always default
-- On Origins, game is always in custom game mode (zombie blood from reward box)
-
-## HUD
+# HUD
 
 Elements listed here are not present in nohud version of this patch
 
 - HUD elements scale accordingly to aspect ratio (solo only, because it's dependent on the ratio of hosts game, cannot be changed for clients separately via gsc patch)
 - Timer & Round timer
-- Shows times for key splits (round 20, 30 etc)
+- Shows times for key splits (round 20, 30 etc), the splits can be [customized by config file](#customizing-splits)
 - Velocity meter (toogleable with `velocity_meter` dvar, set to 1 or 0 respectively)
 - Horde count is printed out at the beginning of each round past 20 (works like zombacus, not a live zombie counter)
 - Permaperks tracker (info when and what was gained / lost)
@@ -153,12 +168,42 @@ Prior to version 2.1 splits were not fully accurate. Starting on 2.1, B2FR emula
 | 70 | -2.25 |
 | 100 | -4.25 |
 
-## Challenges
+## Customizing splits
+
+On Plutonium version R4516+ you can customize on which rounds splits are going to be shown, in order to do that, go to
+
+```
+%localappdata%\Plutonium\storage\t6\raw\scriptdata
+```
+
+Or wherever your Plutonium is installed. If some part of this path is missing on your pc, just create empty folders.
+
+Then proceed to create a `b2fr` folder inside of scriptdata, create `splits.txt` file inside. You can specify all splits you want displayed there, for example, writing the following contents to the file, will cause splits to show on rounds 15, 18, 21, 24, 27 and 30.
+
+```
+15
+18
+21
+24
+27
+30
+```
+
+> [!WARNING]
+> If the `splits.txt` file is not empty, default splits rounds used by the patch no longer apply, so you need to specify ALL of the rounds you want it to show up yourself.
+
+> [!NOTE]
+> In a coop game, splits defined by the host player will apply to all players.
+
+> [!WARNING]
+> Splits customization (much like any other feature based on file IO) won't work if you have `scr_allowFileIo` dvar set to 0
+
+# Challenges
 
 - Built in support for Top Barn challenge (integrity checks for rules and if players remain within the right area)
 - Built it support for Yellow House challenge (integirity checks for rules and if players remain within the right area)
 
-## Permaperks
+# Permaperks
 
 Patch does award players with permaperks on connect, but only at the beginning of the game. Players joining in progress will not be given any permaperks. Every player joining the game past round 15 will have PermaJug taken away from him.
 List of permaperks awarded by B2FR
@@ -177,9 +222,7 @@ List of permaperks awarded by B2FR
 
 # Characters
 
-Up until version 3.0, it was possible to set characters via Plugins system, but it's not particulary easy nor user friendly, so a new version of this system has been created.
-
-Up until version 3.0, it was possible to set characters via Plugins system, but it's not particulary easy nor user friendly, so a new version of this system has been created.
+You can predefine which character you're going to be playing with
 
 > [!NOTE]
 > You don't need to have the patch in for character selections to work if you're the off-host player, as long as the host has it, it'll work.
@@ -335,6 +378,22 @@ char reset
 > [!TIP]
 > You can check which preset you currently have set by entering `whoami` in the chat
 
+## Viewmodel swapping
+
+As a response to drawbacks in the character system, we added additional functionaltiy that allows you to swap only the viewmodel (hands in first person), as oppose to the entire character. Changes here will apply instantly and have no effect to any game logic (as far as the game is concerned, the character has not been changed). You may swap viewmodels either by using `view` chat message or `viewmodel` dvar, followed by one of these values
+
+```
+misty russman stuhlinger marlton weasel billy sal finn dempsey nikolai takeo richtofen cia cdc
+```
+
+or
+
+```
+reset
+```
+
+to set viewmodel back to what it should be with your original character.
+
 # Contributions
 
 If you'd like to contribute to the code, please fork this repository, apply changes / fixes and open a pull request. If the change is in line with rules and the purpose of this patch, it'll be merged and a new version of the patch will be released.
@@ -350,10 +409,6 @@ After applying desired changes, run script `compile.py` while in the patch main 
 
 > [!NOTE]
 > Please note, as the modding scene for BO2 is still very young, stuff and tech is changing rapidly. Above description may not always be up to date, but i will try to not let that happen too often.
-
-# B2 Extensions
-
-THIS IS FOR ADVANCED USERS ONLY. The patch has few handles for external GSC scripts than can be used to modify certain behaviours in a controlled environment. Examples of such modification can be found in the [B2 Extensions repository](https://github.com/B2ORG/T6-B2EXTENSIONS) alongside further instructions
 
 # Legacy info (regarding First Room Fix times)
 

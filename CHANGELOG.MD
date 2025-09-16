@@ -1,3 +1,16 @@
+# Version 3.0
+
+- Added UTC timestamp to split print for versions that don't have game identifier
+- Added link to WaW communtiy patch to the readme
+- Changed structure of welcome prints and added bunch of info about game state
+- Locked client FPS (it's set to 332, as in-game limiter is highly inaccurate, this allows people to go up to 250 via their own locker, which is currently max fps allowed)
+- Anticheat now triggers Plutos cheat state (star) as well as the watermark
+- Removed all remaining hooks for B2 extensions
+- Added option to define custom splits via text file
+- Added viewmodel customization (independend from setting characters, it only changes character hands but allows for use mid game and has no conflicts in coop games)
+- Optimized logic for calculating Semtex prenades
+- Optimized patch allocations
+
 # Version 2.3
 
 - Add enabling `cg_drawIdentifier` dvar for future Pluto update
