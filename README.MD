@@ -6,7 +6,9 @@ Patch for playing world record games in Black Ops II Zombies for First Room game
 
 Please inform me about any issues you may encounter with the patch, so they can be fixed, preferably with decent amount of information in what circumstances an issue occured. The main channel for issues is GitHubs Issues section, although it won't hurt to ask about it on [Discord](https://b2.wtf/discord/) first
 
-Before reporting a problem, please check out the FAQ section down below, you may find answers you're looking for there
+Before reporting a problem, please check out the [FAQ section down below](#faq), you may find answers you're looking for there
+
+[Also check out a B2 website with useful tools and data](https://b2.wtf/)
 
 # Categories
 
