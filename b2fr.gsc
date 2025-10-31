@@ -5,7 +5,7 @@
 #define BETA 0
 
 /* Const macros */
-#define B2FR_VER 3.0
+#define B2FR_VER 3.1
 #define VER_ANCIENT 353
 #define VER_MODERN 1824
 #define VER_2905 2905
@@ -80,8 +80,11 @@
 
 main()
 {
-    replacefunc(maps\mp\animscripts\zm_utility::wait_network_frame, ::fixed_wait_network_frame);
-    replacefunc(maps\mp\zombies\_zm_utility::wait_network_frame, ::fixed_wait_network_frame);
+    if (!is_plutonium_version(VER_3K))
+    {
+        replacefunc(maps\mp\animscripts\zm_utility::wait_network_frame, ::fixed_wait_network_frame);
+        replacefunc(maps\mp\zombies\_zm_utility::wait_network_frame, ::fixed_wait_network_frame);
+    }
 
     replaceFunc(maps\mp\zombies\_zm_weapons::get_pack_a_punch_weapon_options, ::b2_get_pack_a_punch_weapon_options);
 }
@@ -265,7 +268,8 @@ init_b2_dvars()
     dvars[dvars.size] = register_dvar("g_speed",                        "190",                  true,   false);
     dvars[dvars.size] = register_dvar("con_gameMsgWindow0MsgTime",      "5",                    true,   false);
     dvars[dvars.size] = register_dvar("con_gameMsgWindow0Filter",       "gamenotify obituary",  true,   false);
-    dvars[dvars.size] = register_dvar("ai_corpseCount",                 "8",                    true,   false,      array(::is_plutonium_version, 4837, true));
+    /* The corpse count dvar definition says 8, however it's being set to 5 on first game launch, so effectively records are being played on 5. It's being mistakenly set to 8 on Pluto 4837 to 5140+ */
+    dvars[dvars.size] = register_dvar("ai_corpseCount",                 "5",                    true,   false,      array(::is_plutonium_version, 5145, true));
     /* Prevent host migration (redundant nowadays) */
     dvars[dvars.size] = register_dvar("sv_endGameIfISuck",              "0",                    false,  false);
     /* Force post dlc1 patch on recoil */
@@ -854,6 +858,10 @@ fetch_pluto_definition()
 
 try_parse_pluto_version()
 {
+    dvar = getdvar("shortversion");
+    if (dvar)
+        return int(getsubstr(dvar, 1));
+
     dvar = getdvar("version");
     if (!issubstr(dvar, "Plutonium"))
         return 0;
@@ -1216,12 +1224,15 @@ register_dvar(dvar, set_value, b2_protect, init_only, closure, on_change)
     {
         if (isarray(closure) && is_false(call_func_with_variadic_args(closure[0], array_shift(closure))))
         {
+            DEBUG_PRINT("Cancelled dvar '" + dvar + "' registration as closure is false");
             return undefined;
         }
         else if (!isarray(closure) && ![[closure]]())
         {
+            DEBUG_PRINT("Cancelled dvar '" + dvar + "' registration as closure is false");
             return undefined;
         }
+        DEBUG_PRINT("Closure for dvar '" + dvar + "' is true");
     }
 
     dvar_data = SpawnStruct();

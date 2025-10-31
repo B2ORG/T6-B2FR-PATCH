@@ -1,3 +1,9 @@
+# Version 3.1
+
+- Network frame fix now isn't applied on Pluto versions >2905
+- Restore change from 3.7 with `ai_corpseCount`, it's now again set to 5
+    * For a bit of context, the DVAR game definition does set it to 8, but in another place the game adjusts it to 5 (specifically during the first launch process), so effectively all record games are historically played on 5. This setting will not apply after Plutonium update R5140 as they'll adjust their DVAR logic to this discovery and GSC adjustment won't be necessary.
+
 # Version 3.0
 
 - Added UTC timestamp to split print for versions that don't have game identifier
