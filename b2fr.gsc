@@ -553,9 +553,9 @@ convert_time(seconds)
         str_seconds = "0" + seconds;
 
     if (hours == 0)
-        combined = "" + str_minutes  + ":" + str_seconds;
+        combined = str_minutes  + ":" + str_seconds;
     else
-        combined = "" + str_hours  + ":" + str_minutes  + ":" + str_seconds;
+        combined = str_hours  + ":" + str_minutes  + ":" + str_seconds;
 
     return combined;
 }
@@ -680,8 +680,8 @@ number_round(floating_point, decimal_places, format)
     if (is_true(format))
     {
         full_scaled = int(scaled);
-        full = "" + (int(full_scaled / factor));
-        decimal = "" + (int(abs(full_scaled) % factor));
+        full = STR(int(full_scaled / factor));
+        decimal = STR(int(abs(full_scaled) % factor));
 
         // DEBUG_PRINT("decimal_places=" + sstr(decimal_places) + " factor=" + sstr(factor) + " typeof(scaled)=" + gettype(scaled) + " typeof(factor)=" + gettype(factor) + " scaled=" + sstr(scaled) + " decimal=" + sstr(decimal) + " full=" + sstr(full) + " abs(scaled)=" + sstr(abs(scaled)) );
 
