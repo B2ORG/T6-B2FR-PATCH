@@ -66,6 +66,7 @@
 #define CLEAR(__var) __var = undefined;
 #define MS_TO_SECONDS(__ms) int(__ms / 1000)
 #define COLOR_TXT(__txt, __color) __color + __txt + COL_WHITE
+#define STR(__val) "" + (__val)
 
 #include common_scripts\utility;
 #include maps\mp\gametypes_zm\_hud_util;
@@ -693,6 +694,8 @@ sstr(value)
         return "undefined";
     else if (isarray(value))
         return "{" + array_implode(", ", value) + "}";
+    else if (!isdefined(STR(value)))
+        return "<unserializable>";
     return value;
 }
 
@@ -706,9 +709,9 @@ gettype(value)
         return "string";
     if (isarray(value))
         return "array";
-    if (value == true || value == false)
-        return "boolean";
-    return "struct";
+    if (!isdefined(STR(value)))
+        return "struct|callable";
+    return "boolean";
 }
 
 naive_round(floating_point)
