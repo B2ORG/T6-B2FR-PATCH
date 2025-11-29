@@ -953,6 +953,14 @@ remove_mannequin(origin, extra_delay)
     }
 }
 
+b2_restart_level()
+{
+    if (get_plutonium_version() > VER_MODERN || level.players.size == 1)
+        emulate_menu_call("restart_level_zm");
+    else
+        emulate_menu_call("endround");
+}
+
 /*
  ************************************************************************************************************
  ****************************************** SINGLE PURPOSE FUNCTIONS ****************************************
@@ -2109,11 +2117,7 @@ watch_permaperk_award()
             print_scheduler("Permaperks Awarded - ^1RESTARTING");
             wait 1;
 
-            if (get_plutonium_version() > VER_MODERN || present_players == 1)
-                emulate_menu_call("restart_level_zm");
-            else
-                emulate_menu_call("endround");
-            break;
+            b2_restart_level();
         }
 
         if (!did_game_just_start())
