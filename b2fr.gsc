@@ -5,7 +5,7 @@
 #define BETA 0
 
 /* Const macros */
-#define B2FR_VER 3.1
+#define B2FR_VER 3.2
 #define VER_ANCIENT 353
 #define VER_MODERN 1824
 #define VER_2905 2905
@@ -66,6 +66,7 @@
 #define CLEAR(__var) __var = undefined;
 #define MS_TO_SECONDS(__ms) int(__ms / 1000)
 #define COLOR_TXT(__txt, __color) __color + __txt + COL_WHITE
+#define STR(__val) "" + (__val)
 
 #include common_scripts\utility;
 #include maps\mp\gametypes_zm\_hud_util;
@@ -91,6 +92,11 @@ main()
 
 init()
 {
+    if (!isdefined(level.b2_sniff))
+    {
+        level.b2_sniff = 0;
+    }
+
     thread protect_file();
     thread origins_fix();
     thread on_player_connected();
@@ -209,7 +215,6 @@ init_b2_box()
 init_b2_flags()
 {
     flag_init("b2_permaperks_were_set");
-    flag_init("b2_on");
     // flag_init("b2_hud_killed");
     flag_init("b2_char_taken_0");
     flag_init("b2_char_taken_1");
@@ -240,64 +245,12 @@ init_b2_dvars()
         level.GAMEPLAY_REMINDER = ::nuketown_gameplay_reminder;
     }
 
-    dvars = [];
-    /*                                  DVAR                            VALUE                   PROTECT INIT_ONLY   EVAL                                                WATCHER_CALLBACK*/
-    dvars[dvars.size] = register_dvar("sv_cheats",                      "0",                    true,   false);
-    dvars[dvars.size] = register_dvar("award_perks",                    "1",                    false,  true,       ::has_permaperks_system);
-
-#if FEATURE_HUD == 1
-    dvars[dvars.size] = register_dvar("timers",                         "1",                    false,  true,       undefined,                                          ::timers_alpha);
-    dvars[dvars.size] = register_dvar("splits",                         "1",                    false,  true);
-    dvars[dvars.size] = register_dvar("kill_hud",                       "0",                    false,  false,      undefined,                                          ::kill_hud);
-#endif
-
-#if FEATURE_HORDES == 1
-    dvars[dvars.size] = register_dvar("hordes",                         "1",                    false,  true);
-#endif
-
-#if FEATURE_CHARACTERS == 1
-    dvars[dvars.size] = register_dvar("viewmodel",                      "",                     false,  false,      undefined,                                          ::viewmodel_input);
-#endif
-
-#if DEBUG == 1
-    dvars[dvars.size] = register_dvar("getDvarValue",                   "",                     false,  false,      undefined,                                          ::_dvar_reader);
-#endif
-
-    dvars[dvars.size] = register_dvar("player_strafeSpeedScale",        "0.8",                  true,   false);
-    dvars[dvars.size] = register_dvar("player_backSpeedScale",          "0.7",                  true,   false);
-    dvars[dvars.size] = register_dvar("g_speed",                        "190",                  true,   false);
-    dvars[dvars.size] = register_dvar("con_gameMsgWindow0MsgTime",      "5",                    true,   false);
-    dvars[dvars.size] = register_dvar("con_gameMsgWindow0Filter",       "gamenotify obituary",  true,   false);
-    /* The corpse count dvar definition says 8, however it's being set to 5 on first game launch, so effectively records are being played on 5. It's being mistakenly set to 8 on Pluto 4837 to 5140+ */
-    dvars[dvars.size] = register_dvar("ai_corpseCount",                 "5",                    true,   false,      array(::is_plutonium_version, 5145, true));
-    /* Prevent host migration (redundant nowadays) */
-    dvars[dvars.size] = register_dvar("sv_endGameIfISuck",              "0",                    false,  false);
-    /* Force post dlc1 patch on recoil */
-    dvars[dvars.size] = register_dvar("sv_patch_zm_weapons",            "1",                    false,  false);
-    /* Remove Depth of Field */
-    dvars[dvars.size] = register_dvar("r_dof_enable",                   "0",                    false,  true);
-    /* Fix for devblocks in r3903/3904 */
-    dvars[dvars.size] = register_dvar("scr_skip_devblock",              "1",                    false,  false,      array(::is_plutonium_version, VER_3K));
-    /* Use native health fix, r4516+ */
-    dvars[dvars.size] = register_dvar("g_zm_fix_damage_overflow",       "1",                    false,  true,       array(::is_plutonium_version, VER_4K));
-    /* Defines if Pluto error fixes are applied, r4516+ */
-    dvars[dvars.size] = register_dvar("g_fix_entity_leaks",             "0",                    true,   false,      array(::is_plutonium_version, VER_4K));
-    /* Enables flashing hashes of individual scripts */
-    dvars[dvars.size] = register_dvar("cg_flashScriptHashes",           "1",                    true,   false,      array(::is_plutonium_version, VER_4K));
-    /* Offsets for pluto draws compatibile with b2 timers */
-    dvars[dvars.size] = register_dvar("cg_debugInfoCornerOffset",       "50 20",                false,  false,      ::should_set_draw_offset);
-    /* Displays the game status ID */
-    dvars[dvars.size] = register_dvar("cg_drawIdentifier",              "1",                    true,   false,      array(::is_plutonium_version, VER_4K));
-    /* Locks fps for all clients - Set it higher due to engine limiter being dogfood, this allows ppl to go constant 250 if they want to */
-    dvars[dvars.size] = register_dvar("sv_clientFpsLimit",              "332",                  true,   false);
-
+    dvars = dvar_config();
     for (i = 0; i < dvars.size; i++)
     {
         set_dvar_internal(dvars[i]);
-        dvars[i].state = getdvar(dvars[i].name);
     }
-
-    level thread dvar_scanner(dvars);
+    thread dvar_scanner(dvars);
 }
 
 init_b2_chat_watcher()
@@ -338,12 +291,16 @@ b2fr_main_loop()
     // DEBUG_PRINT("initialized b2fr_main_loop");
     game_start = gettime();
 
+    b2_signal("GAME_START", array(game_start, getutc(), "b2fr", B2FR_VER, get_plutonium_version(), fetch_players_info()), array("game_time", "utc_time", "patch", "patch_version", "plutonium_version", "players"));
+
     while (true)
     {
         level waittill("start_of_round");
 
 #if FEATURE_HUD == 1
         round_start = gettime();
+
+        b2_signal("START_OF_ROUND", array(gettime(), getutc(), level.round_number, fetch_players_info()), array("game_time", "utc_time", "round_number", "players"));
 
         if (isdefined(level.round_hud))
         {
@@ -371,6 +328,8 @@ b2fr_main_loop()
 
         level waittill("end_of_round");
 
+        b2_signal("END_OF_ROUND", array(gettime(), getutc()), array("game_time", "utc_time"));
+
 #if FEATURE_HUD == 1
         round_duration = gettime() - round_start;
 
@@ -387,12 +346,6 @@ b2fr_main_loop()
             setdvar("award_perks", 1);
         }
 #endif
-
-        /* This is less invasive way, less intrusive and threads spin up only at the end of round */
-        if (!is_round(50))
-        {
-            level thread sniff();
-        }
 
         if (should_print_checksum())
         {
@@ -412,39 +365,37 @@ b2fr_main_loop()
  ************************************************************************************************************
 */
 
-generate_watermark_slots()
+get_watermark_position(mode, allocate)
 {
-    slots = [];
-
-    positions = array(0, -90, 90, -180, 180, -270, 270, -360, 360, -450, 450, -540, 540, -630, 630);
-
-    foreach (pos in positions)
+    foreach (slot in array(0, -90, 90, -180, 180, -270, 270, -360, 360, -450, 450, -540, 540, -630, 630))
     {
-        i = slots.size;
-        slots[i] = [];
-        slots[i]["pos"] = pos;
-        slots[i]["perm_on"] = false;
-        slots[i]["temp_on"] = false;
-    }
-
-    level.set_of_slots = slots;
-}
-
-get_watermark_position(mode)
-{
-    mode += "_on";
-    for (i = 0; i < level.set_of_slots.size; i++)
-    {
-        if (!level.set_of_slots[i][mode])
+        if (!flag("b2_watermark_" + mode + slot))
         {
-            level.set_of_slots[i][mode] = true;
-            pos = level.set_of_slots[i]["pos"];
-            if (pos < 640 && pos > -640)
-                return pos;
-            return 0;
+            s = abs(slot);
+            if (slot < 0)
+            {
+                s = "-" + s;
+            }
+
+            if (is_true(allocate))
+            {
+                flag_set("b2_watermark_" + mode + s);
+            }
+            return slot;
         }
     }
+
     return 0;
+}
+
+deallocate_temp_watermark_slot(slot)
+{
+    s = abs(slot);
+    if (slot < 0)
+    {
+        s = "-" + s;
+    }
+    flag_clear("b2_watermark_temp" + s);
 }
 
 generate_watermark(text, color, alpha_override)
@@ -452,12 +403,7 @@ generate_watermark(text, color, alpha_override)
     if (is_true(flag(text)))
         return;
 
-    if (!isdefined(level.set_of_slots))
-        generate_watermark_slots();
-
-    x_pos = get_watermark_position("perm");
-    if (!isdefined(x_pos))
-        return;
+    x_pos = get_watermark_position("perm", true);
 
     if (!isdefined(color))
         color = (1, 1, 1);
@@ -471,6 +417,8 @@ generate_watermark(text, color, alpha_override)
     watermark settext(text);
     watermark.alpha = alpha_override;
     watermark.hidewheninmenu = 0;
+
+    DEBUG_PRINT("Created permanent watermark: " + sstr(text));
 
     flag_set(text);
 
@@ -486,12 +434,7 @@ generate_temp_watermark(kill_on, text, color, alpha_override)
     if (is_true(flag(text)))
         return;
 
-    if (!isdefined(level.set_of_slots))
-        generate_watermark_slots();
-
-    x_pos = get_watermark_position("temp");
-    if (!isdefined(x_pos))
-        return;
+    x_pos = get_watermark_position("temp", true);
 
     if (!isdefined(color))
         color = (1, 1, 1);
@@ -506,6 +449,8 @@ generate_temp_watermark(kill_on, text, color, alpha_override)
     twatermark.alpha = alpha_override;
     twatermark.hidewheninmenu = 0;
 
+    DEBUG_PRINT("Created temp watermark: " + sstr(text));
+
     flag_set(text);
 
     CLEAR(text)
@@ -518,12 +463,11 @@ generate_temp_watermark(kill_on, text, color, alpha_override)
     twatermark.alpha = 0;
     twatermark destroy_hud();
 
-    /* Cleanup slots array if there are no huds to track */
-    for (i = 0; i < level.set_of_slots.size; i++)
-    {
-        if (level.set_of_slots[i]["pos"] == x_pos)
-            level.set_of_slots[i]["temp_on"] = false;
-    }
+    /* Cleanup the slot */
+    deallocate_temp_watermark_slot(x_pos);
+
+    /* There should've been flag_clear here, but don't add it anymore, since it's now used
+    for appending first box info to splits */
 }
 
 print_scheduler(content, player, delay)
@@ -604,9 +548,9 @@ convert_time(seconds)
         str_seconds = "0" + seconds;
 
     if (hours == 0)
-        combined = "" + str_minutes  + ":" + str_seconds;
+        combined = str_minutes  + ":" + str_seconds;
     else
-        combined = "" + str_hours  + ":" + str_minutes  + ":" + str_seconds;
+        combined = str_hours  + ":" + str_minutes  + ":" + str_seconds;
 
     return combined;
 }
@@ -693,6 +637,8 @@ sstr(value)
         return "undefined";
     else if (isarray(value))
         return "{" + array_implode(", ", value) + "}";
+    else if (!isdefined(STR(value)))
+        return "<unserializable>";
     return value;
 }
 
@@ -706,9 +652,9 @@ gettype(value)
         return "string";
     if (isarray(value))
         return "array";
-    if (value == true || value == false)
-        return "boolean";
-    return "struct";
+    if (!isdefined(STR(value)))
+        return "struct|callable";
+    return "boolean";
 }
 
 naive_round(floating_point)
@@ -729,8 +675,8 @@ number_round(floating_point, decimal_places, format)
     if (is_true(format))
     {
         full_scaled = int(scaled);
-        full = "" + (int(full_scaled / factor));
-        decimal = "" + (int(abs(full_scaled) % factor));
+        full = STR(int(full_scaled / factor));
+        decimal = STR(int(abs(full_scaled) % factor));
 
         // DEBUG_PRINT("decimal_places=" + sstr(decimal_places) + " factor=" + sstr(factor) + " typeof(scaled)=" + gettype(scaled) + " typeof(factor)=" + gettype(factor) + " scaled=" + sstr(scaled) + " decimal=" + sstr(decimal) + " full=" + sstr(full) + " abs(scaled)=" + sstr(abs(scaled)) );
 
@@ -892,6 +838,17 @@ get_plutonium_version()
     return detected_version;
 }
 
+fetch_players_info()
+{
+    players = [];
+    foreach (player in level.players)
+    {
+        players[players.size] = array(player.name, player.clientid);
+    }
+
+    return players;
+}
+
 should_set_draw_offset()
 {
     return (getdvar("cg_debugInfoCornerOffset") == "40 0" && is_plutonium_version(VER_4K));
@@ -973,6 +930,7 @@ b2_signal(message, ctx, array_keys)
     {
         ctx = array_create(ctx, array_keys);
     }
+    DEBUG_PRINT("b2_signal => " + sstr(message) + " " + sstr(ctx));
     level notify("b2_sig_out", message, ctx);
 #endif
 }
@@ -1009,6 +967,14 @@ remove_mannequin(origin, extra_delay)
             break;
         }
     }
+}
+
+b2_restart_level()
+{
+    if (get_plutonium_version() > VER_MODERN || level.players.size == 1)
+        emulate_menu_call("restart_level_zm");
+    else
+        emulate_menu_call("endround");
 }
 
 /*
@@ -1065,6 +1031,8 @@ b2_get_pack_a_punch_weapon_options(weapon)
 protect_file()
 {
     wait 0.05;
+    level thread sniff();
+
 #if RAW == 1
     bad_file();
 #endif
@@ -1114,7 +1082,10 @@ duplicate_file()
 {
     iprintln("ONLY ONE ^1B2 ^7PATCH CAN RUN AT THE SAME TIME!");
 #if DEBUG == 0
-    level notify("end_game");
+    if (level.round_number <= 15)
+    {
+        level notify("end_game");
+    }
 #endif
 }
 
@@ -1122,14 +1093,16 @@ sniff()
 {
     LEVEL_ENDON
 
-    wait randomfloatrange(0.1, 1.2);
-    if (flag("b2_on")) 
+    level.b2_sniff++;
+
+    flag_wait("initial_blackscreen_passed");
+
+    DEBUG_PRINT("Sniffing for duplicates, should be 1: " + sstr(level.b2_sniff));
+    if (isdefined(level.b2_sniff) && level.b2_sniff > 1)
     {
         duplicate_file();
     }
-    flag_set("b2_on");
-    level waittill("start_of_round");
-    flag_clear("b2_on");
+    CLEAR(level.b2_sniff)
 }
 
 welcome_prints()
@@ -1209,16 +1182,89 @@ should_print_checksum()
     return false;
 }
 
+dvar_config(key)
+{
+    dvars = [];
+    /*                                  DVAR                            VALUE                   PROTECT INIT_ONLY   EVAL                                                WATCHER_CALLBACK*/
+    dvars[dvars.size] = register_dvar("sv_cheats",                      "0",                    true,   false);
+    dvars[dvars.size] = register_dvar("award_perks",                    "1",                    false,  true,       ::has_permaperks_system);
+
+#if FEATURE_HUD == 1
+    dvars[dvars.size] = register_dvar("timers",                         "1",                    false,  true,       undefined,                                          ::timers_alpha);
+    dvars[dvars.size] = register_dvar("splits",                         "1",                    false,  true);
+    dvars[dvars.size] = register_dvar("kill_hud",                       "0",                    false,  false,      undefined,                                          ::kill_hud);
+#endif
+
+#if FEATURE_HORDES == 1
+    dvars[dvars.size] = register_dvar("hordes",                         "1",                    false,  true);
+#endif
+
+#if FEATURE_CHARACTERS == 1
+    dvars[dvars.size] = register_dvar("viewmodel",                      "",                     false,  false,      undefined,                                          ::viewmodel_input);
+#endif
+
+#if DEBUG == 1
+    dvars[dvars.size] = register_dvar("getDvarValue",                   "",                     false,  false,      undefined,                                          ::_dvar_reader);
+#endif
+
+    dvars[dvars.size] = register_dvar("player_strafeSpeedScale",        "0.8",                  true,   false);
+    dvars[dvars.size] = register_dvar("player_backSpeedScale",          "0.7",                  true,   false);
+    dvars[dvars.size] = register_dvar("g_speed",                        "190",                  true,   false);
+    dvars[dvars.size] = register_dvar("con_gameMsgWindow0MsgTime",      "5",                    true,   false);
+    dvars[dvars.size] = register_dvar("con_gameMsgWindow0Filter",       "gamenotify obituary",  true,   false);
+    /* The corpse count dvar definition says 8, however it's being set to 5 on first game launch, so effectively records are being played on 5. It's being mistakenly set to 8 on Pluto 4837 to 5140+ */
+    dvars[dvars.size] = register_dvar("ai_corpseCount",                 "5",                    true,   false,      array(::is_plutonium_version, 5145, true));
+    /* Prevent host migration (redundant nowadays) */
+    dvars[dvars.size] = register_dvar("sv_endGameIfISuck",              "0",                    false,  false);
+    /* Force post dlc1 patch on recoil */
+    dvars[dvars.size] = register_dvar("sv_patch_zm_weapons",            "1",                    false,  false);
+    /* Remove Depth of Field */
+    dvars[dvars.size] = register_dvar("r_dof_enable",                   "0",                    false,  true);
+    /* Fix for devblocks in r3903/3904 */
+    dvars[dvars.size] = register_dvar("scr_skip_devblock",              "1",                    false,  false,      array(::is_plutonium_version, VER_3K));
+    /* Use native health fix, r4516+ */
+    dvars[dvars.size] = register_dvar("g_zm_fix_damage_overflow",       "1",                    false,  true,       array(::is_plutonium_version, VER_4K));
+    /* Defines if Pluto error fixes are applied, r4516+ */
+    dvars[dvars.size] = register_dvar("g_fix_entity_leaks",             "0",                    true,   false,      array(::is_plutonium_version, VER_4K));
+    /* Enables flashing hashes of individual scripts */
+    dvars[dvars.size] = register_dvar("cg_flashScriptHashes",           "1",                    true,   false,      array(::is_plutonium_version, VER_4K));
+    /* Offsets for pluto draws compatibile with b2 timers */
+    dvars[dvars.size] = register_dvar("cg_debugInfoCornerOffset",       "50 20",                false,  false,      ::should_set_draw_offset);
+    /* Displays the game status ID */
+    dvars[dvars.size] = register_dvar("cg_drawIdentifier",              "1",                    true,   false,      array(::is_plutonium_version, VER_4K));
+    /* Locks fps for all clients - 5162 fixes the limiter so we can set it more accurately */
+    dvars[dvars.size] = register_dvar("sv_clientFpsLimit",              "250",                  true,   false,      array(::is_plutonium_version, 5163));
+    dvars[dvars.size] = register_dvar("sv_clientFpsLimit",              "332",                  true,   false,      array(::is_plutonium_version, 5162, true));
+
+    if (isdefined(key))
+    {
+        for (i = 0; i < dvars.size; i++)
+        {
+            if (tolower(dvars[i]["name"]) == tolower(key))
+            {
+                return dvars[i];
+            }
+        }
+
+        return;
+    }
+
+    return dvars;
+}
+
 set_dvar_internal(dvar)
 {
     if (!isdefined(dvar))
         return;
-    if (dvar.init_only && getdvar(dvar.name) != "")
+    if (dvar["is_init_only"] && getdvar(dvar["name"]) != "")
+    {
+        DEBUG_PRINT("abort set_dvar_iternal: is_init_only for " + sstr(dvar["name"]));
         return;
-    setdvar(dvar.name, dvar.value);
+    }
+    setdvar(dvar["name"], dvar["start_value"]);
 }
 
-register_dvar(dvar, set_value, b2_protect, init_only, closure, on_change)
+register_dvar(dvar, set_value, protected, init_only, closure, on_change)
 {
     if (isdefined(closure))
     {
@@ -1235,13 +1281,12 @@ register_dvar(dvar, set_value, b2_protect, init_only, closure, on_change)
         DEBUG_PRINT("Closure for dvar '" + dvar + "' is true");
     }
 
-    dvar_data = SpawnStruct();
-    dvar_data.name = dvar;
-    dvar_data.value = set_value;
-    dvar_data.protected = b2_protect;
-    dvar_data.init_only = init_only;
-    dvar_data.on_change = on_change;
-    dvar_data.state = undefined;
+    dvar_data = [];
+    dvar_data["name"] = dvar;
+    dvar_data["start_value"] = set_value;
+    dvar_data["is_init_only"] = init_only;
+    dvar_data["is_protected"] = protected;
+    dvar_data["on_change"] = on_change;
 
     DEBUG_PRINT("registered dvar " + dvar);
 
@@ -1254,55 +1299,119 @@ dvar_scanner(dvars)
 
     flag_wait("initial_blackscreen_passed");
 
-    /* We're setting them once again, to ensure lack of accidental detections */
+    state = [];
     for (i = 0; i < dvars.size; i++)
     {
-        if (dvars[i].protected)
+        if (dvars[i]["is_protected"] || isdefined(dvars[i]["on_change"]))
         {
-            dvars[i].state = dvars[i].value;
-            setdvar(dvars[i].name, dvars[i].state);
+            if (dvars[i]["is_protected"])
+            {
+                setdvar(dvars[i]["name"], dvars[i]["start_value"]);
+            }
+
+            enabledvarchangednotify(dvars[i]["name"]);
+            state[dvars[i]["name"]] = dvars[i]["start_value"];
         }
     }
 
+    if (is_plutonium_version(5150))
+    {
+        thread new_dvar_scanner();
+        return;
+    }
+
+    DEBUG_PRINT("old dvar scanner");
+
+    /* Old method without using stateless config and new pluto api */
     while (true)
     {
         for (i = 0; i < dvars.size; i++)
         {
             current_state = undefined;
-            if (dvars[i].protected || isdefined(dvars[i].on_change))
-                current_state = getdvar(dvars[i].name);
+            if (dvars[i]["is_protected"] || isdefined(dvars[i]["on_change"]))
+                current_state = getdvar(dvars[i]["name"]);
 
             if (isdefined(current_state))
             {
-                if (dvars[i].protected)
+                if (isdefined(dvars[i]["on_change"]) && state[dvars[i]["name"]] != current_state)
                 {
-                    if (current_state != dvars[i].value)
-                    {
-                        /* They're not reset here, someone might want to test something related to protected dvars, so they can do so with the watermark */
-                        generate_watermark("DVAR " + toupper(dvars[i].name) + " VIOLATED", (1, 0.6, 0.2), 0.66);
-                        setcheatstate();
-                        dvars[i].protected = false;
-                    }
-                }
-
-                if (isdefined(dvars[i].on_change) && dvars[i].state != current_state)
-                {
-                    DEBUG_PRINT("dvar onchange " + sstr(dvars[i].name) + ": " + sstr(dvars[i].state) + " != " + sstr(current_state));
+                    DEBUG_PRINT("dvar onchange " + sstr(dvars[i]["name"]) + ": " + sstr(state[dvars[i]["name"]]) + " != " + sstr(current_state));
                     if (!flag("b2_" + dvars[i].name + "_locked"))
                     {
-                        reset = [[dvars[i].on_change]](current_state, dvars[i].name, gethostplayer());
+                        reset = [[dvars[i]["on_change"]]](current_state, dvars[i]["name"], gethostplayer());
                         if (reset)
                         {
-                            setdvar(dvars[i].name, dvars[i].value);
-                            current_state = dvars[i].value;
+                            setdvar(dvars[i]["name"], dvars[i]["start_value"]);
+                            current_state = dvars[i]["start_value"];
                         }
                     }
                 }
-                dvars[i].state = current_state;
+                else if (dvars[i]["is_protected"] && !isdefined(dvars[i]["on_change"]))
+                {
+                    dvar_violation(current_state, state[dvars[i]["name"]], dvars[i]["name"]);
+                }
+
+                state[dvars[i]["name"]] = current_state;
             }
         }
 
         wait 0.1;
+    }
+}
+
+new_dvar_scanner()
+{
+    LEVEL_ENDON
+
+    DEBUG_PRINT("new dvar scanner");
+
+    while (true)
+    {
+        level waittill("dvar_changed", dvar, new_value, old_value, being_registered);
+
+        cfg = dvar_config(dvar);
+        if (!isdefined(cfg))
+        {
+            CLEAR(dvar)
+            CLEAR(new_value)
+            CLEAR(old_value)
+            CLEAR(being_registered)
+            continue;
+        }
+
+        // DEBUG_PRINT("dvar_changed '" + sstr(dvar) + "': '" + sstr(old_value) + "' => '" + sstr(new_value) + "'");
+
+        if (isdefined(cfg["on_change"]))
+        {
+            /* The signature is counter-intuitive, but it needs to match chat callbacks 
+                it also needs to be non-blocking, or else it'll block notifiers */
+            if ([[cfg["on_change"]]](new_value, dvar, gethostplayer(), old_value))
+            {
+                disabledvarchangednotify(dvar);
+                setdvar(dvar, cfg["start_value"]);
+                enabledvarchangednotify(dvar);
+            }
+        }
+        else if (cfg["is_protected"])
+        {
+            dvar_violation(new_value, old_value, dvar);
+        }
+
+        CLEAR(cfg)
+        CLEAR(dvar)
+        CLEAR(new_value)
+        CLEAR(old_value)
+        CLEAR(being_registered)
+    }
+}
+
+dvar_violation(new_value, old_value, dvar)
+{
+    if (new_value != old_value)
+    {
+        /* They're not reset here, someone might want to test something related to protected dvars, so they can do so with the watermark */
+        generate_watermark("DVAR CHANGED:\n" + toupper(dvar), (1, 0.6, 0.2), 0.66);
+        setcheatstate();
     }
 }
 
@@ -1574,6 +1683,16 @@ fs_listfiles(arg)
 }
 
 setcheatstate()
+{
+
+}
+
+enabledvarchangednotify(arg)
+{
+
+}
+
+disabledvarchangednotify(arg)
 {
 
 }
@@ -2021,11 +2140,7 @@ watch_permaperk_award()
             print_scheduler("Permaperks Awarded - ^1RESTARTING");
             wait 1;
 
-            if (get_plutonium_version() > VER_MODERN || present_players == 1)
-                emulate_menu_call("restart_level_zm");
-            else
-                emulate_menu_call("endround");
-            break;
+            b2_restart_level();
         }
 
         if (!did_game_just_start())
@@ -2985,13 +3100,13 @@ _network_frame_hud()
     netframe_hud = createserverfontstring("default", 1.3);
     netframe_hud set_hud_properties("netframe_hud", "CENTER", "BOTTOM", 0, 28);
     netframe_hud.label = &"NETFRAME: ";
-    netframe_hud.alpha = 1;
     while (true)
     {
         start_time = gettime();
         wait_network_frame();
         end_time = gettime();
         netframe_hud setvalue(end_time - start_time);
+        netframe_hud.alpha = 1;
     }
 }
 
