@@ -49,6 +49,7 @@
 #define FEATURE_NUKETOWN_EYES 0
 #define FEATURE_VELOCITY_METER 1
 #define FEATURE_CHALLENGES 1
+#define FEATURE_CONNECTOR 0
 
 /* Snippet macros */
 #define LEVEL_ENDON \
@@ -291,12 +292,16 @@ b2fr_main_loop()
     // DEBUG_PRINT("initialized b2fr_main_loop");
     game_start = gettime();
 
+    b2_signal("GAME_START", array(game_start, getutc(), "b2fr", B2FR_VER, get_plutonium_version(), fetch_players_info()), array("game_time", "utc_time", "patch", "patch_version", "plutonium_version", "players"));
+
     while (true)
     {
         level waittill("start_of_round");
 
 #if FEATURE_HUD == 1
         round_start = gettime();
+
+        b2_signal("START_OF_ROUND", array(gettime(), getutc(), level.round_number, fetch_players_info()), array("game_time", "utc_time", "round_number", "players"));
 
         if (isdefined(level.round_hud))
         {
@@ -323,6 +328,8 @@ b2fr_main_loop()
 #endif
 
         level waittill("end_of_round");
+
+        b2_signal("END_OF_ROUND", array(gettime(), getutc()), array("game_time", "utc_time"));
 
 #if FEATURE_HUD == 1
         round_duration = gettime() - round_start;
@@ -832,6 +839,17 @@ get_plutonium_version()
     return detected_version;
 }
 
+fetch_players_info()
+{
+    players = [];
+    foreach (player in level.players)
+    {
+        players[players.size] = array(player.name, player.clientid);
+    }
+
+    return players;
+}
+
 should_set_draw_offset()
 {
     return (getdvar("cg_debugInfoCornerOffset") == "40 0" && is_plutonium_version(VER_4K));
@@ -957,6 +975,18 @@ b2_restart_level()
         emulate_menu_call("restart_level_zm");
     else
         emulate_menu_call("endround");
+}
+
+b2_signal(message, ctx, array_keys)
+{
+#FEATURE_CONNECTOR == 1
+    if (isarray(ctx) && isarray(array_keys))
+    {
+        ctx = array_create(ctx, array_keys);
+    }
+    DEBUG_PRINT("b2_signal => " + sstr(message) + " " + sstr(ctx));
+    level notify("b2_sig_out", message, ctx);
+#endif
 }
 
 /*
