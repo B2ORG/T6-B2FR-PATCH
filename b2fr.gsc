@@ -92,6 +92,11 @@ main()
 
 init()
 {
+    if (!isdefined(level.b2_sniff))
+    {
+        level.b2_sniff = 0;
+    }
+
     thread protect_file();
     thread origins_fix();
     thread on_player_connected();
@@ -210,7 +215,6 @@ init_b2_box()
 init_b2_flags()
 {
     flag_init("b2_permaperks_were_set");
-    flag_init("b2_on");
     // flag_init("b2_hud_killed");
     flag_init("b2_char_taken_0");
     flag_init("b2_char_taken_1");
@@ -336,12 +340,6 @@ b2fr_main_loop()
             setdvar("award_perks", 1);
         }
 #endif
-
-        /* This is less invasive way, less intrusive and threads spin up only at the end of round */
-        if (!is_round(50))
-        {
-            level thread sniff();
-        }
 
         if (should_print_checksum())
         {
@@ -1015,6 +1013,8 @@ b2_get_pack_a_punch_weapon_options(weapon)
 protect_file()
 {
     wait 0.05;
+    level thread sniff();
+
 #if RAW == 1
     bad_file();
 #endif
@@ -1064,7 +1064,10 @@ duplicate_file()
 {
     iprintln("ONLY ONE ^1B2 ^7PATCH CAN RUN AT THE SAME TIME!");
 #if DEBUG == 0
-    level notify("end_game");
+    if (level.round_number <= 15)
+    {
+        level notify("end_game");
+    }
 #endif
 }
 
@@ -1072,14 +1075,16 @@ sniff()
 {
     LEVEL_ENDON
 
-    wait randomfloatrange(0.1, 1.2);
-    if (flag("b2_on")) 
+    level.b2_sniff++;
+
+    flag_wait("initial_blackscreen_passed");
+
+    DEBUG_PRINT("Sniffing for duplicates, should be 1: " + sstr(level.b2_sniff));
+    if (isdefined(level.b2_sniff) && level.b2_sniff > 1)
     {
         duplicate_file();
     }
-    flag_set("b2_on");
-    level waittill("start_of_round");
-    flag_clear("b2_on");
+    CLEAR(level.b2_sniff)
 }
 
 welcome_prints()
