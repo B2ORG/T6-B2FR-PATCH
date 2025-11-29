@@ -49,7 +49,6 @@
 #define FEATURE_NUKETOWN_EYES 0
 #define FEATURE_VELOCITY_METER 1
 #define FEATURE_CHALLENGES 1
-#define FEATURE_CONNECTOR 0
 
 /* Snippet macros */
 #define LEVEL_ENDON \
@@ -931,6 +930,7 @@ b2_signal(message, ctx, array_keys)
     {
         ctx = array_create(ctx, array_keys);
     }
+    DEBUG_PRINT("b2_signal => " + sstr(message) + " " + sstr(ctx));
     level notify("b2_sig_out", message, ctx);
 #endif
 }
@@ -975,18 +975,6 @@ b2_restart_level()
         emulate_menu_call("restart_level_zm");
     else
         emulate_menu_call("endround");
-}
-
-b2_signal(message, ctx, array_keys)
-{
-#FEATURE_CONNECTOR == 1
-    if (isarray(ctx) && isarray(array_keys))
-    {
-        ctx = array_create(ctx, array_keys);
-    }
-    DEBUG_PRINT("b2_signal => " + sstr(message) + " " + sstr(ctx));
-    level notify("b2_sig_out", message, ctx);
-#endif
 }
 
 /*
