@@ -177,9 +177,7 @@ init_b2_characters()
 
 init_b2_permaperks()
 {
-#if FEATURE_PERMAPERKS == 1
     thread perma_perks_setup();
-#endif
 }
 
 init_b2_hud()
@@ -2018,19 +2016,20 @@ perma_perks_setup()
     thread fix_persistent_jug();
 
 #if FEATURE_PERMAPERKS == 1
+    level.b2_awarding_permaperks_now = 0;
+
     flag_wait("initial_blackscreen_passed");
+    thread watch_permaperk_award();
 
-    if (getDvar("award_perks") == "1")
+    if (getdvar("award_perks") != "1")
     {
-        setDvar("award_perks", 0);
-        thread watch_permaperk_award();
-
-        foreach (player in level.players)
-        {
-            player.permaperk_display_lock = true;
-            player thread award_permaperks_safe();
-        }
+        CLEAR(level.b2_awarding_permaperks_now)
+        return;
     }
+    setdvar("award_perks", 0);
+
+    foreach (player in level.players)
+        player thread award_permaperks_safe();
 
 #if FEATURE_HUD == 1
     array_thread(level.players, ::permaperks_watcher);
@@ -2038,23 +2037,50 @@ perma_perks_setup()
 #endif
 }
 
-/* If client stat (prefixed with 'pers_') is passed to perk_code, it tries to do it with existing system */
-remove_permaperk_wrapper(perk_code, round)
+remove_permaperk_wrapper(perk_code, round, upload)
 {
     if (!isdefined(round))
+    {
         round = 1;
+    }
 
-    if (is_round(round) && issubstr(perk_code, "pers_"))
-        self maps\mp\zombies\_zm_stats::zero_client_stat(perk_code, 0);
-    else if (is_round(round) && is_true(self.pers_upgrades_awarded[perk_code]))
-        self remove_permaperk(perk_code);
+    if (!is_round(round))
+    {
+        DEBUG_PRINT("Exiting remove_permaperk_wrapper for " + sstr(perk_code) + ", round not reached");
+        return;
+    }
+
+    if (!isdefined(level.pers_upgrades[perk_code].stat_names))
+    {
+        DEBUG_PRINT("Exiting remove_permaperk_wrapper for " + sstr(perk_code) + ", pers_upgrade is not defined");
+        return;
+    }
+
+    self remove_permaperk_local(perk_code);
+
+    for (i = 0; i < level.pers_upgrades[perk_code].stat_names.size; i++)
+    {
+        self remove_permaperk_stat(level.pers_upgrades[perk_code].stat_names[i]);
+    }
+
+    if (is_true(upload))
+    {
+        self thread maps\mp\zombies\_zm_stats::uploadstatssoon();
+    }
 }
 
-remove_permaperk(perk_code)
+remove_permaperk_local(perk_code)
 {
-    // DEBUG_PRINT("removing: " + perk_code);
+    DEBUG_PRINT("remove_permaperk_local: " + sstr(perk_code));
     self.pers_upgrades_awarded[perk_code] = 0;
     self playsoundtoplayer("evt_player_downgrade", self);
+}
+
+remove_permaperk_stat(stat_name)
+{
+    DEBUG_PRINT("remove_permaperk_stat: " + sstr(stat_name));
+    self maps\mp\zombies\_zm_stats::zero_client_stat(stat_name, 0);
+    self.stats_this_frame[stat_name] = 1;
 }
 
 emergency_permaperks_cleanup()
@@ -2065,8 +2091,7 @@ emergency_permaperks_cleanup()
     /* This shouldn't be necessary, serves as last resort defence. Will not reset health but will prevent the perk to be active after a down */
     foreach (player in level.players)
     {
-        player remove_permaperk_wrapper("pers_jugg");
-        player remove_permaperk_wrapper("pers_jugg_downgrade_count");
+        player remove_permaperk_wrapper("jugg", 0, true);
     }
 }
 
@@ -2117,6 +2142,7 @@ fixed_upgrade_jugg_active()
     flag_set("pers_jug_cleared");
 
     DEBUG_PRINT("fixed_upgrade_jugg_active() deinit " + self.name);
+    // DEBUG_PRINT("fixed_upgrade_jugg_active() stat: " + sstr(self maps\mp\zombies\_zm_stats::get_global_stat("pers_jugg")));
 }
 
 #if FEATURE_PERMAPERKS == 1
@@ -2124,36 +2150,21 @@ watch_permaperk_award()
 {
     LEVEL_ENDON
 
-    present_players = level.players.size;
-
-    while (true)
+    while (isdefined(level.b2_awarding_permaperks_now) && did_game_just_start())
     {
-        i = 0;
-        foreach (player in level.players)
-        {
-            if (!isdefined(player.awarding_permaperks_now))
-                i++;
-        }
-
-        if (i == present_players && flag("b2_permaperks_were_set"))
-        {
-            print_scheduler("Permaperks Awarded - ^1RESTARTING");
-            wait 1;
-
-            b2_restart_level();
-        }
-
-        if (!did_game_just_start())
-            break;
-
-        wait 0.1;
+        wait 0.05;
     }
 
-    foreach (player in level.players)
+    if (flag("b2_permaperks_were_set"))
     {
-        if (isdefined(player.awarding_permaperks_now))
-            CLEAR(player.awarding_permaperks_now)
+        print_scheduler("Permaperks Awarded - ^1RESTARTING");
+        wait 1;
+
+        b2_restart_level();
     }
+
+    CLEAR(level.b2_awarding_permaperks_now)
+    level notify("b2_finished_awarding_permaperks");
 }
 
 permaperk_array(code, maps_award, maps_take, to_round)
@@ -2191,7 +2202,9 @@ award_permaperks_safe()
     perks_to_process[perks_to_process.size] = permaperk_array("flopper", array("zm_buried"));
     perks_to_process[perks_to_process.size] = permaperk_array("nube", array("zm_buried"), array("zm_transit", "zm_highrise"), 10);
 
-    self.awarding_permaperks_now = true;
+    DEBUG_PRINT("Generated permaperk array for " + self.name + " => " + sstr(perks_to_process));
+
+    level.b2_awarding_permaperks_now++;
 
     foreach (perk in perks_to_process)
     {
@@ -2200,8 +2213,13 @@ award_permaperks_safe()
     }
 
     wait 0.5;
-    CLEAR(self.awarding_permaperks_now)
-    CLEAR(self.permaperk_display_lock)
+    level.b2_awarding_permaperks_now--;
+
+    if (level.b2_awarding_permaperks_now == 0)
+    {
+        CLEAR(level.b2_awarding_permaperks_now)
+    }
+
     self maps\mp\zombies\_zm_stats::uploadstatssoon();
 }
 
@@ -2215,28 +2233,38 @@ resolve_permaperk(perk)
 
     /* Too high of a round, return out */
     if (is_round(perk["to_round"]))
-        return;
-
-    if (isinarray(perk["maps_award"], level.script) && is_false(self.pers_upgrades_awarded[perk_code]))
     {
-        for (j = 0; j < level.pers_upgrades[perk_code].stat_names.size; j++)
-        {
-            stat_name = level.pers_upgrades[perk_code].stat_names[j];
-            stat_value = level.pers_upgrades[perk_code].stat_desired_values[j];
+        DEBUG_PRINT("Exiting resolve_permaperk for " + sstr(perk_code) + ", round (" + sstr(perk["to_round"]) + " is too high");
+        return;
+    }
+    if (!isdefined(level.pers_upgrades[perk_code].stat_names))
+    {
+        DEBUG_PRINT("Exiting resolve_permaperk for " + sstr(perk_code) + ", pers_upgrade is not defined");
+        return;
+    }
 
+    for (j = 0; j < level.pers_upgrades[perk_code].stat_names.size; j++)
+    {
+        stat_name = level.pers_upgrades[perk_code].stat_names[j];
+        stat_value = level.pers_upgrades[perk_code].stat_desired_values[j];
+
+        if (isinarray(perk["maps_award"], level.script) && is_false(self.pers_upgrades_awarded[perk_code]))
+        {
+            // DEBUG_PRINT("call award_permaperk with " + sstr(stat_name) + ", " + sstr(perk_code) + ", " + sstr(stat_value));
             self award_permaperk(stat_name, perk_code, stat_value);
         }
     }
 
     if (isinarray(perk["maps_take"], level.script) && is_true(self.pers_upgrades_awarded[perk_code]))
     {
-        self remove_permaperk(perk_code);
+        // DEBUG_PRINT("call remove_permaperk_wrapper with " + sstr(stat_name) + " (" + sstr(perk_code) + ")");
+        self remove_permaperk_wrapper(perk_code, 0, false);
     }
 }
 
 award_permaperk(stat_name, perk_code, stat_value)
 {
-    // DEBUG_PRINT("awarding: " + stat_name + " " + perk_code + " " + stat_value);
+    DEBUG_PRINT("award_permaperk: " + sstr(stat_name) + " " + sstr(perk_code) + " " + sstr(stat_value));
     flag_set("b2_permaperks_were_set");
     self.stats_this_frame[stat_name] = 1;
     self maps\mp\zombies\_zm_stats::set_global_stat(stat_name, stat_value);
