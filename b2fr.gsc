@@ -265,6 +265,10 @@ init_b2_chat_watcher()
     chat["prenades"] = ::print_semtex_prenades;
 #endif
 
+#if FEATURE_HUD == 1
+    chat["splits"] = ::splits_input;
+#endif
+
     if (chat.size)
     {
         thread chat_watcher(chat);
@@ -1015,6 +1019,29 @@ b2_restart_level()
         emulate_menu_call("endround");
 }
 
+decode_splits(splits_str, limit)
+{
+    splits = [];
+    i = 0;
+    foreach (val in strtok(splits_str, "\n"))
+    {
+        if (i > limit)
+        {
+            break;
+        }
+        number = int(val);
+        if (isint(number) && number)
+        {
+            splits[splits.size] = number;
+        }
+        i++;
+    }
+
+    DEBUG_PRINT("decode_splits(): num of results " + splits.size + ", iterations " + i + ", limit " + limit);
+
+    return splits;
+}
+
 /*
  ************************************************************************************************************
  ****************************************** SINGLE PURPOSE FUNCTIONS ****************************************
@@ -1548,20 +1575,8 @@ load_b2_splits()
         f = fs_fopen(SPLITS_FILE, "read");
         contents = fs_read(f);
         fs_fclose(f);
+        splits = decode_splits(contents, 255);
 
-        // DEBUG_PRINT("splits loaded: " + sstr(contents));
-        i = 0;
-        foreach (val in strtok(contents, "\n"))
-        {
-            if (i > 255) {
-                break;
-            }
-            // DEBUG_PRINT("split candidate from IO: " + sstr(val));
-            number = int(val);
-            if (isint(number) && number)
-                splits[splits.size] = number;
-            i++;
-        }
         DEBUG_PRINT("splits loaded from IO: " + sstr(splits));
     }
     return splits;
@@ -1812,6 +1827,69 @@ show_split(start_time)
 
     if (!is_plutonium_version(4837))
         print_scheduler("UTC: " + COLOR_TXT(getutc(), COL_RED));
+}
+
+splits_input(new_value, dvar, player)
+{
+    if (!is_io_available())
+    {
+        print_scheduler("File IO is " + COLOR_TXT("NOT AVAILABLE", COL_RED));
+        return true;
+    }
+
+    if (player ishost() && new_value)
+    {
+        if (new_value == "0" && fs_testfile(SPLITS_FILE))
+        {
+            fs_remove(SPLITS_FILE);
+            print_scheduler("Splits file " + COLOR_TXT("REMOVED", COL_RED));
+            return true;
+        }
+        tokens = strtok(new_value, " ");
+        valid_tokens = [];
+        foreach (token in tokens)
+        {
+            round = int(token);
+            if (round && isint(round))
+            {
+                valid_tokens[valid_tokens.size] = round;
+            }
+        }
+
+        if (valid_tokens.size)
+        {
+            f = fs_fopen(SPLITS_FILE, "write");
+            foreach (valid_round in valid_tokens)
+            {
+                fs_writeline(f, valid_round);
+            }
+            fs_fclose(f);
+
+            print_scheduler("Saved " + COLOR_TXT(valid_tokens.size, COL_YELLOW) + " new splits");
+            return true;
+        }
+    }
+
+    if (fs_testfile(SPLITS_FILE))
+    {
+        f = fs_fopen(SPLITS_FILE, "read");
+        contents = fs_read(f);
+        fs_fclose(f);
+        splits = decode_splits(contents, 255);
+
+        if (splits.size > 8)
+        {
+            count = splits.size - 8;
+            slice = array_slice(splits, 0, 8);
+            print_scheduler("Custom splits: " + COLOR_TXT(array_implode(" ", slice), COL_YELLOW) + " and " + COLOR_TXT(count, COL_YELLOW) + " more");
+            return true;
+        }
+
+        print_scheduler("Custom splits: " + COLOR_TXT(array_implode(" ", splits), COL_YELLOW));
+        return true;
+    }
+
+    print_scheduler("No custom split files detected");
 }
 
 #if FEATURE_HORDES == 1
