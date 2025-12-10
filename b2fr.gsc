@@ -5,7 +5,7 @@
 #define BETA 0
 
 /* Const macros */
-#define B2FR_VER 3.2
+#define B2FR_VER 3.3
 #define VER_ANCIENT 353
 #define VER_MODERN 1824
 #define VER_2905 2905
@@ -58,15 +58,15 @@
     self endon("disconnect");
 
 /* Function macros */
+#define COLOR_TXT(__txt, __color) __color + __txt + COL_WHITE
+#define CLEAR(__var) __var = undefined;
+#define MS_TO_SECONDS(__ms) int(__ms / 1000)
+#define STR(__val) "" + (__val)
 #if DEBUG == 1
-#define DEBUG_PRINT(__txt) printf("DEBUG: ^5" + __txt);
+#define DEBUG_PRINT(__txt) printf("DEBUG [" + convert_time() + "]: ^5" + __txt + "^7");
 #else
 #define DEBUG_PRINT(__txt)
 #endif
-#define CLEAR(__var) __var = undefined;
-#define MS_TO_SECONDS(__ms) int(__ms / 1000)
-#define COLOR_TXT(__txt, __color) __color + __txt + COL_WHITE
-#define STR(__val) "" + (__val)
 
 #include common_scripts\utility;
 #include maps\mp\gametypes_zm\_hud_util;
@@ -177,9 +177,7 @@ init_b2_characters()
 
 init_b2_permaperks()
 {
-#if FEATURE_PERMAPERKS == 1
     thread perma_perks_setup();
-#endif
 }
 
 init_b2_hud()
@@ -267,6 +265,10 @@ init_b2_chat_watcher()
     chat["prenades"] = ::print_semtex_prenades;
 #endif
 
+#if FEATURE_HUD == 1
+    chat["splits"] = ::splits_input;
+#endif
+
     if (chat.size)
     {
         thread chat_watcher(chat);
@@ -306,10 +308,9 @@ b2fr_main_loop()
         {
             level.round_hud settimerup(0);
         }
-#endif
-
 #if FEATURE_HORDES == 1
         level thread show_hordes();
+#endif
 #endif
 
         if (has_permaperks_system())
@@ -519,6 +520,11 @@ convert_time(seconds)
 {
     hours = 0;
     minutes = 0;
+    if (!isdefined(seconds))
+    {
+        seconds = int(gettime() / 1000);
+    }
+
 
     if (seconds > 59)
     {
@@ -572,8 +578,15 @@ array_create(values, keys)
 
 array_implode(separator, arr)
 {
+    if (!isdefined(arr))
+    {
+        DEBUG_PRINT("array_implode called without 2nd argument => " + sstr(separator));
+    }
+
     if (arr.size == 0)
+    {
         return "";
+    }
 
     str = "";
     first = true;
@@ -606,29 +619,57 @@ array_shift(arr)
     return new_arr;
 }
 
+array_slice(arr, offset, length, preserve_keys)
+{
+    sliced = [];
+    if (!isdefined(length))
+    {
+        length = arr.size;
+    }
+
+    i = -1;
+    foreach (key, val in arr)
+    {
+        i++;
+        if (i < offset || i >= min(length, arr.size))
+        {
+            continue;
+        }
+
+        if (is_true(preserve_keys))
+        {
+            sliced[key] = val;
+            continue;
+        }
+        sliced[sliced.size] = val;
+    }
+
+    return sliced;
+}
+
 call_func_with_variadic_args(callback, arg_array)
 {
     if (isdefined(arg_array[9]))
-        return [[callback]](arg_array[0], arg_array[1], arg_array[2], arg_array[3], arg_array[4], arg_array[5], arg_array[6], arg_array[7], arg_array[8], arg_array[9]);
+        return self [[callback]](arg_array[0], arg_array[1], arg_array[2], arg_array[3], arg_array[4], arg_array[5], arg_array[6], arg_array[7], arg_array[8], arg_array[9]);
     if (isdefined(arg_array[8]))
-        return [[callback]](arg_array[0], arg_array[1], arg_array[2], arg_array[3], arg_array[4], arg_array[5], arg_array[6], arg_array[7], arg_array[8]);
+        return self [[callback]](arg_array[0], arg_array[1], arg_array[2], arg_array[3], arg_array[4], arg_array[5], arg_array[6], arg_array[7], arg_array[8]);
     if (isdefined(arg_array[7]))
-        return [[callback]](arg_array[0], arg_array[1], arg_array[2], arg_array[3], arg_array[4], arg_array[5], arg_array[6], arg_array[7]);
+        return self [[callback]](arg_array[0], arg_array[1], arg_array[2], arg_array[3], arg_array[4], arg_array[5], arg_array[6], arg_array[7]);
     if (isdefined(arg_array[6]))
-        return [[callback]](arg_array[0], arg_array[1], arg_array[2], arg_array[3], arg_array[4], arg_array[5], arg_array[6]);
+        return self [[callback]](arg_array[0], arg_array[1], arg_array[2], arg_array[3], arg_array[4], arg_array[5], arg_array[6]);
     if (isdefined(arg_array[5]))
-        return [[callback]](arg_array[0], arg_array[1], arg_array[2], arg_array[3], arg_array[4], arg_array[5]);
+        return self [[callback]](arg_array[0], arg_array[1], arg_array[2], arg_array[3], arg_array[4], arg_array[5]);
     if (isdefined(arg_array[4]))
-        return [[callback]](arg_array[0], arg_array[1], arg_array[2], arg_array[3], arg_array[4]);
+        return self [[callback]](arg_array[0], arg_array[1], arg_array[2], arg_array[3], arg_array[4]);
     if (isdefined(arg_array[3]))
-        return [[callback]](arg_array[0], arg_array[1], arg_array[2], arg_array[3]);
+        return self [[callback]](arg_array[0], arg_array[1], arg_array[2], arg_array[3]);
     if (isdefined(arg_array[2]))
-        return [[callback]](arg_array[0], arg_array[1], arg_array[2]);
+        return self [[callback]](arg_array[0], arg_array[1], arg_array[2]);
     if (isdefined(arg_array[1]))
-        return [[callback]](arg_array[0], arg_array[1]);
+        return self [[callback]](arg_array[0], arg_array[1]);
     if (isdefined(arg_array[0]))
-        return [[callback]](arg_array[0]);
-    return [[callback]]();
+        return self [[callback]](arg_array[0]);
+    return self [[callback]]();
 }
 
 sstr(value)
@@ -975,6 +1016,29 @@ b2_restart_level()
         emulate_menu_call("restart_level_zm");
     else
         emulate_menu_call("endround");
+}
+
+decode_splits(splits_str, limit)
+{
+    splits = [];
+    i = 0;
+    foreach (val in strtok(splits_str, "\n"))
+    {
+        if (i > limit)
+        {
+            break;
+        }
+        number = int(val);
+        if (isint(number) && number)
+        {
+            splits[splits.size] = number;
+        }
+        i++;
+    }
+
+    DEBUG_PRINT("decode_splits(): num of results " + splits.size + ", iterations " + i + ", limit " + limit);
+
+    return splits;
 }
 
 /*
@@ -1430,6 +1494,8 @@ debug_mode()
     foreach (player in level.players)
         player thread award_points(333333);
     generate_watermark("DEBUGGER", (0.8, 0.8, 0));
+
+    thread _run_test_array();
 }
 #endif
 
@@ -1508,20 +1574,8 @@ load_b2_splits()
         f = fs_fopen(SPLITS_FILE, "read");
         contents = fs_read(f);
         fs_fclose(f);
+        splits = decode_splits(contents, 255);
 
-        // DEBUG_PRINT("splits loaded: " + sstr(contents));
-        i = 0;
-        foreach (val in strtok(contents, "\n"))
-        {
-            if (i > 255) {
-                break;
-            }
-            // DEBUG_PRINT("split candidate from IO: " + sstr(val));
-            number = int(val);
-            if (isint(number) && number)
-                splits[splits.size] = number;
-            i++;
-        }
         DEBUG_PRINT("splits loaded from IO: " + sstr(splits));
     }
     return splits;
@@ -1774,6 +1828,69 @@ show_split(start_time)
         print_scheduler("UTC: " + COLOR_TXT(getutc(), COL_RED));
 }
 
+splits_input(new_value, dvar, player)
+{
+    if (!is_io_available())
+    {
+        print_scheduler("File IO is " + COLOR_TXT("NOT AVAILABLE", COL_RED));
+        return true;
+    }
+
+    if (player ishost() && new_value)
+    {
+        if (new_value == "0" && fs_testfile(SPLITS_FILE))
+        {
+            fs_remove(SPLITS_FILE);
+            print_scheduler("Splits file " + COLOR_TXT("REMOVED", COL_RED));
+            return true;
+        }
+        tokens = strtok(new_value, " ");
+        valid_tokens = [];
+        foreach (token in tokens)
+        {
+            round = int(token);
+            if (round && isint(round))
+            {
+                valid_tokens[valid_tokens.size] = round;
+            }
+        }
+
+        if (valid_tokens.size)
+        {
+            f = fs_fopen(SPLITS_FILE, "write");
+            foreach (valid_round in valid_tokens)
+            {
+                fs_writeline(f, valid_round);
+            }
+            fs_fclose(f);
+
+            print_scheduler("Saved " + COLOR_TXT(valid_tokens.size, COL_YELLOW) + " new splits");
+            return true;
+        }
+    }
+
+    if (fs_testfile(SPLITS_FILE))
+    {
+        f = fs_fopen(SPLITS_FILE, "read");
+        contents = fs_read(f);
+        fs_fclose(f);
+        splits = decode_splits(contents, 255);
+
+        if (splits.size > 8)
+        {
+            count = splits.size - 8;
+            slice = array_slice(splits, 0, 8);
+            print_scheduler("Custom splits: " + COLOR_TXT(array_implode(" ", slice), COL_YELLOW) + " and " + COLOR_TXT(count, COL_YELLOW) + " more");
+            return true;
+        }
+
+        print_scheduler("Custom splits: " + COLOR_TXT(array_implode(" ", splits), COL_YELLOW));
+        return true;
+    }
+
+    print_scheduler("No custom split files detected");
+}
+
 #if FEATURE_HORDES == 1
 show_hordes()
 {
@@ -2018,19 +2135,20 @@ perma_perks_setup()
     thread fix_persistent_jug();
 
 #if FEATURE_PERMAPERKS == 1
+    level.b2_awarding_permaperks_now = 0;
+
     flag_wait("initial_blackscreen_passed");
+    thread watch_permaperk_award();
 
-    if (getDvar("award_perks") == "1")
+    if (getdvar("award_perks") != "1")
     {
-        setDvar("award_perks", 0);
-        thread watch_permaperk_award();
-
-        foreach (player in level.players)
-        {
-            player.permaperk_display_lock = true;
-            player thread award_permaperks_safe();
-        }
+        CLEAR(level.b2_awarding_permaperks_now)
+        return;
     }
+    setdvar("award_perks", 0);
+
+    foreach (player in level.players)
+        player thread award_permaperks_safe();
 
 #if FEATURE_HUD == 1
     array_thread(level.players, ::permaperks_watcher);
@@ -2038,23 +2156,50 @@ perma_perks_setup()
 #endif
 }
 
-/* If client stat (prefixed with 'pers_') is passed to perk_code, it tries to do it with existing system */
-remove_permaperk_wrapper(perk_code, round)
+remove_permaperk_wrapper(perk_code, round, upload)
 {
     if (!isdefined(round))
+    {
         round = 1;
+    }
 
-    if (is_round(round) && issubstr(perk_code, "pers_"))
-        self maps\mp\zombies\_zm_stats::zero_client_stat(perk_code, 0);
-    else if (is_round(round) && is_true(self.pers_upgrades_awarded[perk_code]))
-        self remove_permaperk(perk_code);
+    if (!is_round(round))
+    {
+        DEBUG_PRINT("Exiting remove_permaperk_wrapper for " + sstr(perk_code) + ", round not reached");
+        return;
+    }
+
+    if (!isdefined(level.pers_upgrades[perk_code].stat_names))
+    {
+        DEBUG_PRINT("Exiting remove_permaperk_wrapper for " + sstr(perk_code) + ", pers_upgrade is not defined");
+        return;
+    }
+
+    self remove_permaperk_local(perk_code);
+
+    for (i = 0; i < level.pers_upgrades[perk_code].stat_names.size; i++)
+    {
+        self remove_permaperk_stat(level.pers_upgrades[perk_code].stat_names[i]);
+    }
+
+    if (is_true(upload))
+    {
+        self thread maps\mp\zombies\_zm_stats::uploadstatssoon();
+    }
 }
 
-remove_permaperk(perk_code)
+remove_permaperk_local(perk_code)
 {
-    // DEBUG_PRINT("removing: " + perk_code);
+    DEBUG_PRINT("remove_permaperk_local: " + sstr(perk_code));
     self.pers_upgrades_awarded[perk_code] = 0;
     self playsoundtoplayer("evt_player_downgrade", self);
+}
+
+remove_permaperk_stat(stat_name)
+{
+    DEBUG_PRINT("remove_permaperk_stat: " + sstr(stat_name));
+    self maps\mp\zombies\_zm_stats::zero_client_stat(stat_name, 0);
+    self.stats_this_frame[stat_name] = 1;
 }
 
 emergency_permaperks_cleanup()
@@ -2065,8 +2210,7 @@ emergency_permaperks_cleanup()
     /* This shouldn't be necessary, serves as last resort defence. Will not reset health but will prevent the perk to be active after a down */
     foreach (player in level.players)
     {
-        player remove_permaperk_wrapper("pers_jugg");
-        player remove_permaperk_wrapper("pers_jugg_downgrade_count");
+        player remove_permaperk_wrapper("jugg", 0, true);
     }
 }
 
@@ -2117,6 +2261,7 @@ fixed_upgrade_jugg_active()
     flag_set("pers_jug_cleared");
 
     DEBUG_PRINT("fixed_upgrade_jugg_active() deinit " + self.name);
+    // DEBUG_PRINT("fixed_upgrade_jugg_active() stat: " + sstr(self maps\mp\zombies\_zm_stats::get_global_stat("pers_jugg")));
 }
 
 #if FEATURE_PERMAPERKS == 1
@@ -2124,36 +2269,21 @@ watch_permaperk_award()
 {
     LEVEL_ENDON
 
-    present_players = level.players.size;
-
-    while (true)
+    while (isdefined(level.b2_awarding_permaperks_now) && did_game_just_start())
     {
-        i = 0;
-        foreach (player in level.players)
-        {
-            if (!isdefined(player.awarding_permaperks_now))
-                i++;
-        }
-
-        if (i == present_players && flag("b2_permaperks_were_set"))
-        {
-            print_scheduler("Permaperks Awarded - ^1RESTARTING");
-            wait 1;
-
-            b2_restart_level();
-        }
-
-        if (!did_game_just_start())
-            break;
-
-        wait 0.1;
+        wait 0.05;
     }
 
-    foreach (player in level.players)
+    if (flag("b2_permaperks_were_set"))
     {
-        if (isdefined(player.awarding_permaperks_now))
-            CLEAR(player.awarding_permaperks_now)
+        print_scheduler("Permaperks Awarded - ^1RESTARTING");
+        wait 1;
+
+        b2_restart_level();
     }
+
+    CLEAR(level.b2_awarding_permaperks_now)
+    level notify("b2_finished_awarding_permaperks");
 }
 
 permaperk_array(code, maps_award, maps_take, to_round)
@@ -2191,7 +2321,9 @@ award_permaperks_safe()
     perks_to_process[perks_to_process.size] = permaperk_array("flopper", array("zm_buried"));
     perks_to_process[perks_to_process.size] = permaperk_array("nube", array("zm_buried"), array("zm_transit", "zm_highrise"), 10);
 
-    self.awarding_permaperks_now = true;
+    DEBUG_PRINT("Generated permaperk array for " + self.name + " => " + sstr(perks_to_process));
+
+    level.b2_awarding_permaperks_now++;
 
     foreach (perk in perks_to_process)
     {
@@ -2200,8 +2332,13 @@ award_permaperks_safe()
     }
 
     wait 0.5;
-    CLEAR(self.awarding_permaperks_now)
-    CLEAR(self.permaperk_display_lock)
+    level.b2_awarding_permaperks_now--;
+
+    if (level.b2_awarding_permaperks_now == 0)
+    {
+        CLEAR(level.b2_awarding_permaperks_now)
+    }
+
     self maps\mp\zombies\_zm_stats::uploadstatssoon();
 }
 
@@ -2215,28 +2352,38 @@ resolve_permaperk(perk)
 
     /* Too high of a round, return out */
     if (is_round(perk["to_round"]))
-        return;
-
-    if (isinarray(perk["maps_award"], level.script) && is_false(self.pers_upgrades_awarded[perk_code]))
     {
-        for (j = 0; j < level.pers_upgrades[perk_code].stat_names.size; j++)
-        {
-            stat_name = level.pers_upgrades[perk_code].stat_names[j];
-            stat_value = level.pers_upgrades[perk_code].stat_desired_values[j];
+        DEBUG_PRINT("Exiting resolve_permaperk for " + sstr(perk_code) + ", round (" + sstr(perk["to_round"]) + " is too high");
+        return;
+    }
+    if (!isdefined(level.pers_upgrades[perk_code].stat_names))
+    {
+        DEBUG_PRINT("Exiting resolve_permaperk for " + sstr(perk_code) + ", pers_upgrade is not defined");
+        return;
+    }
 
+    for (j = 0; j < level.pers_upgrades[perk_code].stat_names.size; j++)
+    {
+        stat_name = level.pers_upgrades[perk_code].stat_names[j];
+        stat_value = level.pers_upgrades[perk_code].stat_desired_values[j];
+
+        if (isinarray(perk["maps_award"], level.script) && is_false(self.pers_upgrades_awarded[perk_code]))
+        {
+            // DEBUG_PRINT("call award_permaperk with " + sstr(stat_name) + ", " + sstr(perk_code) + ", " + sstr(stat_value));
             self award_permaperk(stat_name, perk_code, stat_value);
         }
     }
 
     if (isinarray(perk["maps_take"], level.script) && is_true(self.pers_upgrades_awarded[perk_code]))
     {
-        self remove_permaperk(perk_code);
+        // DEBUG_PRINT("call remove_permaperk_wrapper with " + sstr(stat_name) + " (" + sstr(perk_code) + ")");
+        self remove_permaperk_wrapper(perk_code, 0, false);
     }
 }
 
 award_permaperk(stat_name, perk_code, stat_value)
 {
-    // DEBUG_PRINT("awarding: " + stat_name + " " + perk_code + " " + stat_value);
+    DEBUG_PRINT("award_permaperk: " + sstr(stat_name) + " " + sstr(perk_code) + " " + sstr(stat_value));
     flag_set("b2_permaperks_were_set");
     self.stats_this_frame[stat_name] = 1;
     self maps\mp\zombies\_zm_stats::set_global_stat(stat_name, stat_value);
@@ -3091,6 +3238,43 @@ _custom_start_round()
     {
         level.round_number = dvar;
     }
+}
+
+_run_test_array()
+{
+    // test_array_1 = [];
+    // test_array_2 = [];
+    // keys = [];
+
+    // for (i = 0; i < 10; i++)
+    // {
+    //     test_array_1[i] = "array_value_" + i;
+    //     keys[i] = "k" + (i + 5);
+    // }
+
+    // foreach (k in keys)
+    // {
+    //     test_array_2[k] = "array_value_" + k;
+    // }
+
+    // t1 = array_slice(test_array_1, 0, 5);
+    // t2 = array_slice(test_array_2, 0, 5);
+    // t3 = array_slice(test_array_2, 0, 5, true);
+    // t4 = array_slice(test_array_1, 2, 5);
+    // t5 = array_slice(test_array_2, 2, 5);
+    // t6 = array_slice(test_array_2, 2, 5, true);
+    // t7 = array_slice(test_array_1, 0, 15);
+    // t8 = array_slice(test_array_2, 0, 15);
+    // t9 = array_slice(test_array_2, 0, 15, true);
+    // printf("test 1: " + sstr(t1) + " | keys: " + sstr(getarraykeys(t1)));
+    // printf("test 2: " + sstr(t2) + " | keys: " + sstr(getarraykeys(t2)));
+    // printf("test 3: " + sstr(t3) + " | keys: " + sstr(getarraykeys(t3)));
+    // printf("test 4: " + sstr(t4) + " | keys: " + sstr(getarraykeys(t4)));
+    // printf("test 5: " + sstr(t5) + " | keys: " + sstr(getarraykeys(t5)));
+    // printf("test 6: " + sstr(t6) + " | keys: " + sstr(getarraykeys(t6)));
+    // printf("test 7: " + sstr(t7) + " | keys: " + sstr(getarraykeys(t7)));
+    // printf("test 8: " + sstr(t8) + " | keys: " + sstr(getarraykeys(t8)));
+    // printf("test 9: " + sstr(t9) + " | keys: " + sstr(getarraykeys(t9)));
 }
 
 #if DEBUG_HUD == 1 && FEATURE_HUD == 1
