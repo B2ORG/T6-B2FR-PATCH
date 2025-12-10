@@ -308,10 +308,9 @@ b2fr_main_loop()
         {
             level.round_hud settimerup(0);
         }
-#endif
-
 #if FEATURE_HORDES == 1
         level thread show_hordes();
+#endif
 #endif
 
         if (has_permaperks_system())
