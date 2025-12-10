@@ -131,7 +131,7 @@ End of 18, 28, 38 onwards up to the end, and additionally
 - DVAR is a variable that player can (usually) modify from the game console. DVARs mentioned in this document are all changeable. In order to set a DVAR, press `~` button, then type in dvar name, and value you want to assign to it, like so
 
 ```
-velocity_meter 1
+cg_drawReset 1
 ```
 
 7) There is a bunch of text showing up on my screen while playing on Plutonium with this patch
@@ -175,7 +175,9 @@ Prior to version 2.1 splits were not fully accurate. Starting on 2.1, B2FR emula
 
 ## Customizing splits
 
-On Plutonium version R4516+ you can customize on which rounds splits are going to be shown, in order to do that, go to
+On Plutonium version R4516+ you can customize on which rounds splits are going to be shown, in order to do that
+
+### Direct file edit
 
 ```
 %localappdata%\Plutonium\storage\t6\raw\scriptdata
@@ -193,6 +195,14 @@ Then proceed to create a `b2fr` folder inside of scriptdata, create `splits.txt`
 27
 30
 ```
+
+### Chat message
+
+As of B2FR version 3.3, you can set splits using chat messages as host. Under the hood, the patch will just overwrite contents of the file described above.
+
+- To check current custom splits settings type `splits` in chat
+- To remove custom splits settings and revert to default, type `splits 0`
+- To define new set of custom splits, type `splits 2 3 4 5`, which will cause the splits to show on rounds 2, 3, 4 and 5. Adjust round numbers accordingly
 
 > [!WARNING]
 > If the `splits.txt` file is not empty, default splits rounds used by the patch no longer apply, so you need to specify ALL of the rounds you want it to show up yourself.
@@ -414,6 +424,22 @@ After applying desired changes, run script `compile.py` while in the patch main 
 
 > [!NOTE]
 > Please note, as the modding scene for BO2 is still very young, stuff and tech is changing rapidly. Above description may not always be up to date, but i will try to not let that happen too often.
+
+# Weaponlocker stats allocations for B2 patches
+
+Here is a list of weaponlocker stats B2 patches use to persist settings. Note, Tranzit stats are all used by the game, all the other maps are available to use by modders.
+
+| Map | Stat | Component | Effect |
+| :---: | :---: | :---: | :--- |
+| zm_highrise | clip | Characters | Controls character preset on Victis maps |
+| zm_highrise | stock | Characters | Controls character preset on MOTD |
+| zm_highrise | alt_clip | Characters | Controls character preset on Origins |
+| zm_highrise | lh_clip | Characters | Controls character preset on survival maps |
+| zm_prison | clip | RNG | (B2OP) Controls MOTD key position overrides |
+| zm_prison | stock | Permaperks | (B2OP) Controls Purist mode |
+| zm_prison | alt_clip | Gameplay | (B2OP) Controls strafespeed scale |
+| zm_prison | lh_clip | Gameplay | (B2OP) Controls backspeed scale |
+| zm_tomb | clip | Gameplay | (B2OP) Controls tank depatching |
 
 # Legacy info (regarding First Room Fix times)
 
