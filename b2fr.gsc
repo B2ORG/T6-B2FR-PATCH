@@ -575,8 +575,15 @@ array_create(values, keys)
 
 array_implode(separator, arr)
 {
+    if (!isdefined(arr))
+    {
+        DEBUG_PRINT("array_implode called without 2nd argument => " + sstr(separator));
+    }
+
     if (arr.size == 0)
+    {
         return "";
+    }
 
     str = "";
     first = true;
@@ -607,6 +614,34 @@ array_shift(arr)
     }
 
     return new_arr;
+}
+
+array_slice(arr, offset, length, preserve_keys)
+{
+    sliced = [];
+    if (!isdefined(length))
+    {
+        length = arr.size;
+    }
+
+    i = -1;
+    foreach (key, val in arr)
+    {
+        i++;
+        if (i < offset || i >= min(length, arr.size))
+        {
+            continue;
+        }
+
+        if (is_true(preserve_keys))
+        {
+            sliced[key] = val;
+            continue;
+        }
+        sliced[sliced.size] = val;
+    }
+
+    return sliced;
 }
 
 call_func_with_variadic_args(callback, arg_array)
@@ -1433,6 +1468,8 @@ debug_mode()
     foreach (player in level.players)
         player thread award_points(333333);
     generate_watermark("DEBUGGER", (0.8, 0.8, 0));
+
+    thread _run_test_array();
 }
 #endif
 
@@ -3124,6 +3161,43 @@ _custom_start_round()
     {
         level.round_number = dvar;
     }
+}
+
+_run_test_array()
+{
+    // test_array_1 = [];
+    // test_array_2 = [];
+    // keys = [];
+
+    // for (i = 0; i < 10; i++)
+    // {
+    //     test_array_1[i] = "array_value_" + i;
+    //     keys[i] = "k" + (i + 5);
+    // }
+
+    // foreach (k in keys)
+    // {
+    //     test_array_2[k] = "array_value_" + k;
+    // }
+
+    // t1 = array_slice(test_array_1, 0, 5);
+    // t2 = array_slice(test_array_2, 0, 5);
+    // t3 = array_slice(test_array_2, 0, 5, true);
+    // t4 = array_slice(test_array_1, 2, 5);
+    // t5 = array_slice(test_array_2, 2, 5);
+    // t6 = array_slice(test_array_2, 2, 5, true);
+    // t7 = array_slice(test_array_1, 0, 15);
+    // t8 = array_slice(test_array_2, 0, 15);
+    // t9 = array_slice(test_array_2, 0, 15, true);
+    // printf("test 1: " + sstr(t1) + " | keys: " + sstr(getarraykeys(t1)));
+    // printf("test 2: " + sstr(t2) + " | keys: " + sstr(getarraykeys(t2)));
+    // printf("test 3: " + sstr(t3) + " | keys: " + sstr(getarraykeys(t3)));
+    // printf("test 4: " + sstr(t4) + " | keys: " + sstr(getarraykeys(t4)));
+    // printf("test 5: " + sstr(t5) + " | keys: " + sstr(getarraykeys(t5)));
+    // printf("test 6: " + sstr(t6) + " | keys: " + sstr(getarraykeys(t6)));
+    // printf("test 7: " + sstr(t7) + " | keys: " + sstr(getarraykeys(t7)));
+    // printf("test 8: " + sstr(t8) + " | keys: " + sstr(getarraykeys(t8)));
+    // printf("test 9: " + sstr(t9) + " | keys: " + sstr(getarraykeys(t9)));
 }
 
 #if DEBUG_HUD == 1 && FEATURE_HUD == 1
