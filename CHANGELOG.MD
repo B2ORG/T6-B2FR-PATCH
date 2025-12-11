@@ -2,7 +2,6 @@
 
 - Added ability to manage custom splits file via chat messages for Modern Plutonium (4516+)
 - Changed the behavior of permaperk system to prevent possible stat/script state mismatch
-- Custom splits file can now be managed via `splits` chat message on Plutonium
 - Fix unresolved external error from no hud release
 
 # Version 3.2
