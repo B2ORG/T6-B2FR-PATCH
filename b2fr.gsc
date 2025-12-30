@@ -683,7 +683,7 @@ sstr(value)
     return value;
 }
 
-gettype(value)
+typeof(value)
 {
     if (isint(value))
         return "integer";
@@ -719,7 +719,7 @@ number_round(floating_point, decimal_places, format)
         full = STR(int(full_scaled / factor));
         decimal = STR(int(abs(full_scaled) % factor));
 
-        // DEBUG_PRINT("decimal_places=" + sstr(decimal_places) + " factor=" + sstr(factor) + " typeof(scaled)=" + gettype(scaled) + " typeof(factor)=" + gettype(factor) + " scaled=" + sstr(scaled) + " decimal=" + sstr(decimal) + " full=" + sstr(full) + " abs(scaled)=" + sstr(abs(scaled)) );
+        // DEBUG_PRINT("decimal_places=" + sstr(decimal_places) + " factor=" + sstr(factor) + " typeof(scaled)=" + typeof(scaled) + " typeof(factor)=" + typeof(factor) + " scaled=" + sstr(scaled) + " decimal=" + sstr(decimal) + " full=" + sstr(full) + " abs(scaled)=" + sstr(abs(scaled)) );
 
         for (i = decimal.size; i < decimal_places; i++)
         {
