@@ -43,6 +43,8 @@
 #define STAT_CHAR_PRISON "stock"
 #define STAT_CHAR_TOMB "alt_clip"
 #define STAT_CHAR_SURVIVAL "lh_clip"
+#define STAT_RETICLE_MAP "zm_tomb"
+#define STAT_RETICLE "stock"
 
 /* Feature flags */
 #define FEATURE_HUD 1
@@ -1030,6 +1032,20 @@ decode_splits(splits_str, limit)
     return splits;
 }
 
+get_reticle_stat()
+{
+    stat = self maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(STAT_RETICLE, STAT_RETICLE_MAP);
+    DEBUG_PRINT("raw reticle stat: " + sstr(stat));
+    stat = int(stat);
+
+    if (stat >= 1 && stat <= 16)
+    {
+        return stat;
+    }
+
+    return undefined;
+}
+
 /*
  ************************************************************************************************************
  ****************************************** SINGLE PURPOSE FUNCTIONS ****************************************
@@ -1065,10 +1081,47 @@ b2_get_pack_a_punch_weapon_options(weapon)
     base = get_base_name(weapon);
 
     /* Lens & color seem to not make any difference, at least on Ori */
-    reticle_index = 0;
+    reticle_index = self get_reticle_stat();
+    DEBUG_PRINT("pack a punch options, reticle stat: " + sstr(reticle_index));
+    if (!isdefined(reticle_index))
+    {
+        reticle_index = randomintrange(0, 16);
+    }
+    /* We use 16 to represent reddot to make it different from 0 in weak comparison */
+    if (reticle_index == 16)
+    {
+        reticle_index = 0;
+    }
 
     self.pack_a_punch_weapon_options[weapon] = self calcweaponoptions(45, 0, reticle_index, 0);
     return self.pack_a_punch_weapon_options[weapon];
+}
+
+reticle_input(new_value, key, player)
+{
+    DEBUG_PRINT("reticle_input(" + sstr(new_value) + ", " + sstr(key) + ", " + sstr(player.name) + ")");
+
+    if (isdefined(new_value))
+    {
+        if (new_value == "reset")
+        {
+            new_value = 0;
+        }
+
+        new_value = int(new_value);
+        if (new_value >= 0 && new_value <= 16)
+        {
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_RETICLE, new_value, STAT_RETICLE_MAP);
+        }
+    }
+
+    ret_txt = "Your current reticle option: ";
+    current_stat = player get_reticle_stat();
+    if (isdefined(current_stat))
+        print_scheduler(ret_txt + COLOR_TXT(sstr(current_stat), COL_YELLOW), player);
+    else
+        print_scheduler(ret_txt + COLOR_TXT("UNSET", COL_YELLOW), player);
+    return true;
 }
 
 protect_file()
@@ -1126,7 +1179,7 @@ chat_watcher()
 
             if (isdefined(matched_signature))
             {
-                DEBUG_PRINT("matched chat signature '" + sstr(matched_signature) + "' to chat '" + sstr(message) + "' for player " + sstr(player.name));
+                DEBUG_PRINT("matched chat signature '" + sstr(matched_signature) + "' to message '" + sstr(message) + "' for player " + sstr(player.name));
                 input = undefined;
                 if (message.size > matched_signature.size + 1)
                 {
@@ -1288,6 +1341,8 @@ chat_config()
 #if FEATURE_HUD == 1
     chat[chat.size] = register_chat("splits",   array("!s"),        ::splits_input,             true,       false);
 #endif
+
+    chat[chat.size] = register_chat("reticle",  array("!r"),        ::reticle_input,            false,      false);
 
     return chat;
 }
@@ -2803,7 +2858,7 @@ characters_input(new_value, key, player)
     print_scheduler("Characterindex: ^1" + player.characterindex, player);
 #endif
 
-        return;
+        return true;
     }
 
     /* Don't allow updating the preset deeper into the game */
