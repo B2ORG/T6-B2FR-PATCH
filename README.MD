@@ -48,6 +48,9 @@ Download either of the scripts `b2fr-hud.gsc` or `b2fr-nohud.gsc` and put them i
 > [!CAUTION]
 > Whenever there's a new major patch release (eg. 2.* to 3.0 or 3.* to 4.0), please note that a lot of internal logic changes, therefore stability may not be up to the full standard. While we recommend you update your patch as we fix issues and add new features, we acknowledge increased risk with new major versions, which is why we usually leave most recent release of last major version in releases for some time, so players can access it until new version was battletested and issues have been fixed. We appreciate early adopters, who by reporting any problems help us provide the stable experience.
 
+> [!WARNING]
+> We started deprecating support for legacy Plutonium versions (such as 2905), in the future the patch will stop working on them. Make sure to switch to up to date Plutonium version.
+
 # B2FR Features
 
 - Basic anticheat capabilities (DVARs, Box etc.)

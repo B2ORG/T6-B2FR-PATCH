@@ -3,6 +3,7 @@
 #define DEBUG 0
 #define DEBUG_HUD 0
 #define BETA 0
+#define DEPRECATION 5162
 
 /* Const macros */
 #define B2FR_VER 3.3
@@ -1273,6 +1274,13 @@ welcome_prints()
         print_scheduler("^1REMINDER ^7You are a host", self);
         wait 0.25;
         print_scheduler("Full gameplay is required from host perspective as of April 2023", self);
+    }
+
+    if (get_plutonium_version() < DEPRECATION)
+    {
+        level waittill("end_of_round");
+        print_scheduler(COLOR_TXT("DEPRECATION NOTICE", COL_RED), self);
+        print_scheduler("Support for this Plutonium version is deprecated. Make sure to update urgently!", self);
     }
 }
 
