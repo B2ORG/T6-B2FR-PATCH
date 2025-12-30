@@ -36,6 +36,7 @@
 #define TXT_AVAILABLE COL_GREEN + "AVAILABLE" + COL_WHITE
 #define TXT_DISABLED COL_RED + "DISABLED" + COL_WHITE
 #define SPLITS_FILE "b2fr/splits.txt"
+#define VERSION_FILE "b2fr/version.txt"
 #define SEMTEX_DYNAMIC_CALC_ROUND 51
 #define SEMTEX_PRENADES_MAP array(1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 17, 19, 22, 24, 28, 29, 34, 39, 42, 46, 52, 57, 61, 69, 78, 86, 96, 103)
 #define SEMTEX_BEGIN_PRENADES_RND 22
@@ -111,11 +112,13 @@ init()
     thread protect_file();
     thread origins_fix();
     thread on_player_connected();
+    init_b2_io();
+    b2_self_update();
+
     init_b2_flags();
     init_b2_dvars();
     init_b2_characters();
     init_b2_permaperks();
-    init_b2_io();
 
 #if DEBUG == 1
     thread _custom_start_round();
@@ -1047,6 +1050,40 @@ get_reticle_stat()
     return undefined;
 }
 
+version_compare(compare, with, allow_equal)
+{
+    /* Both must be arrays and have at least one element (major version) */
+    if (!isarray(compare) || !isarray(with) || !isdefined(compare[0]) || !isdefined(with[0]))
+    {
+        DEBUG_PRINT("Malformed data while trying to self update: " + sstr(compare) + " " + sstr(with));
+        return undefined;
+    }
+
+    /* Fill up minor and inner versions */
+    if (!isdefined(compare[1]))
+        compare[1] = 0;
+    if (!isdefined(compare[2]))
+        compare[2] = 0;
+    if (!isdefined(with[1]))
+        with[1] = 0;
+    if (!isdefined(with[2]))
+        with[2] = 0;
+
+    major_greater = int(compare[0]) > int(with[0]);
+    minor_greater = int(compare[0]) >= int(with[0]) && int(compare[1]) > int(with[1]);
+    inner_greater = int(compare[0]) >= int(with[0]) && int(compare[1]) >= int(with[1]) && int(compare[2]) > int(with[2]);
+    if (is_true(allow_equal))
+    {
+        major_greater = int(compare[0]) >= int(with[0]);
+        minor_greater = int(compare[0]) >= int(with[0]) && int(compare[1]) >= int(with[1]);
+        inner_greater = int(compare[0]) >= int(with[0]) && int(compare[1]) >= int(with[1]) && int(compare[2]) >= int(with[2]);
+    }
+
+    DEBUG_PRINT("Comparing versions " + sstr(compare) + " and " + sstr(with) + " => major=" + sstr(major_greater) + " minor=" + sstr(minor_greater) + " inner=" + sstr(inner_greater));
+
+    return major_greater || minor_greater || inner_greater;
+}
+
 /*
  ************************************************************************************************************
  ****************************************** SINGLE PURPOSE FUNCTIONS ****************************************
@@ -1788,11 +1825,98 @@ nuketown_switch_eyes()
 }
 #endif
 
+b2_self_update()
+{
+    if (!is_io_available())
+    {
+        return;
+    }
+
+    version = strtok(STR(B2FR_VER), ".");
+    old = undefined;
+
+    if (fs_testfile(VERSION_FILE))
+    {
+        f = fs_fopen(VERSION_FILE, "read");
+        old = fs_read(f);
+        fs_fclose(f);
+
+        old = strtok(old, ".");
+    }
+
+    DEBUG_PRINT("self updater read versions: current=" + sstr(version) + ", old=" + sstr(old));
+
+    /* No old version, we just run the updates */
+    noold = false;
+    if (!isdefined(old))
+    {
+        old = array(0, 0, 0);
+        noold = true;
+    }
+
+    update = version_compare(version, old);
+
+    if (!is_true(update))
+    {
+        return;
+    }
+
+    f = fs_fopen(VERSION_FILE, "write");
+    fs_write(f, B2FR_VER);
+    fs_fclose(f);
+
+    updates = [];
+    /*                                      VERSION     UPDATE_CB               REQ_OLD*/
+    updates[updates.size] = register_update("3.4",      ::noop,                 false);
+
+    foreach (i, update in updates)
+    {
+        /* We require to know the old version before updating - more strict */
+        if (update["require_old"] && noold)
+        {
+            DEBUG_PRINT("skipping update " + sstr(i) + " due to old requirement");
+            continue;
+        }
+
+        /* The version assigned to the update is not higher than version the patch was updated from */
+        if (!version_compare(update["version"], old))
+        {
+            DEBUG_PRINT("skipping update " + sstr(i) + ", update version not higher than old");
+            continue;
+        }
+
+        /* Current version is lower than version assigned to the update*/
+        if (!version_compare(version, update["version"], true))
+        {
+            DEBUG_PRINT("skipping update " + sstr(i) + ", update version higher than current");
+            continue;
+        }
+
+        DEBUG_PRINT("Applying callback for update " + sstr(i));
+        [[update["callback"]]]();
+    }
+}
+
+register_update(version, callback, require_old)
+{
+    update = [];
+    update["version"] = strtok(version, ".");
+    update["callback"] = callback;
+    update["require_old"] = require_old;
+
+    return update;
+}
+
 /*
  ************************************************************************************************************
  ************************************************** STUBS ***************************************************
  ************************************************************************************************************
 */
+
+noop()
+{
+    DEBUG_PRINT("noop");
+}
 
 cmdexec(arg)
 {
