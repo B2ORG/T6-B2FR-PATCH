@@ -87,7 +87,10 @@ main()
         replacefunc(maps\mp\zombies\_zm_utility::wait_network_frame, ::fixed_wait_network_frame);
     }
 
-    replaceFunc(maps\mp\zombies\_zm_weapons::get_pack_a_punch_weapon_options, ::b2_get_pack_a_punch_weapon_options);
+    if (is_origins())
+    {
+        replacefunc(maps\mp\zombies\_zm_weapons::get_pack_a_punch_weapon_options, ::b2_get_pack_a_punch_weapon_options);
+    }
 }
 
 init()
@@ -1074,21 +1077,11 @@ b2_get_pack_a_punch_weapon_options(weapon)
         return self.pack_a_punch_weapon_options[weapon];
 
     base = get_base_name(weapon);
-    camo_index = 39;
 
-    if ("zm_prison" == level.script)
-        camo_index = 40;
-    else if ("zm_tomb" == level.script)
-        camo_index = 45;
+    /* Lens & color seem to not make any difference, at least on Ori */
+    reticle_index = 0;
 
-    lens_index = randomintrange(0, 6);
-    reticle_index = 16;
-    reticle_color_index = randomintrange(0, 6);
-
-    if ("saritch_upgraded_zm" == base)
-        reticle_index = 1;
-
-    self.pack_a_punch_weapon_options[weapon] = self calcweaponoptions( camo_index, lens_index, reticle_index, reticle_color_index );
+    self.pack_a_punch_weapon_options[weapon] = self calcweaponoptions(45, 0, reticle_index, 0);
     return self.pack_a_punch_weapon_options[weapon];
 }
 
