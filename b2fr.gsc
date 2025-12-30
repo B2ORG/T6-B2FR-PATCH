@@ -261,26 +261,7 @@ init_b2_dvars()
 
 init_b2_chat_watcher()
 {
-    chat = [];
-
-#if FEATURE_CHARACTERS == 1
-    chat["char"] = ::characters_input;
-    chat["whoami"] = ::check_whoami;
-    chat["view"] = ::viewmodel_input;
-#endif
-
-#if FEATURE_HUD == 1 && FEATURE_SEMTEX_CALC_PRENADE == 1
-    chat["prenades"] = ::print_semtex_prenades;
-#endif
-
-#if FEATURE_HUD == 1
-    chat["splits"] = ::splits_input;
-#endif
-
-    if (chat.size)
-    {
-        thread chat_watcher(chat);
-    }
+    thread chat_watcher();
 }
 
 init_b2_io()
@@ -1100,27 +1081,75 @@ protect_file()
 #endif
 }
 
-chat_watcher(lookups)
+chat_watcher()
 {
     LEVEL_ENDON
 
-    keys = getarraykeys(lookups);
     while (true)
     {
         level waittill("say", message, player);
 
-        foreach (chat in keys)
+        cfg = chat_config();
+
+        /* TODO check if i should specifically validate if player is a player */
+        foreach (chat in cfg)
         {
-            if (!flag("b2_" + chat + "_locked") && isstrstart(message, chat))
+            if (flag("b2_" + chat["chat"] + "_locked"))
             {
-                DEBUG_PRINT("chat_callback('" + getsubstr(message, chat.size + 1) + "', '" + chat + "', '" + player.name + "')");
-                [[lookups[chat]]](getsubstr(message, chat.size + 1), chat, player);
+                DEBUG_PRINT("not checking chat " + sstr(chat["chat"]) + " as flag is locked");
+                continue;
+            }
+            if (chat["host_only"] && !player ishost())
+            {
+                DEBUG_PRINT("not checking chat " + sstr(chat["chat"]) + " as player " + sstr(player.name) + " is not a host");
+                continue;
+            }
+
+            matched_signature = undefined;
+            for (i = -1; i < chat["aliases"].size; i++)
+            {
+                if (i == -1)
+                {
+                    signature = chat["chat"];
+                }
+                else
+                {
+                    signature = chat["aliases"][i];
+                }
+
+                if (isstrstart(message, signature))
+                {
+                    matched_signature = signature;
+                    break;
+                }
+            }
+
+            if (isdefined(matched_signature))
+            {
+                DEBUG_PRINT("matched chat signature '" + sstr(matched_signature) + "' to chat '" + sstr(message) + "' for player " + sstr(player.name));
+                input = undefined;
+                if (message.size > matched_signature.size + 1)
+                {
+                    input = getsubstr(message, matched_signature.size + 1);
+                }
+                if (chat["thread"])
+                {
+                    thread [[chat["callback"]]](input, chat["chat"], player);
+                }
+                else
+                {
+                    [[chat["callback"]]](input, chat["chat"], player);
+                }
                 break;
             }
         }
 
         CLEAR(message)
         CLEAR(chat)
+        CLEAR(matched_signature)
+        CLEAR(signature)
+        CLEAR(input)
+        CLEAR(cfg)
     }
 }
 
@@ -1242,6 +1271,37 @@ should_print_checksum()
     if (is_survival_map() && level.round_number > faster && level.round_number % 10 == 4)
         return true;
     return false;
+}
+
+chat_config()
+{
+    chat = [];
+
+    /*                              CHATS       ALIASES             CALLBACK                    HOSTONLY    THREAD */
+#if FEATURE_CHARACTERS == 1
+    chat[chat.size] = register_chat("char",     array("!c"),        ::characters_input,         false,      false);
+    chat[chat.size] = register_chat("view",     array("!v"),        ::viewmodel_input,          false,      false);
+#endif
+#if FEATURE_HUD == 1 && FEATURE_SEMTEX_CALC_PRENADE == 1
+    chat[chat.size] = register_chat("prenades", array("!p"),        ::print_semtex_prenades,    false,      false);
+#endif
+#if FEATURE_HUD == 1
+    chat[chat.size] = register_chat("splits",   array("!s"),        ::splits_input,             true,       false);
+#endif
+
+    return chat;
+}
+
+register_chat(chat, aliases, callback, host_only, is_thread)
+{
+    cfg = [];
+    cfg["chat"] = chat;
+    cfg["aliases"] = aliases;
+    cfg["callback"] = callback;
+    cfg["host_only"] = host_only;
+    cfg["thread"] = is_thread;
+
+    return cfg;
 }
 
 dvar_config(key)
@@ -1834,7 +1894,9 @@ splits_input(new_value, dvar, player)
         return true;
     }
 
-    if (player ishost() && new_value)
+    DEBUG_PRINT("splits_input(" + sstr(new_value) + ", " + sstr(dvar) + ", " + sstr(player.name) + ")");
+
+    if (player ishost() && isdefined(new_value))
     {
         if (new_value == "0" && fs_testfile(SPLITS_FILE))
         {
@@ -2679,6 +2741,65 @@ run_default_character_hotjoin_safety()
 
 characters_input(new_value, key, player)
 {
+    preset_txt = "Your character preset is: ";
+    DEBUG_PRINT("characters_input(" + sstr(new_value) + ", " + sstr(key) + ", " + sstr(player.name) + ")");
+
+    if (!isdefined(new_value))
+    {
+        switch (player maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(get_character_stat_for_map(), STAT_CHAR_MAP))
+        {
+            case 1:
+                if (is_victis_map())
+                    print_scheduler(preset_txt + COLOR_TXT("Russman", COL_YELLOW), player);
+                else if (is_mob())
+                    print_scheduler(preset_txt + COLOR_TXT("Finn", COL_YELLOW), player);
+                else if (is_origins())
+                    print_scheduler(preset_txt + COLOR_TXT("Dempsey", COL_YELLOW), player);
+                else
+                    print_scheduler(preset_txt + COLOR_TXT("CDC", COL_YELLOW), player);
+                break;
+            case 2:
+                if (is_victis_map())
+                    print_scheduler(preset_txt + COLOR_TXT("Stuhlinger", COL_YELLOW), player);
+                else if (is_mob())
+                    print_scheduler(preset_txt + COLOR_TXT("Sal", COL_YELLOW), player);
+                else if (is_origins())
+                    print_scheduler(preset_txt + COLOR_TXT("Nikolai", COL_YELLOW), player);
+                else
+                    print_scheduler(preset_txt + COLOR_TXT("CIA", COL_YELLOW), player);
+                break;
+            case 3:
+                if (is_victis_map())
+                    print_scheduler(preset_txt + COLOR_TXT("Misty", COL_YELLOW), player);
+                else if (is_mob())
+                    print_scheduler(preset_txt + COLOR_TXT("Billy", COL_YELLOW), player);
+                else if (is_origins())
+                    print_scheduler(preset_txt + COLOR_TXT("Richtofen", COL_YELLOW), player);
+                else
+                    print_scheduler("You don't currently have any character preset", player);
+                break;
+            case 4:
+                if (is_victis_map())
+                    print_scheduler(preset_txt + COLOR_TXT("Marlton", COL_YELLOW), player);
+                else if (is_mob())
+                    print_scheduler(preset_txt + COLOR_TXT("Weasel", COL_YELLOW), player);
+                else if (is_origins())
+                    print_scheduler(preset_txt + COLOR_TXT("Takeo", COL_YELLOW), player);
+                else
+                    print_scheduler("You don't currently have any character preset", player);
+                break;
+            default:
+                print_scheduler("You don't currently have any character preset", player);
+        }
+
+#if DEBUG == 1
+    print_scheduler("Characterindex: ^1" + player.characterindex, player);
+#endif
+
+        return;
+    }
+
+    /* Don't allow updating the preset deeper into the game */
     if (!did_game_just_start())
     {
         return true;
@@ -2688,73 +2809,73 @@ characters_input(new_value, key, player)
     {
         case "russman":
         case "oldman":
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Russman", COL_YELLOW), player);
             player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_VICTIS, 1, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Russman", COL_YELLOW), player);
             break;
         case "marlton":
         case "reporter":
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Stuhlinger", COL_YELLOW), player);
             player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_VICTIS, 4, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Stuhlinger", COL_YELLOW), player);
             break;
         case "misty":
         case "farmgirl":
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Misty", COL_YELLOW), player);
             player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_VICTIS, 3, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Misty", COL_YELLOW), player);
             break;
         case "stuhlinger":
         case "engineer":
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Marlton", COL_YELLOW), player);
             player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_VICTIS, 2, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Marlton", COL_YELLOW), player);
             break;
 
         case "finn":
         case "oleary":
         case "shortsleeve":
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Finn", COL_YELLOW), player);
             player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_PRISON, 1, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Finn", COL_YELLOW), player);
             break;
         case "sal":
         case "deluca":
         case "longsleeve":
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Sal", COL_YELLOW), player);
             player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_PRISON, 2, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Sal", COL_YELLOW), player);
             break;
         case "billy":
         case "handsome":
         case "sleeveless":
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Billy", COL_YELLOW), player);
             player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_PRISON, 3, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Billy", COL_YELLOW), player);
             break;
         case "weasel":
         case "arlington":
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Weasel", COL_YELLOW), player);
             player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_PRISON, 4, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Weasel", COL_YELLOW), player);
             break;
 
         case "dempsey":
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Dempsey", COL_YELLOW), player);
             player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_TOMB, 1, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Dempsey", COL_YELLOW), player);
             break;
         case "nikolai":
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Nikolai", COL_YELLOW), player);
             player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_TOMB, 2, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Nikolai", COL_YELLOW), player);
             break;
         case "richtofen":
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Richtofen", COL_YELLOW), player);
             player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_TOMB, 3, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Richtofen", COL_YELLOW), player);
             break;
         case "takeo":
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Takeo", COL_YELLOW), player);
             player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_TOMB, 4, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Takeo", COL_YELLOW), player);
             break;
 
         case "cdc":
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("CDC", COL_YELLOW), player);
             player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_SURVIVAL, 1, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("CDC", COL_YELLOW), player);
             break;
         case "cia":
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("CIA", COL_YELLOW), player);
             player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_SURVIVAL, 2, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("CIA", COL_YELLOW), player);
             break;
 
         case "reset":
@@ -2985,60 +3106,6 @@ viewmodel_input(value, key, player)
     }
 
     return true;
-}
-
-check_whoami(value, key, player)
-{
-    switch (player maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(get_stat_for_map(), "zm_highrise"))
-    {
-        case 1:
-            if (is_victis_map())
-                print_scheduler("Your preset is: " + COLOR_TXT("Russman", COL_YELLOW), player);
-            else if (is_mob())
-                print_scheduler("Your preset is: " + COLOR_TXT("Finn", COL_YELLOW), player);
-            else if (is_origins())
-                print_scheduler("Your preset is: " + COLOR_TXT("Dempsey", COL_YELLOW), player);
-            else
-                print_scheduler("Your preset is: " + COLOR_TXT("CDC", COL_YELLOW), player);
-            break;
-        case 2:
-            if (is_victis_map())
-                print_scheduler("Your preset is: " + COLOR_TXT("Stuhlinger", COL_YELLOW), player);
-            else if (is_mob())
-                print_scheduler("Your preset is: " + COLOR_TXT("Sal", COL_YELLOW), player);
-            else if (is_origins())
-                print_scheduler("Your preset is: " + COLOR_TXT("Nikolai", COL_YELLOW), player);
-            else
-                print_scheduler("Your preset is: " + COLOR_TXT("CIA", COL_YELLOW), player);
-            break;
-        case 3:
-            if (is_victis_map())
-                print_scheduler("Your preset is: " + COLOR_TXT("Misty", COL_YELLOW), player);
-            else if (is_mob())
-                print_scheduler("Your preset is: " + COLOR_TXT("Billy", COL_YELLOW), player);
-            else if (is_origins())
-                print_scheduler("Your preset is: " + COLOR_TXT("Richtofen", COL_YELLOW), player);
-            else
-                print_scheduler("You don't currently have any character preset", player);
-            break;
-        case 4:
-            if (is_victis_map())
-                print_scheduler("Your preset is: " + COLOR_TXT("Marlton", COL_YELLOW), player);
-            else if (is_mob())
-                print_scheduler("Your preset is: " + COLOR_TXT("Weasel", COL_YELLOW), player);
-            else if (is_origins())
-                print_scheduler("Your preset is: " + COLOR_TXT("Takeo", COL_YELLOW), player);
-            else
-                print_scheduler("You don't currently have any character preset", player);
-            break;
-        default:
-            print_scheduler("You don't currently have any character preset", player);
-    }
-
-#if DEBUG == 1
-    print_scheduler("Characterindex: ^1" + player.characterindex, player);
-    // print_scheduler("Shader: ^1" + player.whos_who_shader, player);
-#endif
 }
 #endif
 
