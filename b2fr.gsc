@@ -1657,6 +1657,18 @@ debug_mode()
             player weapon_give(maps\mp\zombies\_zm_weapons::get_upgrade_weapon("scar_zm"));
             player weapon_give(maps\mp\zombies\_zm_weapons::get_upgrade_weapon("galil_zm"));
         }
+        else if (is_town())
+        {
+            player weapon_give("cymbal_monkey_zm");
+            if (player ishost())
+            {
+                player weapon_give("raygun_mark2_upgraded_zm");
+            }
+            else
+            {
+                player weapon_give("ray_gun_upgraded_zm");
+            }
+        }
     }
     generate_watermark("DEBUGGER", (0.8, 0.8, 0));
 
