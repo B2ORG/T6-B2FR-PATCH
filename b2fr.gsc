@@ -1550,7 +1550,14 @@ award_points(amount)
 debug_mode()
 {
     foreach (player in level.players)
+    {
         player thread award_points(333333);
+        if (is_origins())
+        {
+            player weapon_give(maps\mp\zombies\_zm_weapons::get_upgrade_weapon("scar_zm"));
+            player weapon_give(maps\mp\zombies\_zm_weapons::get_upgrade_weapon("galil_zm"));
+        }
+    }
     generate_watermark("DEBUGGER", (0.8, 0.8, 0));
 
     thread _run_test_array();
