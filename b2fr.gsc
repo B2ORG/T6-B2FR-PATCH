@@ -15,8 +15,8 @@
 #define NET_FRAME_SOLO 100
 #define NET_FRAME_COOP 50
 #define MAX_VALID_HEALTH 1044606905
-#define CHALLENGE_NEW 0
-#define CHALLENGE_SUCCESS 1
+#define CHALLENGE_PENDING 0
+#define CHALLENGE_NEW 1
 #define CHALLENGE_FAIL 2
 #define LUI_ROUND_PULSE_TIMES_MIN 2
 #define LUI_ROUND_MAX 100
@@ -58,6 +58,7 @@
 #define FEATURE_NUKETOWN_EYES 0
 #define FEATURE_VELOCITY_METER 1
 #define FEATURE_CHALLENGES 1
+#define FEATURE_CHALLENGE_WARDEN 0
 
 /* Snippet macros */
 #define LEVEL_ENDON \
@@ -929,17 +930,15 @@ is_special_round()
     return is_true(flag("dog_round")) || is_true(flag("leaper_round"));
 }
 
-#if FEATURE_HORDES == 1
 get_zombies_left()
 {
-    return get_round_enemy_array().size + level.zombie_total;
+    return get_current_zombie_count() + level.zombie_total;
 }
 
 get_hordes_left()
 {
     return int((get_zombies_left() / 24) * 100) / 100;
 }
-#endif
 
 wait_for_message_end()
 {
@@ -3339,6 +3338,17 @@ b2fr_challenge_loop()
             ::setup_topbarn,
             ::failed_topbarn
         ));
+#if FEATURE_CHALLENGE_WARDEN == 1
+    if (is_mob())
+        initial_challenges = add_to_array(initial_challenges, register_challenge(
+            ::check_bounds_warden,
+            ::setup_warden,
+            ::failed_warden,
+            ::condition_warden
+        ));
+#endif
+
+    DEBUG_PRINT(initial_challenges.size + " challenges registered");
 
     level waittill("start_of_round");
 
@@ -3349,7 +3359,7 @@ b2fr_challenge_loop()
         in_bounds = true;
         foreach (player in level.players)
         {
-            if (!player [[challenge.boundry_check]]())
+            if (!player [[challenge.boundry_check]](challenge, true))
             {
                 in_bounds = false;
             }
@@ -3358,9 +3368,9 @@ b2fr_challenge_loop()
         {
             continue;
         }
-        if (isDefined(challenge.setup))
+        if (isdefined(challenge.setup))
         {
-            thread [[challenge.setup]]();
+            challenge thread [[challenge.setup]]();
         }
         start_challenges = add_to_array(start_challenges, challenge);
         active_challenges++;
@@ -3369,12 +3379,14 @@ b2fr_challenge_loop()
     CLEAR(initial_challenges)
     CLEAR(in_bounds)
 
+    DEBUG_PRINT("challenge loop with " + active_challenges + " challenges");
+
     while (active_challenges)
     {
         foreach (challenge in start_challenges)
         {
-            /* Skip challenge if it has already been failed */
-            if (challenge.status == CHALLENGE_FAIL)
+            /* Skip challenge if it has already been failed or has not been setup fully */
+            if (challenge.status == CHALLENGE_FAIL || challenge.status == CHALLENGE_PENDING)
             {
                 continue;
             }
@@ -3382,7 +3394,7 @@ b2fr_challenge_loop()
             /* Check if players are within boundries */
             foreach (player in level.players)
             {
-                if (!player [[challenge.boundry_check]]())
+                if (!player [[challenge.boundry_check]](challenge))
                 {
                     challenge [[challenge.fail]](player);
                     break;
@@ -3395,7 +3407,7 @@ b2fr_challenge_loop()
             }
 
             /* If additional challenge condition exists, check that as well */
-            if (isDefined(challenge.condition) && [[challenge.condition]]())
+            if (isdefined(challenge.condition) && challenge [[challenge.condition]]())
             {
                 challenge [[challenge.fail]]();
             }
@@ -3418,11 +3430,12 @@ b2fr_challenge_loop()
 register_challenge(boundry_check, setup_function, challenge_failed_function, challenge_condition_function)
 {
     challenge = spawnStruct();
-    challenge.status = CHALLENGE_NEW;
+    challenge.status = CHALLENGE_PENDING;
     challenge.boundry_check = boundry_check;
     challenge.setup = setup_function;
     challenge.fail = challenge_failed_function;
     challenge.condition = challenge_condition_function;
+    challenge.fail_msg = undefined;
 
     return challenge;
 }
@@ -3434,14 +3447,47 @@ setup_yellowhouse()
         remove_mannequin(origin);
 
     print_scheduler("Yellow House Challenge: ^2ACTIVE");
+    self.status = CHALLENGE_NEW;
 }
 
 setup_topbarn()
 {
     print_scheduler("Top Barn Challenge: ^2ACTIVE");
+    self.status = CHALLENGE_NEW;
 }
 
-check_bounds_yellowhouse()
+#if FEATURE_CHALLENGE_WARDEN == 1
+setup_warden()
+{
+    level endon("end_game");
+
+    while (!is_round(8))
+    {
+        ready = 0;
+        foreach (player in level.players)
+        {
+            if (maps\mp\zombies\_zm_zonemgr::zone_is_enabled("zone_warden_office") && player check_bounds_warden(true) && !is_true(player.afterlife))
+            {
+                ready++;
+            }
+        }
+
+        if (ready >= level.players.size)
+        {
+            level waittill("start_of_round");
+            self.status = CHALLENGE_NEW;
+            print_scheduler("Warden's Office Challenge: ^2ACTIVE");
+            return;
+        }
+
+        wait 0.1;
+    }
+
+    self.status = CHALLENGE_FAIL;
+}
+#endif
+
+check_bounds_yellowhouse(challenge, init)
 {
     return (self get_current_zone() == "openhouse2_f1_zone"
         /* Staircase */
@@ -3450,25 +3496,109 @@ check_bounds_yellowhouse()
         || (self.origin[0] < 1130 && self.origin[1] > 100) && (self.origin[0] > 900 && self.origin[1] < 750) && self.origin[2] < 0);
 }
 
-check_bounds_topbarn()
+check_bounds_topbarn(challenge, init)
 {
     return ((self get_current_zone() == "zone_brn" && self.origin[2] >= 50)
         || (self.origin[0] > 7875 && self.origin[0] < 8115 && self.origin[1] <= -5115 && self.origin[1] >= -5415));
 }
 
+#if FEATURE_CHALLENGE_WARDEN == 1
+check_bounds_warden(challenge, init)
+{
+    if (is_true(init))
+    {
+        return true;
+    }
+
+    all_enemies_inside = false;
+    if (get_round_enemy_array().size >= min(24, level.zombie_total))
+    {
+        all_enemies_inside = true;
+        foreach (zombie in get_round_enemy_array())
+        {
+            if (!is_true(zombie.completed_emerging_into_playable_area))
+            {
+                all_enemies_inside = false;
+                break;
+            }
+        }
+    }
+
+    DEBUG_PRINT("check_bounds_warden all_enemies_inside => " + sstr(all_enemies_inside) + " zone => " + sstr(self get_current_zone()) + " enemy_array => " + get_round_enemy_array().size + " total => " + min(24, level.zombie_total));
+
+    switch (self get_current_zone())
+    {
+        case "zone_warden_office":
+        case "zone_cellblock_west_warden":
+        case "zone_cellblock_west_barber":
+            if (all_enemies_inside && level.zombie_total > 0)
+                return true;
+            else
+                return self get_current_zone() == "zone_warden_office";
+    }
+    return false;
+}
+
+condition_warden()
+{
+    foreach (player in level.players)
+    {
+        foreach (weapon in player getweaponslistprimaries())
+        {
+            switch (weapon)
+            {
+                case "uzi_zm":
+                case "m14_zm":
+                case "m1911_zm":
+                    break;
+                default:
+                    self.fail_msg = player.name + " has illegal weapon: " + weapon;
+                    return true;
+            }
+        }
+
+        if (isdefined(player get_player_placeable_mine()))
+        {
+            self.fail_msg = player.name + " has claymores";
+            return true;
+        }
+    }
+
+    return false;
+}
+#endif
+
 failed_yellowhouse(player)
 {
-    print_scheduler("Yellow House Challenge: ^1" + player.name + " LEFT THE CHALLENGE AREA!");
+    if (isdefined(self.fail_msg))
+        print_scheduler("Yellow House Challenge: ^1" + self.fail_msg);
+    else if (isdefined(player))
+        print_scheduler("Yellow House Challenge: ^1" + player.name + " LEFT THE CHALLENGE AREA!");
     level thread generate_temp_watermark(20, "FAILED YELLOW HOUSE", (0.8, 0, 0));
     self.status = CHALLENGE_FAIL;
 }
 
 failed_topbarn(player)
 {
-    print_scheduler("Top Barn Challenge: ^1" + player.name + " LEFT THE CHALLENGE AREA!");
+    if (isdefined(self.fail_msg))
+        print_scheduler("Top Barn Challenge: ^1" + self.fail_msg);
+    else if (isdefined(player))
+        print_scheduler("Top Barn Challenge: ^1" + player.name + " LEFT THE CHALLENGE AREA!");
     level thread generate_temp_watermark(20, "FAILED TOP BARN", (0.8, 0, 0));
     self.status = CHALLENGE_FAIL;
 }
+
+#if FEATURE_CHALLENGE_WARDEN == 1
+failed_warden(player)
+{
+    if (isdefined(self.fail_msg))
+        print_scheduler("Warden's Office Challenge: ^1" + self.fail_msg);
+    else if (isdefined(player))
+        print_scheduler("Warden's Office Challenge: ^1" + player.name + " LEFT THE CHALLENGE AREA!");
+    level thread generate_temp_watermark(level.round_number + 5, "FAILED WARDEN'S OFFICE", (0.8, 0, 0));
+    self.status = CHALLENGE_FAIL;
+}
+#endif
 #endif
 
 /*
