@@ -1316,7 +1316,7 @@ welcome_prints()
     {
         level waittill("end_of_round");
         print_scheduler(COLOR_TXT("DEPRECATION NOTICE", COL_RED), self);
-        print_scheduler("Support for this Plutonium version is deprecated. Make sure to update urgently!", self);
+        print_scheduler("Support for hosts Plutonium version is deprecated. Make sure to update urgently!", self);
     }
 }
 
