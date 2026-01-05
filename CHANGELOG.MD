@@ -3,6 +3,7 @@
 - Pap gun reticle patch is now only active on Origins, and the reticle can be selected per player, see readme for more info
 - Added some aliases to chat commands
 - Deprecate legacy Plutonium versions support
+- Improve Plutonium version detection
 
 # Version 3.3
 
