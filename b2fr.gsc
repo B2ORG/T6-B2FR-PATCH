@@ -1412,7 +1412,6 @@ dvar_config(key)
 
 #if FEATURE_HUD == 1
     dvars[dvars.size] = register_dvar("timers",                         "1",                    false,  true,       undefined,                                          ::timers_alpha);
-    dvars[dvars.size] = register_dvar("splits",                         "1",                    false,  true);
     dvars[dvars.size] = register_dvar("kill_hud",                       "0",                    false,  false,      undefined,                                          ::kill_hud);
 #endif
 
