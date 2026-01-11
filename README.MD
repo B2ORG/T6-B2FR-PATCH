@@ -170,7 +170,7 @@ The patch can be interacted with using DVARs and game chat commands. Below is a 
 | - | `char` | `!c` | No | [Character chat commands](#character-chat-commands) |
 | - | `preandes` | `!p` | No | Reprint the number of Semtex prenades for the current round |
 | - | `splits` | `!s` | Yes | [Splits chat command](#splits-chat-command) |
-| - | `reticle` | `!r` | No | Allows for customizing gun reticle, values between 1 and 16 (eg. 16 is a red dot), 0 to make it random. Needs to be set BEFORE the gun is obtained |
+| - | `reticle` | `!r` | No | Allows for customizing PaP'd gun reticle, values between 1 and 16 (eg. 16 is a red dot), 0 to make it random. Needs to be set BEFORE the gun is obtained |
 
 # HUD
 
@@ -462,7 +462,8 @@ Here is a list of weaponlocker stats B2 patches use to persist settings. Note, T
 | zm_prison | alt_clip | Gameplay | (B2OP) Controls strafespeed scale |
 | zm_prison | lh_clip | Gameplay | (B2OP) Controls backspeed scale |
 | zm_tomb | clip | Gameplay | (B2OP) Controls tank depatching |
-| zm_tomb | stock | Gameplay | (B2FR) Controls reticle for Origins gun |
+| zm_tomb | stock | Gameplay | Controls reticle for upgraded gun (Origins only on B2FR) |
+| zm_tomb | alt_clip | Gameplay | (B2OP) Controls camo index |
 
 # Legacy info (regarding First Room Fix times)
 
