@@ -3,9 +3,10 @@
 #define DEBUG 0
 #define DEBUG_HUD 0
 #define BETA 0
+#define DEPRECATION 5162
 
 /* Const macros */
-#define B2FR_VER 3.3
+#define B2FR_VER 3.4
 #define VER_ANCIENT 353
 #define VER_MODERN 1824
 #define VER_2905 2905
@@ -14,8 +15,8 @@
 #define NET_FRAME_SOLO 100
 #define NET_FRAME_COOP 50
 #define MAX_VALID_HEALTH 1044606905
-#define CHALLENGE_NEW 0
-#define CHALLENGE_SUCCESS 1
+#define CHALLENGE_PENDING 0
+#define CHALLENGE_NEW 1
 #define CHALLENGE_FAIL 2
 #define LUI_ROUND_PULSE_TIMES_MIN 2
 #define LUI_ROUND_MAX 100
@@ -35,9 +36,17 @@
 #define TXT_AVAILABLE COL_GREEN + "AVAILABLE" + COL_WHITE
 #define TXT_DISABLED COL_RED + "DISABLED" + COL_WHITE
 #define SPLITS_FILE "b2fr/splits.txt"
+#define VERSION_FILE "b2fr/version.txt"
 #define SEMTEX_DYNAMIC_CALC_ROUND 51
 #define SEMTEX_PRENADES_MAP array(1, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 17, 19, 22, 24, 28, 29, 34, 39, 42, 46, 52, 57, 61, 69, 78, 86, 96, 103)
 #define SEMTEX_BEGIN_PRENADES_RND 22
+#define STAT_CHAR_MAP "zm_highrise"
+#define STAT_CHAR_VICTIS "clip"
+#define STAT_CHAR_PRISON "stock"
+#define STAT_CHAR_TOMB "alt_clip"
+#define STAT_CHAR_SURVIVAL "lh_clip"
+#define STAT_RETICLE_MAP "zm_tomb"
+#define STAT_RETICLE "stock"
 
 /* Feature flags */
 #define FEATURE_HUD 1
@@ -49,6 +58,7 @@
 #define FEATURE_NUKETOWN_EYES 0
 #define FEATURE_VELOCITY_METER 1
 #define FEATURE_CHALLENGES 1
+#define FEATURE_CHALLENGE_WARDEN 0
 
 /* Snippet macros */
 #define LEVEL_ENDON \
@@ -87,7 +97,10 @@ main()
         replacefunc(maps\mp\zombies\_zm_utility::wait_network_frame, ::fixed_wait_network_frame);
     }
 
-    replaceFunc(maps\mp\zombies\_zm_weapons::get_pack_a_punch_weapon_options, ::b2_get_pack_a_punch_weapon_options);
+    if (is_origins())
+    {
+        replacefunc(maps\mp\zombies\_zm_weapons::get_pack_a_punch_weapon_options, ::b2_get_pack_a_punch_weapon_options);
+    }
 }
 
 init()
@@ -100,11 +113,13 @@ init()
     thread protect_file();
     thread origins_fix();
     thread on_player_connected();
+    init_b2_io();
+    b2_self_update();
+
     init_b2_flags();
     init_b2_dvars();
     init_b2_characters();
     init_b2_permaperks();
-    init_b2_io();
 
 #if DEBUG == 1
     thread _custom_start_round();
@@ -253,26 +268,7 @@ init_b2_dvars()
 
 init_b2_chat_watcher()
 {
-    chat = [];
-
-#if FEATURE_CHARACTERS == 1
-    chat["char"] = ::characters_input;
-    chat["whoami"] = ::check_whoami;
-    chat["view"] = ::viewmodel_input;
-#endif
-
-#if FEATURE_HUD == 1 && FEATURE_SEMTEX_CALC_PRENADE == 1
-    chat["prenades"] = ::print_semtex_prenades;
-#endif
-
-#if FEATURE_HUD == 1
-    chat["splits"] = ::splits_input;
-#endif
-
-    if (chat.size)
-    {
-        thread chat_watcher(chat);
-    }
+    thread chat_watcher();
 }
 
 init_b2_io()
@@ -683,7 +679,7 @@ sstr(value)
     return value;
 }
 
-gettype(value)
+typeof(value)
 {
     if (isint(value))
         return "integer";
@@ -719,7 +715,7 @@ number_round(floating_point, decimal_places, format)
         full = STR(int(full_scaled / factor));
         decimal = STR(int(abs(full_scaled) % factor));
 
-        // DEBUG_PRINT("decimal_places=" + sstr(decimal_places) + " factor=" + sstr(factor) + " typeof(scaled)=" + gettype(scaled) + " typeof(factor)=" + gettype(factor) + " scaled=" + sstr(scaled) + " decimal=" + sstr(decimal) + " full=" + sstr(full) + " abs(scaled)=" + sstr(abs(scaled)) );
+        // DEBUG_PRINT("decimal_places=" + sstr(decimal_places) + " factor=" + sstr(factor) + " typeof(scaled)=" + typeof(scaled) + " typeof(factor)=" + typeof(factor) + " scaled=" + sstr(scaled) + " decimal=" + sstr(decimal) + " full=" + sstr(full) + " abs(scaled)=" + sstr(abs(scaled)) );
 
         for (i = decimal.size; i < decimal_places; i++)
         {
@@ -846,19 +842,34 @@ fetch_pluto_definition()
 try_parse_pluto_version()
 {
     dvar = getdvar("shortversion");
-    if (dvar)
-        return int(getsubstr(dvar, 1));
+    if (dvar && isstrstart(dvar, "r"))
+    {
+        dvar_int = int(getsubstr(dvar, 1));
+        if (dvar_int)
+        {
+            DEBUG_PRINT("Parsed version from 'shortversion' => " + sstr(dvar_int));
+            return dvar_int;
+        }
+    }
 
     dvar = getdvar("version");
-    if (!issubstr(dvar, "Plutonium"))
-        return 0;
+    if (dvar && isstrstart(dvar, "Plutonium"))
+    {
+        dvar_int = int(getsubstr(dvar, 23, 28));
+        if (dvar_int)
+        {
+            DEBUG_PRINT("Parsed version from 'version' => " + sstr(dvar_int));
+            return dvar_int;
+        }
+        dvar_int = int(getsubstr(dvar, 23, 27));
+        if (dvar_int)
+        {
+            DEBUG_PRINT("Parsed version from 'version' => " + sstr(dvar_int));
+            return dvar_int;
+        }
+    }
 
-    /* Future proof for potential version 10k+ */
-    parsed = getsubstr(dvar, 23, 28);
-    if (int(parsed))
-        return int(parsed);
-    parsed = getsubstr(dvar, 23, 27);
-    return int(parsed);
+    return 0;
 }
 
 get_plutonium_version()
@@ -872,9 +883,11 @@ get_plutonium_version()
     foreach (definition in array_reverse(getarraykeys(definitions)))
     {
         version = definitions[definition];
-        // DEBUG_PRINT("definition: " + definition + " version: " + version);
         if (getdvar(definition) != "")
+        {
+            DEBUG_PRINT("Found version from definition '" + sstr(definition) + "' => " + sstr(version));
             detected_version = version;
+        }
     }
     return detected_version;
 }
@@ -934,17 +947,15 @@ is_special_round()
     return is_true(flag("dog_round")) || is_true(flag("leaper_round"));
 }
 
-#if FEATURE_HORDES == 1
 get_zombies_left()
 {
-    return get_round_enemy_array().size + level.zombie_total;
+    return get_current_zombie_count() + level.zombie_total;
 }
 
 get_hordes_left()
 {
     return int((get_zombies_left() / 24) * 100) / 100;
 }
-#endif
 
 wait_for_message_end()
 {
@@ -1041,6 +1052,54 @@ decode_splits(splits_str, limit)
     return splits;
 }
 
+get_reticle_stat()
+{
+    stat = self maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(STAT_RETICLE, STAT_RETICLE_MAP);
+    DEBUG_PRINT("raw reticle stat: " + sstr(stat));
+    stat = int(stat);
+
+    if (stat >= 1 && stat <= 16)
+    {
+        return stat;
+    }
+
+    return undefined;
+}
+
+version_compare(compare, with, allow_equal)
+{
+    /* Both must be arrays and have at least one element (major version) */
+    if (!isarray(compare) || !isarray(with) || !isdefined(compare[0]) || !isdefined(with[0]))
+    {
+        DEBUG_PRINT("Malformed data while trying to self update: " + sstr(compare) + " " + sstr(with));
+        return undefined;
+    }
+
+    /* Fill up minor and inner versions */
+    if (!isdefined(compare[1]))
+        compare[1] = 0;
+    if (!isdefined(compare[2]))
+        compare[2] = 0;
+    if (!isdefined(with[1]))
+        with[1] = 0;
+    if (!isdefined(with[2]))
+        with[2] = 0;
+
+    major_greater = int(compare[0]) > int(with[0]);
+    minor_greater = int(compare[0]) >= int(with[0]) && int(compare[1]) > int(with[1]);
+    inner_greater = int(compare[0]) >= int(with[0]) && int(compare[1]) >= int(with[1]) && int(compare[2]) > int(with[2]);
+    if (is_true(allow_equal))
+    {
+        major_greater = int(compare[0]) >= int(with[0]);
+        minor_greater = int(compare[0]) >= int(with[0]) && int(compare[1]) >= int(with[1]);
+        inner_greater = int(compare[0]) >= int(with[0]) && int(compare[1]) >= int(with[1]) && int(compare[2]) >= int(with[2]);
+    }
+
+    DEBUG_PRINT("Comparing versions " + sstr(compare) + " and " + sstr(with) + " => major=" + sstr(major_greater) + " minor=" + sstr(minor_greater) + " inner=" + sstr(inner_greater));
+
+    return major_greater || minor_greater || inner_greater;
+}
+
 /*
  ************************************************************************************************************
  ****************************************** SINGLE PURPOSE FUNCTIONS ****************************************
@@ -1074,22 +1133,49 @@ b2_get_pack_a_punch_weapon_options(weapon)
         return self.pack_a_punch_weapon_options[weapon];
 
     base = get_base_name(weapon);
-    camo_index = 39;
 
-    if ("zm_prison" == level.script)
-        camo_index = 40;
-    else if ("zm_tomb" == level.script)
-        camo_index = 45;
+    /* Lens & color seem to not make any difference, at least on Ori */
+    reticle_index = self get_reticle_stat();
+    DEBUG_PRINT("pack a punch options, reticle stat: " + sstr(reticle_index));
+    if (!isdefined(reticle_index))
+    {
+        reticle_index = randomintrange(0, 16);
+    }
+    /* We use 16 to represent reddot to make it different from 0 in weak comparison */
+    if (reticle_index == 16)
+    {
+        reticle_index = 0;
+    }
 
-    lens_index = randomintrange(0, 6);
-    reticle_index = 16;
-    reticle_color_index = randomintrange(0, 6);
-
-    if ("saritch_upgraded_zm" == base)
-        reticle_index = 1;
-
-    self.pack_a_punch_weapon_options[weapon] = self calcweaponoptions( camo_index, lens_index, reticle_index, reticle_color_index );
+    self.pack_a_punch_weapon_options[weapon] = self calcweaponoptions(45, 0, reticle_index, 0);
     return self.pack_a_punch_weapon_options[weapon];
+}
+
+reticle_input(new_value, key, player)
+{
+    DEBUG_PRINT("reticle_input(" + sstr(new_value) + ", " + sstr(key) + ", " + sstr(player.name) + ")");
+
+    if (isdefined(new_value))
+    {
+        if (new_value == "reset")
+        {
+            new_value = 0;
+        }
+
+        new_value = int(new_value);
+        if (new_value >= 0 && new_value <= 16)
+        {
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_RETICLE, new_value, STAT_RETICLE_MAP);
+        }
+    }
+
+    ret_txt = "Your current reticle option: ";
+    current_stat = player get_reticle_stat();
+    if (isdefined(current_stat))
+        print_scheduler(ret_txt + COLOR_TXT(sstr(current_stat), COL_YELLOW), player);
+    else
+        print_scheduler(ret_txt + COLOR_TXT("UNSET", COL_YELLOW), player);
+    return true;
 }
 
 protect_file()
@@ -1102,27 +1188,75 @@ protect_file()
 #endif
 }
 
-chat_watcher(lookups)
+chat_watcher()
 {
     LEVEL_ENDON
 
-    keys = getarraykeys(lookups);
     while (true)
     {
         level waittill("say", message, player);
 
-        foreach (chat in keys)
+        cfg = chat_config();
+
+        /* TODO check if i should specifically validate if player is a player */
+        foreach (chat in cfg)
         {
-            if (!flag("b2_" + chat + "_locked") && isstrstart(message, chat))
+            if (flag("b2_" + chat["chat"] + "_locked"))
             {
-                DEBUG_PRINT("chat_callback('" + getsubstr(message, chat.size + 1) + "', '" + chat + "', '" + player.name + "')");
-                [[lookups[chat]]](getsubstr(message, chat.size + 1), chat, player);
+                DEBUG_PRINT("not checking chat " + sstr(chat["chat"]) + " as flag is locked");
+                continue;
+            }
+            if (chat["host_only"] && !player ishost())
+            {
+                DEBUG_PRINT("not checking chat " + sstr(chat["chat"]) + " as player " + sstr(player.name) + " is not a host");
+                continue;
+            }
+
+            matched_signature = undefined;
+            for (i = -1; i < chat["aliases"].size; i++)
+            {
+                if (i == -1)
+                {
+                    signature = chat["chat"];
+                }
+                else
+                {
+                    signature = chat["aliases"][i];
+                }
+
+                if (isstrstart(message, signature))
+                {
+                    matched_signature = signature;
+                    break;
+                }
+            }
+
+            if (isdefined(matched_signature))
+            {
+                DEBUG_PRINT("matched chat signature '" + sstr(matched_signature) + "' to message '" + sstr(message) + "' for player " + sstr(player.name));
+                input = undefined;
+                if (message.size > matched_signature.size + 1)
+                {
+                    input = getsubstr(message, matched_signature.size + 1);
+                }
+                if (chat["thread"])
+                {
+                    thread [[chat["callback"]]](input, chat["chat"], player);
+                }
+                else
+                {
+                    [[chat["callback"]]](input, chat["chat"], player);
+                }
                 break;
             }
         }
 
         CLEAR(message)
         CLEAR(chat)
+        CLEAR(matched_signature)
+        CLEAR(signature)
+        CLEAR(input)
+        CLEAR(cfg)
     }
 }
 
@@ -1194,6 +1328,13 @@ welcome_prints()
         wait 0.25;
         print_scheduler("Full gameplay is required from host perspective as of April 2023", self);
     }
+
+    if (get_plutonium_version() < DEPRECATION)
+    {
+        level waittill("end_of_round");
+        print_scheduler(COLOR_TXT("DEPRECATION NOTICE", COL_RED), self);
+        print_scheduler("Support for hosts Plutonium version is deprecated. Make sure to update urgently!", self);
+    }
 }
 
 compose_welcome_print()
@@ -1246,6 +1387,39 @@ should_print_checksum()
     return false;
 }
 
+chat_config()
+{
+    chat = [];
+
+    /*                              CHATS       ALIASES             CALLBACK                    HOSTONLY    THREAD */
+#if FEATURE_CHARACTERS == 1
+    chat[chat.size] = register_chat("char",     array("!c"),        ::characters_input,         false,      false);
+    chat[chat.size] = register_chat("view",     array("!v"),        ::viewmodel_input,          false,      false);
+#endif
+#if FEATURE_HUD == 1 && FEATURE_SEMTEX_CALC_PRENADE == 1
+    chat[chat.size] = register_chat("prenades", array("!p"),        ::print_semtex_prenades,    false,      false);
+#endif
+#if FEATURE_HUD == 1
+    chat[chat.size] = register_chat("splits",   array("!s"),        ::splits_input,             true,       false);
+#endif
+
+    chat[chat.size] = register_chat("reticle",  array("!r"),        ::reticle_input,            false,      false);
+
+    return chat;
+}
+
+register_chat(chat, aliases, callback, host_only, is_thread)
+{
+    cfg = [];
+    cfg["chat"] = chat;
+    cfg["aliases"] = aliases;
+    cfg["callback"] = callback;
+    cfg["host_only"] = host_only;
+    cfg["thread"] = is_thread;
+
+    return cfg;
+}
+
 dvar_config(key)
 {
     dvars = [];
@@ -1255,7 +1429,6 @@ dvar_config(key)
 
 #if FEATURE_HUD == 1
     dvars[dvars.size] = register_dvar("timers",                         "1",                    false,  true,       undefined,                                          ::timers_alpha);
-    dvars[dvars.size] = register_dvar("splits",                         "1",                    false,  true);
     dvars[dvars.size] = register_dvar("kill_hud",                       "0",                    false,  false,      undefined,                                          ::kill_hud);
 #endif
 
@@ -1492,7 +1665,26 @@ award_points(amount)
 debug_mode()
 {
     foreach (player in level.players)
+    {
         player thread award_points(333333);
+        if (is_origins())
+        {
+            player weapon_give(maps\mp\zombies\_zm_weapons::get_upgrade_weapon("scar_zm"));
+            player weapon_give(maps\mp\zombies\_zm_weapons::get_upgrade_weapon("galil_zm"));
+        }
+        else if (is_town())
+        {
+            player weapon_give("cymbal_monkey_zm");
+            if (player ishost())
+            {
+                player weapon_give("raygun_mark2_upgraded_zm");
+            }
+            else
+            {
+                player weapon_give("ray_gun_upgraded_zm");
+            }
+        }
+    }
     generate_watermark("DEBUGGER", (0.8, 0.8, 0));
 
     thread _run_test_array();
@@ -1660,11 +1852,98 @@ nuketown_switch_eyes()
 }
 #endif
 
+b2_self_update()
+{
+    if (!is_io_available())
+    {
+        return;
+    }
+
+    version = strtok(STR(B2FR_VER), ".");
+    old = undefined;
+
+    if (fs_testfile(VERSION_FILE))
+    {
+        f = fs_fopen(VERSION_FILE, "read");
+        old = fs_read(f);
+        fs_fclose(f);
+
+        old = strtok(old, ".");
+    }
+
+    DEBUG_PRINT("self updater read versions: current=" + sstr(version) + ", old=" + sstr(old));
+
+    /* No old version, we just run the updates */
+    noold = false;
+    if (!isdefined(old))
+    {
+        old = array(0, 0, 0);
+        noold = true;
+    }
+
+    update = version_compare(version, old);
+
+    if (!is_true(update))
+    {
+        return;
+    }
+
+    f = fs_fopen(VERSION_FILE, "write");
+    fs_write(f, B2FR_VER);
+    fs_fclose(f);
+
+    updates = [];
+    /*                                      VERSION     UPDATE_CB               REQ_OLD*/
+    updates[updates.size] = register_update("3.4",      ::noop,                 false);
+
+    foreach (i, update in updates)
+    {
+        /* We require to know the old version before updating - more strict */
+        if (update["require_old"] && noold)
+        {
+            DEBUG_PRINT("skipping update " + sstr(i) + " due to old requirement");
+            continue;
+        }
+
+        /* The version assigned to the update is not higher than version the patch was updated from */
+        if (!version_compare(update["version"], old))
+        {
+            DEBUG_PRINT("skipping update " + sstr(i) + ", update version not higher than old");
+            continue;
+        }
+
+        /* Current version is lower than version assigned to the update*/
+        if (!version_compare(version, update["version"], true))
+        {
+            DEBUG_PRINT("skipping update " + sstr(i) + ", update version higher than current");
+            continue;
+        }
+
+        DEBUG_PRINT("Applying callback for update " + sstr(i));
+        [[update["callback"]]]();
+    }
+}
+
+register_update(version, callback, require_old)
+{
+    update = [];
+    update["version"] = strtok(version, ".");
+    update["callback"] = callback;
+    update["require_old"] = require_old;
+
+    return update;
+}
+
 /*
  ************************************************************************************************************
  ************************************************** STUBS ***************************************************
  ************************************************************************************************************
 */
+
+noop()
+{
+    DEBUG_PRINT("noop");
+}
 
 cmdexec(arg)
 {
@@ -1836,7 +2115,9 @@ splits_input(new_value, dvar, player)
         return true;
     }
 
-    if (player ishost() && new_value)
+    DEBUG_PRINT("splits_input(" + sstr(new_value) + ", " + sstr(dvar) + ", " + sstr(player.name) + ")");
+
+    if (player ishost() && isdefined(new_value))
     {
         if (new_value == "0" && fs_testfile(SPLITS_FILE))
         {
@@ -2123,7 +2404,10 @@ fill_up_bank()
 
     if (has_permaperks_system() && did_game_just_start())
     {
+        DEBUG_PRINT("Setting bank for " + sstr(self.name) + " from value " + sstr(self.account_value) + " to " + sstr(level.bank_account_max));
+
         self.account_value = level.bank_account_max;
+        self maps\mp\zombies\_zm_stats::set_map_stat("depositBox", self.account_value, level.banking_map);
     }
 }
 
@@ -2582,7 +2866,7 @@ override_personality_character()
     if (run_default_character_hotjoin_safety())
         return;
 
-    preset = self parse_preset(get_stat_for_map(), array(1, 2, 3, 4));
+    preset = self parse_preset(get_character_stat_for_map(), array(1, 2, 3, 4));
     charindex = preset - 1;
     if (preset > 0 && !flag("b2_char_taken_" + charindex))
     {
@@ -2609,7 +2893,7 @@ override_team_character()
 
     if (!flag("b2_char_taken_0") && !flag("b2_char_taken_1"))
     {
-        preset = gethostplayer() parse_preset(get_stat_for_map(), array(1, 2));
+        preset = gethostplayer() parse_preset(get_character_stat_for_map(), array(1, 2));
         charindex = preset - 1;
         flag_set("b2_char_taken_" + charindex);
         level.should_use_cia = charindex;
@@ -2638,15 +2922,15 @@ parse_preset(stat, allowed_presets)
     return 0;
 }
 
-get_stat_for_map()
+get_character_stat_for_map()
 {
     if (is_victis_map())
-        return "clip";
+        return STAT_CHAR_VICTIS;
     else if (is_mob())
-        return "stock";
+        return STAT_CHAR_PRISON;
     else if (is_origins())
-        return "alt_clip";
-    return "lh_clip";
+        return STAT_CHAR_TOMB;
+    return STAT_CHAR_SURVIVAL;
 }
 
 character_flag_cleanup()
@@ -2679,91 +2963,150 @@ run_default_character_hotjoin_safety()
     return false;
 }
 
-characters_input(value, key, player)
+characters_input(new_value, key, player)
 {
+    preset_txt = "Your character preset is: ";
+    DEBUG_PRINT("characters_input(" + sstr(new_value) + ", " + sstr(key) + ", " + sstr(player.name) + ")");
+
+    if (!isdefined(new_value))
+    {
+        switch (player maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(get_character_stat_for_map(), STAT_CHAR_MAP))
+        {
+            case 1:
+                if (is_victis_map())
+                    print_scheduler(preset_txt + COLOR_TXT("Russman", COL_YELLOW), player);
+                else if (is_mob())
+                    print_scheduler(preset_txt + COLOR_TXT("Finn", COL_YELLOW), player);
+                else if (is_origins())
+                    print_scheduler(preset_txt + COLOR_TXT("Dempsey", COL_YELLOW), player);
+                else
+                    print_scheduler(preset_txt + COLOR_TXT("CDC", COL_YELLOW), player);
+                break;
+            case 2:
+                if (is_victis_map())
+                    print_scheduler(preset_txt + COLOR_TXT("Stuhlinger", COL_YELLOW), player);
+                else if (is_mob())
+                    print_scheduler(preset_txt + COLOR_TXT("Sal", COL_YELLOW), player);
+                else if (is_origins())
+                    print_scheduler(preset_txt + COLOR_TXT("Nikolai", COL_YELLOW), player);
+                else
+                    print_scheduler(preset_txt + COLOR_TXT("CIA", COL_YELLOW), player);
+                break;
+            case 3:
+                if (is_victis_map())
+                    print_scheduler(preset_txt + COLOR_TXT("Misty", COL_YELLOW), player);
+                else if (is_mob())
+                    print_scheduler(preset_txt + COLOR_TXT("Billy", COL_YELLOW), player);
+                else if (is_origins())
+                    print_scheduler(preset_txt + COLOR_TXT("Richtofen", COL_YELLOW), player);
+                else
+                    print_scheduler("You don't currently have any character preset", player);
+                break;
+            case 4:
+                if (is_victis_map())
+                    print_scheduler(preset_txt + COLOR_TXT("Marlton", COL_YELLOW), player);
+                else if (is_mob())
+                    print_scheduler(preset_txt + COLOR_TXT("Weasel", COL_YELLOW), player);
+                else if (is_origins())
+                    print_scheduler(preset_txt + COLOR_TXT("Takeo", COL_YELLOW), player);
+                else
+                    print_scheduler("You don't currently have any character preset", player);
+                break;
+            default:
+                print_scheduler("You don't currently have any character preset", player);
+        }
+
+#if DEBUG == 1
+    print_scheduler("Characterindex: ^1" + player.characterindex, player);
+#endif
+
+        return true;
+    }
+
+    /* Don't allow updating the preset deeper into the game */
     if (!did_game_just_start())
     {
         return true;
     }
 
-    switch (value)
+    switch (new_value)
     {
         case "russman":
         case "oldman":
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("clip", 1, "zm_highrise");
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Russman", COL_YELLOW), player);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_VICTIS, 1, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Russman", COL_YELLOW), player);
             break;
         case "marlton":
         case "reporter":
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("clip", 4, "zm_highrise");
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Stuhlinger", COL_YELLOW), player);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_VICTIS, 4, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Stuhlinger", COL_YELLOW), player);
             break;
         case "misty":
         case "farmgirl":
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("clip", 3, "zm_highrise");
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Misty", COL_YELLOW), player);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_VICTIS, 3, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Misty", COL_YELLOW), player);
             break;
         case "stuhlinger":
         case "engineer":
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("clip", 2, "zm_highrise");
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Marlton", COL_YELLOW), player);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_VICTIS, 2, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Marlton", COL_YELLOW), player);
             break;
 
         case "finn":
         case "oleary":
         case "shortsleeve":
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("stock", 1, "zm_highrise");
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Finn", COL_YELLOW), player);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_PRISON, 1, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Finn", COL_YELLOW), player);
             break;
         case "sal":
         case "deluca":
         case "longsleeve":
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("stock", 2, "zm_highrise");
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Sal", COL_YELLOW), player);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_PRISON, 2, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Sal", COL_YELLOW), player);
             break;
         case "billy":
         case "handsome":
         case "sleeveless":
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("stock", 3, "zm_highrise");
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Billy", COL_YELLOW), player);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_PRISON, 3, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Billy", COL_YELLOW), player);
             break;
         case "weasel":
         case "arlington":
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("stock", 4, "zm_highrise");
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Weasel", COL_YELLOW), player);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_PRISON, 4, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Weasel", COL_YELLOW), player);
             break;
 
         case "dempsey":
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("alt_clip", 1, "zm_highrise");
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Dempsey", COL_YELLOW), player);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_TOMB, 1, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Dempsey", COL_YELLOW), player);
             break;
         case "nikolai":
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("alt_clip", 2, "zm_highrise");
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Nikolai", COL_YELLOW), player);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_TOMB, 2, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Nikolai", COL_YELLOW), player);
             break;
         case "richtofen":
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("alt_clip", 3, "zm_highrise");
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Richtofen", COL_YELLOW), player);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_TOMB, 3, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Richtofen", COL_YELLOW), player);
             break;
         case "takeo":
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("alt_clip", 4, "zm_highrise");
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("Takeo", COL_YELLOW), player);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_TOMB, 4, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("Takeo", COL_YELLOW), player);
             break;
 
         case "cdc":
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("lh_clip", 1, "zm_highrise");
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("CDC", COL_YELLOW), player);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_SURVIVAL, 1, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("CDC", COL_YELLOW), player);
             break;
         case "cia":
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("lh_clip", 2, "zm_highrise");
-            print_scheduler("Successfully updated character settings to: " + COLOR_TXT("CIA", COL_YELLOW), player);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_SURVIVAL, 2, STAT_CHAR_MAP);
+            print_scheduler(preset_txt + COLOR_TXT("CIA", COL_YELLOW), player);
             break;
 
         case "reset":
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("clip", 0, "zm_highrise");
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("stock", 0, "zm_highrise");
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("alt_clip", 0, "zm_highrise");
-            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat("lh_clip", 0, "zm_highrise");
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_VICTIS, 0, STAT_CHAR_MAP);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_PRISON, 0, STAT_CHAR_MAP);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_TOMB, 0, STAT_CHAR_MAP);
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_CHAR_SURVIVAL, 0, STAT_CHAR_MAP);
             print_scheduler("Character settings have been reset", player);
             break;
     }
@@ -2988,60 +3331,6 @@ viewmodel_input(value, key, player)
 
     return true;
 }
-
-check_whoami(value, key, player)
-{
-    switch (player maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(get_stat_for_map(), "zm_highrise"))
-    {
-        case 1:
-            if (is_victis_map())
-                print_scheduler("Your preset is: " + COLOR_TXT("Russman", COL_YELLOW), player);
-            else if (is_mob())
-                print_scheduler("Your preset is: " + COLOR_TXT("Finn", COL_YELLOW), player);
-            else if (is_origins())
-                print_scheduler("Your preset is: " + COLOR_TXT("Dempsey", COL_YELLOW), player);
-            else
-                print_scheduler("Your preset is: " + COLOR_TXT("CDC", COL_YELLOW), player);
-            break;
-        case 2:
-            if (is_victis_map())
-                print_scheduler("Your preset is: " + COLOR_TXT("Stuhlinger", COL_YELLOW), player);
-            else if (is_mob())
-                print_scheduler("Your preset is: " + COLOR_TXT("Sal", COL_YELLOW), player);
-            else if (is_origins())
-                print_scheduler("Your preset is: " + COLOR_TXT("Nikolai", COL_YELLOW), player);
-            else
-                print_scheduler("Your preset is: " + COLOR_TXT("CIA", COL_YELLOW), player);
-            break;
-        case 3:
-            if (is_victis_map())
-                print_scheduler("Your preset is: " + COLOR_TXT("Misty", COL_YELLOW), player);
-            else if (is_mob())
-                print_scheduler("Your preset is: " + COLOR_TXT("Billy", COL_YELLOW), player);
-            else if (is_origins())
-                print_scheduler("Your preset is: " + COLOR_TXT("Richtofen", COL_YELLOW), player);
-            else
-                print_scheduler("You don't currently have any character preset", player);
-            break;
-        case 4:
-            if (is_victis_map())
-                print_scheduler("Your preset is: " + COLOR_TXT("Marlton", COL_YELLOW), player);
-            else if (is_mob())
-                print_scheduler("Your preset is: " + COLOR_TXT("Weasel", COL_YELLOW), player);
-            else if (is_origins())
-                print_scheduler("Your preset is: " + COLOR_TXT("Takeo", COL_YELLOW), player);
-            else
-                print_scheduler("You don't currently have any character preset", player);
-            break;
-        default:
-            print_scheduler("You don't currently have any character preset", player);
-    }
-
-#if DEBUG == 1
-    print_scheduler("Characterindex: ^1" + player.characterindex, player);
-    // print_scheduler("Shader: ^1" + player.whos_who_shader, player);
-#endif
-}
 #endif
 
 /*
@@ -3068,6 +3357,17 @@ b2fr_challenge_loop()
             ::setup_topbarn,
             ::failed_topbarn
         ));
+#if FEATURE_CHALLENGE_WARDEN == 1
+    if (is_mob())
+        initial_challenges = add_to_array(initial_challenges, register_challenge(
+            ::check_bounds_warden,
+            ::setup_warden,
+            ::failed_warden,
+            ::condition_warden
+        ));
+#endif
+
+    DEBUG_PRINT(initial_challenges.size + " challenges registered");
 
     level waittill("start_of_round");
 
@@ -3078,7 +3378,7 @@ b2fr_challenge_loop()
         in_bounds = true;
         foreach (player in level.players)
         {
-            if (!player [[challenge.boundry_check]]())
+            if (!player [[challenge.boundry_check]](challenge, true))
             {
                 in_bounds = false;
             }
@@ -3087,9 +3387,9 @@ b2fr_challenge_loop()
         {
             continue;
         }
-        if (isDefined(challenge.setup))
+        if (isdefined(challenge.setup))
         {
-            thread [[challenge.setup]]();
+            challenge thread [[challenge.setup]]();
         }
         start_challenges = add_to_array(start_challenges, challenge);
         active_challenges++;
@@ -3098,12 +3398,14 @@ b2fr_challenge_loop()
     CLEAR(initial_challenges)
     CLEAR(in_bounds)
 
+    DEBUG_PRINT("challenge loop with " + active_challenges + " challenges");
+
     while (active_challenges)
     {
         foreach (challenge in start_challenges)
         {
-            /* Skip challenge if it has already been failed */
-            if (challenge.status == CHALLENGE_FAIL)
+            /* Skip challenge if it has already been failed or has not been setup fully */
+            if (challenge.status == CHALLENGE_FAIL || challenge.status == CHALLENGE_PENDING)
             {
                 continue;
             }
@@ -3111,7 +3413,7 @@ b2fr_challenge_loop()
             /* Check if players are within boundries */
             foreach (player in level.players)
             {
-                if (!player [[challenge.boundry_check]]())
+                if (!player [[challenge.boundry_check]](challenge))
                 {
                     challenge [[challenge.fail]](player);
                     break;
@@ -3124,7 +3426,7 @@ b2fr_challenge_loop()
             }
 
             /* If additional challenge condition exists, check that as well */
-            if (isDefined(challenge.condition) && [[challenge.condition]]())
+            if (isdefined(challenge.condition) && challenge [[challenge.condition]]())
             {
                 challenge [[challenge.fail]]();
             }
@@ -3147,11 +3449,12 @@ b2fr_challenge_loop()
 register_challenge(boundry_check, setup_function, challenge_failed_function, challenge_condition_function)
 {
     challenge = spawnStruct();
-    challenge.status = CHALLENGE_NEW;
+    challenge.status = CHALLENGE_PENDING;
     challenge.boundry_check = boundry_check;
     challenge.setup = setup_function;
     challenge.fail = challenge_failed_function;
     challenge.condition = challenge_condition_function;
+    challenge.fail_msg = undefined;
 
     return challenge;
 }
@@ -3163,14 +3466,47 @@ setup_yellowhouse()
         remove_mannequin(origin);
 
     print_scheduler("Yellow House Challenge: ^2ACTIVE");
+    self.status = CHALLENGE_NEW;
 }
 
 setup_topbarn()
 {
     print_scheduler("Top Barn Challenge: ^2ACTIVE");
+    self.status = CHALLENGE_NEW;
 }
 
-check_bounds_yellowhouse()
+#if FEATURE_CHALLENGE_WARDEN == 1
+setup_warden()
+{
+    level endon("end_game");
+
+    while (!is_round(8))
+    {
+        ready = 0;
+        foreach (player in level.players)
+        {
+            if (maps\mp\zombies\_zm_zonemgr::zone_is_enabled("zone_warden_office") && player check_bounds_warden(true) && !is_true(player.afterlife))
+            {
+                ready++;
+            }
+        }
+
+        if (ready >= level.players.size)
+        {
+            level waittill("start_of_round");
+            self.status = CHALLENGE_NEW;
+            print_scheduler("Warden's Office Challenge: ^2ACTIVE");
+            return;
+        }
+
+        wait 0.1;
+    }
+
+    self.status = CHALLENGE_FAIL;
+}
+#endif
+
+check_bounds_yellowhouse(challenge, init)
 {
     return (self get_current_zone() == "openhouse2_f1_zone"
         /* Staircase */
@@ -3179,25 +3515,109 @@ check_bounds_yellowhouse()
         || (self.origin[0] < 1130 && self.origin[1] > 100) && (self.origin[0] > 900 && self.origin[1] < 750) && self.origin[2] < 0);
 }
 
-check_bounds_topbarn()
+check_bounds_topbarn(challenge, init)
 {
     return ((self get_current_zone() == "zone_brn" && self.origin[2] >= 50)
         || (self.origin[0] > 7875 && self.origin[0] < 8115 && self.origin[1] <= -5115 && self.origin[1] >= -5415));
 }
 
+#if FEATURE_CHALLENGE_WARDEN == 1
+check_bounds_warden(challenge, init)
+{
+    if (is_true(init))
+    {
+        return true;
+    }
+
+    all_enemies_inside = false;
+    if (get_round_enemy_array().size >= min(24, level.zombie_total))
+    {
+        all_enemies_inside = true;
+        foreach (zombie in get_round_enemy_array())
+        {
+            if (!is_true(zombie.completed_emerging_into_playable_area))
+            {
+                all_enemies_inside = false;
+                break;
+            }
+        }
+    }
+
+    DEBUG_PRINT("check_bounds_warden all_enemies_inside => " + sstr(all_enemies_inside) + " zone => " + sstr(self get_current_zone()) + " enemy_array => " + get_round_enemy_array().size + " total => " + min(24, level.zombie_total));
+
+    switch (self get_current_zone())
+    {
+        case "zone_warden_office":
+        case "zone_cellblock_west_warden":
+        case "zone_cellblock_west_barber":
+            if (all_enemies_inside && level.zombie_total > 0)
+                return true;
+            else
+                return self get_current_zone() == "zone_warden_office";
+    }
+    return false;
+}
+
+condition_warden()
+{
+    foreach (player in level.players)
+    {
+        foreach (weapon in player getweaponslistprimaries())
+        {
+            switch (weapon)
+            {
+                case "uzi_zm":
+                case "m14_zm":
+                case "m1911_zm":
+                    break;
+                default:
+                    self.fail_msg = player.name + " has illegal weapon: " + weapon;
+                    return true;
+            }
+        }
+
+        if (isdefined(player get_player_placeable_mine()))
+        {
+            self.fail_msg = player.name + " has claymores";
+            return true;
+        }
+    }
+
+    return false;
+}
+#endif
+
 failed_yellowhouse(player)
 {
-    print_scheduler("Yellow House Challenge: ^1" + player.name + " LEFT THE CHALLENGE AREA!");
+    if (isdefined(self.fail_msg))
+        print_scheduler("Yellow House Challenge: ^1" + self.fail_msg);
+    else if (isdefined(player))
+        print_scheduler("Yellow House Challenge: ^1" + player.name + " LEFT THE CHALLENGE AREA!");
     level thread generate_temp_watermark(20, "FAILED YELLOW HOUSE", (0.8, 0, 0));
     self.status = CHALLENGE_FAIL;
 }
 
 failed_topbarn(player)
 {
-    print_scheduler("Top Barn Challenge: ^1" + player.name + " LEFT THE CHALLENGE AREA!");
+    if (isdefined(self.fail_msg))
+        print_scheduler("Top Barn Challenge: ^1" + self.fail_msg);
+    else if (isdefined(player))
+        print_scheduler("Top Barn Challenge: ^1" + player.name + " LEFT THE CHALLENGE AREA!");
     level thread generate_temp_watermark(20, "FAILED TOP BARN", (0.8, 0, 0));
     self.status = CHALLENGE_FAIL;
 }
+
+#if FEATURE_CHALLENGE_WARDEN == 1
+failed_warden(player)
+{
+    if (isdefined(self.fail_msg))
+        print_scheduler("Warden's Office Challenge: ^1" + self.fail_msg);
+    else if (isdefined(player))
+        print_scheduler("Warden's Office Challenge: ^1" + player.name + " LEFT THE CHALLENGE AREA!");
+    level thread generate_temp_watermark(level.round_number + 5, "FAILED WARDEN'S OFFICE", (0.8, 0, 0));
+    self.status = CHALLENGE_FAIL;
+}
+#endif
 #endif
 
 /*

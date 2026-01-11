@@ -1,8 +1,15 @@
+# Version 3.4
+
+- Pap gun reticle patch is now only active on Origins, and the reticle can be selected per player, see readme for more info
+- Added some aliases to chat commands
+- Deprecate legacy Plutonium versions support
+- Improve Plutonium version detection
+- Add explicit saving of updated bank balance in player stats
+
 # Version 3.3
 
 - Added ability to manage custom splits file via chat messages for Modern Plutonium (4516+)
 - Changed the behavior of permaperk system to prevent possible stat/script state mismatch
-- Custom splits file can now be managed via `splits` chat message on Plutonium
 - Fix unresolved external error from no hud release
 
 # Version 3.2

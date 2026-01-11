@@ -31,7 +31,7 @@ This patch is meant to be used during First Room games. Below you can see altern
 
 # Installation
 
-Since version B2FR v1, the patch is only available for modern versions of Plutonium. Download most recent version of your choice [from releases](https://github.com/B2ORG/T6-B2FR-PATCH/releases/latest). Downloading raw code from code section will not work!
+Since version B2FR v1, the patch is only available for Plutonium R1824+. Download most recent version of your choice [from releases](https://github.com/B2ORG/T6-B2FR-PATCH/releases/latest). Downloading raw code from code section will not work!
 
 Download either of the scripts `b2fr-hud.gsc` or `b2fr-nohud.gsc` and put them in your Plutonium folder, which is located here by default:
 
@@ -51,6 +51,9 @@ Download either of the scripts `b2fr-hud.gsc` or `b2fr-nohud.gsc` and put them i
 > [!CAUTION]
 > Whenever there's a new major patch release (eg. 2.* to 3.0 or 3.* to 4.0), please note that a lot of internal logic changes, therefore stability may not be up to the full standard. While we recommend you update your patch as we fix issues and add new features, we acknowledge increased risk with new major versions, which is why we usually leave most recent release of last major version in releases for some time, so players can access it until new version was battletested and issues have been fixed. We appreciate early adopters, who by reporting any problems help us provide the stable experience.
 
+> [!WARNING]
+> We started deprecating support for legacy Plutonium versions (such as 2905), in the future the patch will stop working on them. Make sure to switch to up to date Plutonium version.
+
 # B2FR Features
 
 - Basic anticheat capabilities (DVARs, Box etc.)
@@ -63,7 +66,7 @@ Download either of the scripts `b2fr-hud.gsc` or `b2fr-nohud.gsc` and put them i
 - Disabled DOF (Depth of Field)
 - On Nuketown, the mannequin next to the yellow bus is automatically removed
 - On Nuketown, players are warned if Jugg is going to be in the first room
-- On Origins, reticle is always default
+- On Origins, the scope reticle can be adjusted
 - On Origins, game is always in custom game mode (zombie blood from reward box)
 
 # Patch checksum
@@ -153,6 +156,22 @@ cg_drawReset 1
 - Remove other patches. B2 Extensions should not cause any issues, but if you are using any, for the sake of troubleshooting remove them as well.
 - Check if the directory the patch is in is correct. Perhaps you have multiple instances of Plutonium or Redacted and you put it in the directory belonging to another instance.
 
+# Chat commands and dvars
+
+The patch can be interacted with using DVARs and game chat commands. Below is a table listing all the options
+
+| DVAR | Chat message | Chat aliases | Chat command for host only | Feature description |
+| :--- : | :---: | :---: | :--- | :--- |
+| `timers` | - | - | - | Set to `1` to show timers (hud version only) |
+| `velocity_meter` | - | - | - | Set to `0` to hide velocity meter (hud version only) |
+| `kill_hud` | - | - | - | Set to `1` to premanently destroy HUD for the rest of the game to save allocations (hud version only) |
+| `hordes` | - | - | - | Set to `0` to stop displaying horde count at the beginning of the round (hud version only) |
+| `viewmodel` | `view` | `!v` | No | [Viewmodel swapping](#viewmodel-swapping) |
+| - | `char` | `!c` | No | [Character chat commands](#character-chat-commands) |
+| - | `preandes` | `!p` | No | Reprint the number of Semtex prenades for the current round |
+| - | `splits` | `!s` | Yes | [Splits chat command](#splits-chat-command) |
+| - | `reticle` | `!r` | No | Allows for customizing PaP'd gun reticle, values between 1 and 16 (eg. 16 is a red dot), 0 to make it random. Needs to be set BEFORE the gun is obtained |
+
 # HUD
 
 Elements listed here are not present in nohud version of this patch
@@ -160,7 +179,7 @@ Elements listed here are not present in nohud version of this patch
 - HUD elements scale accordingly to aspect ratio (solo only, because it's dependent on the ratio of hosts game, cannot be changed for clients separately via gsc patch)
 - Timer & Round timer
 - Shows times for key splits (round 20, 30 etc), the splits can be [customized by config file](#customizing-splits)
-- Velocity meter (toogleable with `velocity_meter` dvar, set to 1 or 0 respectively)
+- Velocity meter
 - Horde count is printed out at the beginning of each round past 20 (works like zombacus, not a live zombie counter)
 - Permaperks tracker (info when and what was gained / lost)
 - Semtex prenades are printed out each round on Town Semtex and Nuketown No Magic
@@ -199,7 +218,7 @@ Then proceed to create a `b2fr` folder inside of scriptdata, create `splits.txt`
 30
 ```
 
-### Chat message
+### Splits chat command
 
 As of B2FR version 3.3, you can set splits using chat messages as host. Under the hood, the patch will just overwrite contents of the file described above.
 
@@ -394,7 +413,7 @@ char reset
 ```
 
 > [!TIP]
-> You can check which preset you currently have set by entering `whoami` in the chat
+> You can check which preset you currently have set by sending `char` in the chat
 
 ## Viewmodel swapping
 
@@ -443,6 +462,8 @@ Here is a list of weaponlocker stats B2 patches use to persist settings. Note, T
 | zm_prison | alt_clip | Gameplay | (B2OP) Controls strafespeed scale |
 | zm_prison | lh_clip | Gameplay | (B2OP) Controls backspeed scale |
 | zm_tomb | clip | Gameplay | (B2OP) Controls tank depatching |
+| zm_tomb | stock | Gameplay | Controls reticle for upgraded gun (Origins only on B2FR) |
+| zm_tomb | alt_clip | Gameplay | (B2OP) Controls camo index |
 
 # Legacy info (regarding First Room Fix times)
 
