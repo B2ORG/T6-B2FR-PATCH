@@ -372,7 +372,7 @@ get_watermark_position(mode, allocate)
 {
     foreach (slot in array(0, -90, 90, -180, 180, -270, 270, -360, 360, -450, 450, -540, 540, -630, 630))
     {
-        if (!flag("b2_watermark_" + mode + slot))
+        if (!flag_exists("b2_watermark_" + mode + slot) || is_false(flag("b2_watermark_" + mode + slot)))
         {
             s = abs(slot);
             if (slot < 0)
@@ -403,7 +403,7 @@ deallocate_temp_watermark_slot(slot)
 
 generate_watermark(text, color, alpha_override)
 {
-    if (is_true(flag(text)))
+    if (flag_exists(text) && is_true(flag(text)))
         return;
 
     x_pos = get_watermark_position("perm", true);
@@ -414,7 +414,7 @@ generate_watermark(text, color, alpha_override)
     if (!isdefined(alpha_override))
         alpha_override = 0.33;
 
-    watermark = createserverfontstring("hudsmall" , 1.2);
+    watermark = createserverfontstring("objective" , 1.2);
     watermark setpoint("CENTER", "TOP", x_pos, -5);
     watermark.color = color;
     watermark settext(text);
@@ -848,7 +848,7 @@ fetch_pluto_definition()
 try_parse_pluto_version()
 {
     dvar = getdvar("shortversion");
-    if (dvar && isstrstart(dvar, "r"))
+    if (dvar != "" && isstrstart(dvar, "r"))
     {
         dvar_int = int(getsubstr(dvar, 1));
         if (dvar_int)
@@ -1313,7 +1313,7 @@ welcome_prints()
 {
     PLAYER_ENDON
 
-    if (is_true(flag("b2_bad_file")))
+    if (flag_exists("b2_bad_file") && is_true(flag("b2_bad_file")))
         return;
 
     wait 0.75;
