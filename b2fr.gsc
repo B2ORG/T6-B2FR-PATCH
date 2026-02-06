@@ -6,7 +6,7 @@
 #define DEPRECATION 5162
 
 /* Const macros */
-#define B2FR_VER 3.4
+#define B2FR_VER 3.5
 #define VER_ANCIENT 353
 #define VER_MODERN 1824
 #define VER_2905 2905
@@ -47,6 +47,8 @@
 #define STAT_CHAR_SURVIVAL "lh_clip"
 #define STAT_RETICLE_MAP "zm_tomb"
 #define STAT_RETICLE "stock"
+#define STAT_VELOCITY_METER_MAP "zm_tomb"
+#define STAT_VELOCITY_METER "lh_clip"
 
 /* Feature flags */
 #define FEATURE_HUD 1
@@ -56,7 +58,6 @@
 #define FEATURE_CONNECTOR 0
 #define FEATURE_SEMTEX_CALC_PRENADE 1
 #define FEATURE_NUKETOWN_EYES 0
-#define FEATURE_VELOCITY_METER 1
 #define FEATURE_CHALLENGES 1
 #define FEATURE_CHALLENGE_WARDEN 0
 
@@ -91,6 +92,7 @@
 
 main()
 {
+    /** TODO replace_func_safe wrapper for 4.0 */
     if (!is_plutonium_version(VER_3K))
     {
         replacefunc(maps\mp\animscripts\zm_utility::wait_network_frame, ::fixed_wait_network_frame);
@@ -166,15 +168,19 @@ on_player_spawned()
 
     self waittill("spawned_player");
 
-    /* Perhaps a redundand safety check, but doesn't hurt */
-    while (!flag("initial_players_connected"))
-        wait 0.05;
+    /* Notifier runs twice, 2nd one is when player actually spawns */
+    if (!did_game_just_start())
+    {
+        self waittill_any_array(array("spawned_player", "start_of_round"));
+    }
+
+    flag_wait("initial_players_connected");
 
     self thread welcome_prints();
     self thread evaluate_network_frame();
     self thread fill_up_bank();
 
-#if FEATURE_HUD == 1 && FEATURE_VELOCITY_METER == 1
+#if FEATURE_HUD == 1
     self thread velocity_meter();
 #endif
 
@@ -366,7 +372,7 @@ get_watermark_position(mode, allocate)
 {
     foreach (slot in array(0, -90, 90, -180, 180, -270, 270, -360, 360, -450, 450, -540, 540, -630, 630))
     {
-        if (!flag("b2_watermark_" + mode + slot))
+        if (!flag_exists("b2_watermark_" + mode + slot) || is_false(flag("b2_watermark_" + mode + slot)))
         {
             s = abs(slot);
             if (slot < 0)
@@ -397,7 +403,7 @@ deallocate_temp_watermark_slot(slot)
 
 generate_watermark(text, color, alpha_override)
 {
-    if (is_true(flag(text)))
+    if (flag_exists(text) && is_true(flag(text)))
         return;
 
     x_pos = get_watermark_position("perm", true);
@@ -408,7 +414,7 @@ generate_watermark(text, color, alpha_override)
     if (!isdefined(alpha_override))
         alpha_override = 0.33;
 
-    watermark = createserverfontstring("hudsmall" , 1.2);
+    watermark = createserverfontstring("objective" , 1.2);
     watermark setpoint("CENTER", "TOP", x_pos, -5);
     watermark.color = color;
     watermark settext(text);
@@ -842,7 +848,7 @@ fetch_pluto_definition()
 try_parse_pluto_version()
 {
     dvar = getdvar("shortversion");
-    if (dvar && isstrstart(dvar, "r"))
+    if (dvar != "" && isstrstart(dvar, "r"))
     {
         dvar_int = int(getsubstr(dvar, 1));
         if (dvar_int)
@@ -905,7 +911,7 @@ fetch_players_info()
 
 should_set_draw_offset()
 {
-    return (getdvar("cg_debugInfoCornerOffset") == "40 0" && is_plutonium_version(VER_4K));
+    return is_plutonium_version(5202) && (getdvar("cg_debugInfoCornerOffset") == "40 0" || getdvar("cg_debugInfoCornerOffset") == "50 20");
 }
 
 is_redacted()
@@ -1307,11 +1313,12 @@ welcome_prints()
 {
     PLAYER_ENDON
 
-    if (is_true(flag("b2_bad_file")))
+    if (flag_exists("b2_bad_file") && is_true(flag("b2_bad_file")))
         return;
 
     wait 0.75;
     self iprintln("B2^1FR^7 PATCH " + COLOR_TXT("V" + B2FR_VER, COL_RED));
+    printf("Plutonium " + get_plutonium_version() + " " + "b2fr" + " " + STR(B2FR_VER));
     wait 0.75;
     self iprintln(compose_welcome_print());
     wait 0.75;
@@ -1401,6 +1408,7 @@ chat_config()
 #endif
 #if FEATURE_HUD == 1
     chat[chat.size] = register_chat("splits",   array("!s"),        ::splits_input,             true,       false);
+    chat[chat.size] = register_chat("velocity", [],                 ::velocity_meter_input,     false,      false);
 #endif
 
     chat[chat.size] = register_chat("reticle",  array("!r"),        ::reticle_input,            false,      false);
@@ -1430,6 +1438,7 @@ dvar_config(key)
 #if FEATURE_HUD == 1
     dvars[dvars.size] = register_dvar("timers",                         "1",                    false,  true,       undefined,                                          ::timers_alpha);
     dvars[dvars.size] = register_dvar("kill_hud",                       "0",                    false,  false,      undefined,                                          ::kill_hud);
+    dvars[dvars.size] = register_dvar("velocity_meter",                 "",                     false,  true,       undefined,                                          ::velocity_meter_input);
 #endif
 
 #if FEATURE_HORDES == 1
@@ -1466,7 +1475,7 @@ dvar_config(key)
     /* Enables flashing hashes of individual scripts */
     dvars[dvars.size] = register_dvar("cg_flashScriptHashes",           "1",                    true,   false,      array(::is_plutonium_version, VER_4K));
     /* Offsets for pluto draws compatibile with b2 timers */
-    dvars[dvars.size] = register_dvar("cg_debugInfoCornerOffset",       "50 20",                false,  false,      ::should_set_draw_offset);
+    dvars[dvars.size] = register_dvar("cg_debugInfoCornerOffset",       "-20 15",               false,  false,      ::should_set_draw_offset);
     /* Displays the game status ID */
     dvars[dvars.size] = register_dvar("cg_drawIdentifier",              "1",                    true,   false,      array(::is_plutonium_version, VER_4K));
     /* Locks fps for all clients - 5162 fixes the limiter so we can set it more accurately */
@@ -1894,7 +1903,7 @@ b2_self_update()
 
     updates = [];
     /*                                      VERSION     UPDATE_CB               REQ_OLD*/
-    updates[updates.size] = register_update("3.4",      ::noop,                 false);
+    updates[updates.size] = register_update("3.5",      ::update_3_5,           false);
 
     foreach (i, update in updates)
     {
@@ -1932,6 +1941,14 @@ register_update(version, callback, require_old)
     update["require_old"] = require_old;
 
     return update;
+}
+
+update_3_5()
+{
+    if (getdvar("velocity_meter") == "0")
+    {
+        gethostplayer() maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_VELOCITY_METER, 2, STAT_VELOCITY_METER_MAP);
+    }
 }
 
 /*
@@ -2254,7 +2271,6 @@ recalculate_x_for_aspect_ratio(alignment, xpos, aspect_ratio)
     return xpos;
 }
 
-#if FEATURE_VELOCITY_METER == 1
 velocity_meter()
 {
     PLAYER_ENDON
@@ -2268,7 +2284,11 @@ velocity_meter()
 
     while (true)
     {
-        self velocity_visible(self.hud_velocity);
+        /* Slow down the visibility check */
+        if (gettime() % 500 == 0)
+        {
+            self velocity_visible(self.hud_velocity);
+        }
 
         velocity = int(length(self getvelocity() * (1, 1, 1)));
         if (!self isonground())
@@ -2283,7 +2303,7 @@ velocity_meter()
 
 velocity_visible(hud)
 {
-    if (getdvar("velocity_meter") == "0" || is_true(self.afterlife))
+    if (self maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(STAT_VELOCITY_METER, STAT_VELOCITY_METER_MAP) == 2 || is_true(self.afterlife))
         hud.alpha = 0;
     else
         hud.alpha = 1;
@@ -2330,7 +2350,29 @@ velocity_meter_scale(vel)
         self.glowcolor = (0.7, 0.1, 0);
     }
 }
-#endif
+
+velocity_meter_input(new_value, key, player)
+{
+    if (new_value == "0")
+    {
+        player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_VELOCITY_METER, 2, STAT_VELOCITY_METER_MAP);
+        print_scheduler("Velocity meter: ^1DISABLED", player);
+    }
+    else if (new_value == "1")
+    {
+        player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_VELOCITY_METER, 1, STAT_VELOCITY_METER_MAP);
+        print_scheduler("Velocity meter: ^3ENABLED", player);
+    }
+    else if (player maps\mp\zombies\_zm_stats::get_map_weaponlocker_stat(STAT_VELOCITY_METER, STAT_VELOCITY_METER_MAP) == 2)
+    {
+        print_scheduler("Velocity meter: ^1DISABLED", player);
+    }
+    else
+    {
+        print_scheduler("Velocity meter: ^3ENABLED", player);
+    }
+    return true;
+}
 
 #if FEATURE_SEMTEX_CALC_PRENADE == 1
 recalculate_semtex_prenades()
@@ -2404,10 +2446,11 @@ fill_up_bank()
 
     if (has_permaperks_system() && did_game_just_start())
     {
-        DEBUG_PRINT("Setting bank for " + sstr(self.name) + " from value " + sstr(self.account_value) + " to " + sstr(level.bank_account_max));
-
-        self.account_value = level.bank_account_max;
+        /* Cast it to int, float will bug out in stats */
+        self.account_value = int(level.bank_account_max);
         self maps\mp\zombies\_zm_stats::set_map_stat("depositBox", self.account_value, level.banking_map);
+
+        DEBUG_PRINT("Set bank for " + sstr(self.name) + ": " + sstr(self.account_value) + " (" + sstr(self maps\mp\zombies\_zm_stats::get_map_stat("depositBox", level.banking_map)) + ")");
     }
 }
 

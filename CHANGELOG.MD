@@ -1,3 +1,9 @@
+# Version 3.5
+
+- Velocity meter is toogleable again, and can be toggled for each player individually using chat messages
+- Fix persiting bank state for reconnecting players
+- Adjust label offsets for Pluto 5202+
+
 # Version 3.4
 
 - Pap gun reticle patch is now only active on Origins, and the reticle can be selected per player, see readme for more info

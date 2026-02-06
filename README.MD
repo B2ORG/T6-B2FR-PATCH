@@ -163,9 +163,9 @@ The patch can be interacted with using DVARs and game chat commands. Below is a 
 | DVAR | Chat message | Chat aliases | Chat command for host only | Feature description |
 | :---: | :---: | :---: | :--- | :--- |
 | `timers` | - | - | - | Set to `1` to show timers (hud version only) |
-| `velocity_meter` | - | - | - | Set to `0` to hide velocity meter (hud version only) |
 | `kill_hud` | - | - | - | Set to `1` to premanently destroy HUD for the rest of the game to save allocations (hud version only) |
 | `hordes` | - | - | - | Set to `0` to stop displaying horde count at the beginning of the round (hud version only) |
+| `velocity_meter` | `velocity` | - | No | Set to `0` to hide velocity meter (hud version only) |
 | `viewmodel` | `view` | `!v` | No | [Viewmodel swapping](#viewmodel-swapping) |
 | - | `char` | `!c` | No | [Character chat commands](#character-chat-commands) |
 | - | `preandes` | `!p` | No | Reprint the number of Semtex prenades for the current round |
@@ -464,6 +464,7 @@ Here is a list of weaponlocker stats B2 patches use to persist settings. Note, T
 | zm_tomb | clip | Gameplay | (B2OP) Controls tank depatching |
 | zm_tomb | stock | Gameplay | Controls reticle for upgraded gun (Origins only on B2FR) |
 | zm_tomb | alt_clip | Gameplay | (B2OP) Controls camo index |
+| zm_tomb | lh_clip | HUD | (B2FR) Controls whether velocity meter is enabled (1 is disabled) |
 
 # Legacy info (regarding First Room Fix times)
 
