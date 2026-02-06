@@ -1316,6 +1316,7 @@ welcome_prints()
 
     wait 0.75;
     self iprintln("B2^1FR^7 PATCH " + COLOR_TXT("V" + B2FR_VER, COL_RED));
+    printf("Plutonium " + get_plutonium_version() + " " + "b2fr" + " " + STR(B2FR_VER));
     wait 0.75;
     self iprintln(compose_welcome_print());
     wait 0.75;
