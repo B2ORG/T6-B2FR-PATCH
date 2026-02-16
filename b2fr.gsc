@@ -101,6 +101,7 @@ main()
 
     if (is_origins())
     {
+        DEBUG_PRINT("replacing get_pack_a_punch_weapon_options");
         replacefunc(maps\mp\zombies\_zm_weapons::get_pack_a_punch_weapon_options, ::b2_get_pack_a_punch_weapon_options);
     }
 }
@@ -748,46 +749,64 @@ number_round(floating_point, decimal_places, format)
 
 is_town()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_transit" && tolower(getdvar("ui_zm_mapstartlocation")) == "town" && tolower(getdvar("ui_zm_gamemodegroup")) == "zsurvival";
     return level.script == "zm_transit" && level.scr_zm_map_start_location == "town" && level.scr_zm_ui_gametype_group == "zsurvival";
 }
 
 is_farm()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_transit" && tolower(getdvar("ui_zm_mapstartlocation")) == "farm" && tolower(getdvar("ui_zm_gamemodegroup")) == "zsurvival";
     return level.script == "zm_transit" && level.scr_zm_map_start_location == "farm" && level.scr_zm_ui_gametype_group == "zsurvival";
 }
 
 is_depot()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_transit" && tolower(getdvar("ui_zm_mapstartlocation")) == "transit" && tolower(getdvar("ui_zm_gamemodegroup")) == "zsurvival";
     return level.script == "zm_transit" && level.scr_zm_map_start_location == "transit" && level.scr_zm_ui_gametype_group == "zsurvival";
 }
 
 is_tranzit()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_transit" && tolower(getdvar("ui_zm_mapstartlocation")) == "transit" && tolower(getdvar("ui_zm_gamemodegroup")) == "zclassic";
     return level.script == "zm_transit" && level.scr_zm_map_start_location == "transit" && level.scr_zm_ui_gametype_group == "zclassic";
 }
 
 is_nuketown()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_nuked";
     return level.script == "zm_nuked";
 }
 
 is_die_rise()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_highrise";
     return level.script == "zm_highrise";
 }
 
 is_mob()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_prison";
     return level.script == "zm_prison";
 }
 
 is_buried()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_buried";
     return level.script == "zm_buried";
 }
 
 is_origins()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_tomb";
     return level.script == "zm_tomb";
 }
 
