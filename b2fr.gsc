@@ -57,7 +57,6 @@
 #define FEATURE_CHARACTERS 1
 #define FEATURE_CONNECTOR 0
 #define FEATURE_SEMTEX_CALC_PRENADE 1
-#define FEATURE_NUKETOWN_EYES 0
 #define FEATURE_CHALLENGES 1
 #define FEATURE_CHALLENGE_WARDEN 0
 
@@ -1439,6 +1438,7 @@ chat_config()
     chat[chat.size] = register_chat("velocity", [],                 ::velocity_meter_input,     false,      false);
 #endif
 
+    chat[chat.size] = register_chat("eyes",     array("!e"),        ::nuketown_eyes_input,      true,       false);
     chat[chat.size] = register_chat("reticle",  array("!r"),        ::reticle_input,            false,      false);
 
     return chat;
@@ -1920,13 +1920,16 @@ origins_fix()
     }
 }
 
-#if FEATURE_NUKETOWN_EYES == 1
-nuketown_switch_eyes()
+nuketown_eyes_input()
 {
+    if (!is_nuketown())
+    {
+        return;
+    }
+    DEBUG_PRINT("setting nuektown eyes");
     level setclientfield("zombie_eye_change", 1);
     sndswitchannouncervox("richtofen");
 }
-#endif
 
 b2_self_update()
 {
