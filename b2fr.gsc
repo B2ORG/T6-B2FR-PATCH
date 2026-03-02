@@ -373,7 +373,8 @@ get_watermark_position(mode, allocate)
 {
     foreach (slot in array(0, -90, 90, -180, 180, -270, 270, -360, 360, -450, 450, -540, 540, -630, 630))
     {
-        if (!flag_exists("b2_watermark_" + mode + slot) || is_false(flag("b2_watermark_" + mode + slot)))
+        // DEBUG_PRINT("Watermark checking for allocation flag 'b2_watermark_" + sstr(mode) + sstr(slot) + "'");
+        if (!flag_exists("b2_watermark_" + mode + slot) && !flag("b2_watermark_" + mode + slot))
         {
             s = abs(slot);
             if (slot < 0)
@@ -384,7 +385,9 @@ get_watermark_position(mode, allocate)
             if (is_true(allocate))
             {
                 flag_set("b2_watermark_" + mode + s);
+                // DEBUG_PRINT("Watermark " + sstr(mode) + " allocating with flag 'b2_watermark_" + sstr(mode) + sstr(s) + "' exists=" + sstr(flag_exists("b2_watermark_" + mode + s)) + " true=" + sstr(flag("b2_watermark_" + mode + s)));
             }
+            DEBUG_PRINT("Found slot for watermark '" + sstr(mode) + "': " + sstr(slot));
             return slot;
         }
     }
@@ -408,6 +411,8 @@ generate_watermark(text, color, alpha_override)
         return;
 
     x_pos = get_watermark_position("perm", true);
+
+    DEBUG_PRINT("xpos for " + sstr(text) + ": " + sstr(x_pos));
 
     if (!isdefined(color))
         color = (1, 1, 1);
