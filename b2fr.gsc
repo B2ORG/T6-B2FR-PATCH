@@ -260,6 +260,10 @@ init_b2_dvars()
     }
 #endif
 
+    if (is_town() || is_farm())
+    {
+        level.gameplay_reminder = ::dog_maps_gameplay_reminder;
+    }
     if (is_nuketown())
     {
         level.gameplay_reminder = ::nuketown_gameplay_reminder;
@@ -1804,6 +1808,33 @@ load_b2_splits()
         DEBUG_PRINT("splits loaded from IO: " + sstr(splits));
     }
     return splits;
+}
+
+dog_maps_gameplay_reminder()
+{
+    PLAYER_ENDON
+
+    if (!self ishost())
+    {
+        return;
+    }
+
+    if (is_true(level.dog_rounds_allowed))
+    {
+        print_scheduler("Playing with dog rounds is not allowed as of March 2nd, 2026. The game won't be valid! Type 'idc' to ignore and play", self);
+        if (!does_care())
+        {
+            emulate_menu_call("endround");
+            return;
+        }
+        generate_watermark("DOGROUNDS ENABLED", (0.8, 0.8, 0), 0.66);
+    }
+    else
+    {
+        print_scheduler("^1REMINDER ^7You are a host", self);
+        wait 0.25;
+        print_scheduler("Full gameplay is required from host perspective as of April 2023", self);
+    }
 }
 
 nuketown_gameplay_reminder()
