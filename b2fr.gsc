@@ -1813,6 +1813,11 @@ nuketown_gameplay_reminder()
     // -82.07 740.67
     // -844.93 60.8
 
+    if (!self ishost())
+    {
+        return;
+    }
+
     if (level.players.size > 1)
     {
         spawn_positions = [];
@@ -1853,9 +1858,15 @@ nuketown_gameplay_reminder()
 
         if (jug_in_spawn)
         {
-            print_scheduler("JuggerNog in the first room! Full gameplay from all players will be required!", self);
+            print_scheduler("Jug machine is in the first room. The game won't be valid! Type 'idc' to ignore and play.", self);
+            if (!nuketown_idc())
+            {
+                b2_restart_level();
+                return;
+            }
+            generate_watermark("JUG IN THE ROOM", (0.8, 0.8, 0), 0.66);
         }
-        else if (self ishost())
+        else
         {
             print_scheduler("^1REMINDER ^7You are a host", self);
             wait 0.25;
@@ -1973,6 +1984,34 @@ update_3_5()
     {
         gethostplayer() maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_VELOCITY_METER, 2, STAT_VELOCITY_METER_MAP);
     }
+}
+
+nuketown_idc_listener()
+{
+    LEVEL_ENDON
+    flag_init("b2_kill_nuketown_idc");
+    level endon("b2_kill_nuketown_idc_listener");
+    while (true)
+    {
+        level waittill("say", message, player);
+
+        if (player ishost() && message == "idc")
+        {
+            flag_set("b2_kill_nuketown_idc");
+            break;
+        }
+    }
+}
+
+nuketown_idc()
+{
+    LEVEL_ENDON
+
+    thread nuketown_idc_listener();
+    wait 8;
+    level notify("b2_kill_nuketown_idc_listener");
+
+    return flag("b2_kill_nuketown_idc");
 }
 
 /*
