@@ -262,7 +262,7 @@ init_b2_dvars()
 
     if (is_nuketown())
     {
-        level.GAMEPLAY_REMINDER = ::nuketown_gameplay_reminder;
+        level.gameplay_reminder = ::nuketown_gameplay_reminder;
     }
 
     dvars = dvar_config();
@@ -1349,9 +1349,9 @@ welcome_prints()
     self iprintln("Source: ^1github.com/B2ORG/T6-B2FR-PATCH");
 
     wait 1;
-    if (isdefined(level.GAMEPLAY_REMINDER))
+    if (isdefined(level.gameplay_reminder))
     {
-        self thread [[level.GAMEPLAY_REMINDER]]();
+        self thread [[level.gameplay_reminder]]();
     }
     else if (level.players.size > 1 && self ishost())
     {
