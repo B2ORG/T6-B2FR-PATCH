@@ -2565,15 +2565,15 @@ perma_perks_setup()
     flag_wait("initial_blackscreen_passed");
     thread watch_permaperk_award();
 
-    if (getdvar("award_perks") != "1")
+    if (getdvar("award_perks") == "1")
+    {
+        array_thread(level.players, ::award_permaperks_safe);
+        setdvar("award_perks", 0);
+    }
+    else
     {
         CLEAR(level.b2_awarding_permaperks_now)
-        return;
     }
-    setdvar("award_perks", 0);
-
-    foreach (player in level.players)
-        player thread award_permaperks_safe();
 
 #if FEATURE_HUD == 1
     array_thread(level.players, ::permaperks_watcher);
@@ -2820,6 +2820,11 @@ permaperks_watcher()
 {
     PLAYER_ENDON
 
+    while (isdefined(level.b2_awarding_permaperks_now) && did_game_just_start())
+    {
+        wait 0.1;
+    }
+
     self.last_perk_state = [];
     foreach(perk in level.pers_upgrades_keys)
     {
@@ -2834,8 +2839,7 @@ permaperks_watcher()
         {
             if (self.pers_upgrades_awarded[perk] != self.last_perk_state[perk])
             {
-                if (!is_true(self.permaperk_display_lock))
-                    self print_permaperk_state(self.pers_upgrades_awarded[perk], perk);
+                self print_permaperk_state(self.pers_upgrades_awarded[perk], perk);
                 self.last_perk_state[perk] = self.pers_upgrades_awarded[perk];
                 wait 0.1;
             }
