@@ -169,7 +169,7 @@ on_player_spawned()
     self waittill("spawned_player");
 
     /* Notifier runs twice, 2nd one is when player actually spawns */
-    if (!did_game_just_start())
+    if (flag("initial_blackscreen_passed"))
     {
         self waittill_any_array(array("spawned_player", "start_of_round"));
     }
@@ -845,7 +845,7 @@ is_victis_map()
 
 did_game_just_start()
 {
-    return !isdefined(level.start_round) || !is_round(level.start_round + 2);
+    return !isdefined(level.start_round) || level.start_round >= level.round_number;
 }
 
 is_round(rnd)
