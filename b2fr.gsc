@@ -49,6 +49,8 @@
 #define STAT_RETICLE "stock"
 #define STAT_VELOCITY_METER_MAP "zm_tomb"
 #define STAT_VELOCITY_METER "lh_clip"
+#define RESTORE_WEAPONS 1
+#define RESTORE_PERKS 2
 
 /* Feature flags */
 #define FEATURE_HUD 1
@@ -59,6 +61,7 @@
 #define FEATURE_SEMTEX_CALC_PRENADE 1
 #define FEATURE_CHALLENGES 1
 #define FEATURE_CHALLENGE_WARDEN 0
+#define FEATURE_LOADOUT_CACHE 1
 
 /* Snippet macros */
 #define LEVEL_ENDON \
@@ -118,6 +121,7 @@ init()
     init_b2_io();
     b2_self_update();
 
+    thread init_b2_loadout_cache();
     init_b2_flags();
     init_b2_dvars();
     init_b2_characters();
@@ -159,6 +163,13 @@ on_player_connected()
     {
         level waittill("connected", player);
         player thread on_player_spawned();
+
+#if FEATURE_LOADOUT_CACHE == 1
+        if (player ishost() || flag("initial_blackscreen_passed"))
+        {
+            player._b2_skip_loadout_cache = true;
+        }
+#endif
     }
 }
 
@@ -292,6 +303,22 @@ init_b2_io()
     }
 }
 
+init_b2_loadout_cache()
+{
+#if FEATURE_LOADOUT_CACHE == 1
+    LEVEL_ENDON
+
+    flag_wait("initial_blackscreen_passed");
+
+    if (is_town() || is_die_rise())
+    {
+        level.givecustomloadout = ::restore_equipment_on_reconnect;
+
+        thread cache_current_loadout();
+    }
+#endif
+}
+
 b2fr_main_loop()
 {
     LEVEL_ENDON
@@ -317,6 +344,10 @@ b2fr_main_loop()
 #if FEATURE_HORDES == 1
         level thread show_hordes();
 #endif
+#endif
+
+#if FEATURE_LOADOUT_CACHE == 1
+        unlock_loadout_cache();
 #endif
 
         if (has_permaperks_system())
@@ -1133,6 +1164,18 @@ version_compare(compare, with, allow_equal)
     return major_greater || minor_greater || inner_greater;
 }
 
+get_player_by_ent_number(number)
+{
+    foreach (player in level.players)
+    {
+        if (isdefined(player.entity_num) && player.entity_num == number)
+        {
+            return player;
+        }
+    }
+    return undefined;
+}
+
 /*
  ************************************************************************************************************
  ****************************************** SINGLE PURPOSE FUNCTIONS ****************************************
@@ -1462,6 +1505,7 @@ dvar_config(key)
     /*                                  DVAR                            VALUE                   PROTECT INIT_ONLY   EVAL                                                WATCHER_CALLBACK*/
     dvars[dvars.size] = register_dvar("sv_cheats",                      "0",                    true,   false);
     dvars[dvars.size] = register_dvar("award_perks",                    "1",                    false,  true,       ::has_permaperks_system);
+    dvars[dvars.size] = register_dvar("disable_loadout_caching",      "0",                    false,  true);
 
 #if FEATURE_HUD == 1
     dvars[dvars.size] = register_dvar("timers",                         "1",                    false,  true,       undefined,                                          ::timers_alpha);
@@ -2048,6 +2092,205 @@ does_care()
 
     return flag("b2_kill_idc");
 }
+
+#if FEATURE_LOADOUT_CACHE == 1
+can_cache_loadout()
+{
+    if (!is_player_valid(self))
+    {
+        return false;
+    }
+
+    if (is_true(self.is_hotjoining))
+    {
+        return false;
+    }
+
+    if (get_zombies_left() > 3 || get_zombies_left() < 1)
+    {
+        return false;
+    }
+
+    if (is_special_round())
+    {
+        return false;
+    }
+
+#if DEBUG == 0
+    if (level.round_number < 11)
+    {
+        return false;
+    }
+#endif
+
+    if (getdvar("disable_loadout_caching") == "1")
+    {
+        return false;
+    }
+
+    return true;
+}
+
+cache_current_loadout()
+{
+    LEVEL_ENDON
+
+    level.b2_player_eq_cache = [];
+    can_cache_state = [];
+
+    while (true)
+    {
+        wait 0.25;
+
+        foreach (player in level.players)
+        {
+            if (is_true(player._b2_skip_loadout_cache))
+            {
+                continue;
+            }
+
+            player_key = STR(player.entity_num);
+
+            if (!isdefined(level.b2_player_eq_cache[player_key]) || !isdefined(can_cache_state[player_key]))
+            {
+                level.b2_player_eq_cache[player_key] = [];
+                can_cache_state[player_key] = false;
+                // DEBUG_PRINT("type of player_key=" + typeof(player_key));
+            }
+
+            level.b2_player_eq_cache[player_key][STR(RESTORE_WEAPONS)] = [];
+            level.b2_player_eq_cache[player_key][STR(RESTORE_PERKS)] = [];
+            // DEBUG_PRINT("empty cache arr for " + sstr(player_key));
+
+            if (player can_cache_loadout() != can_cache_state[player_key])
+            {
+                can_cache_state[player_key] = player can_cache_loadout();
+                if (can_cache_state[player_key])
+                {
+                    DEBUG_PRINT("Toggling loadout preservation state ACTIVE for " + sstr(player.name) + " (" + sstr(player_key) + ")");
+                    print_scheduler("Loadout preservation: " + COLOR_TXT("ACTIVE", COL_GREEN), player);
+                }
+                else
+                {
+                    DEBUG_PRINT("Toggling loadout preservation state DISABLED for " + sstr(player.name) + " (" + sstr(player_key) + ")");
+                    print_scheduler("Loadout preservation: " + COLOR_TXT("DISABLED", COL_RED), player);
+                }
+            }
+
+            if (!can_cache_state[player_key])
+            {
+                continue;
+            }
+
+            foreach (weapon in player getweaponslist())
+            {
+                if (!get_is_in_box(get_base_weapon_name(weapon, true)))
+                {
+                    continue;
+                }
+                level.b2_player_eq_cache[player_key][STR(RESTORE_WEAPONS)][level.b2_player_eq_cache[player_key][STR(RESTORE_WEAPONS)].size] = get_player_weapondata(player, weapon);
+            }
+
+            if (isdefined(player.perks_active))
+            {
+                level.b2_player_eq_cache[player_key][STR(RESTORE_PERKS)] = array_copy(player.perks_active);
+            }
+            // DEBUG_PRINT(sstr(level.b2_player_eq_cache[player_key]));
+        }
+
+        /* Remove state for disconnected players */
+        foreach (state_key in getarraykeys(can_cache_state))
+        {
+            // DEBUG_PRINT("cleanup check " + sstr(state_key));
+            if (!isdefined(get_player_by_ent_number(int(state_key))) && is_true(can_cache_state[state_key]))
+            {
+                // DEBUG_PRINT("clearing state: " + sstr(state_key));
+                can_cache_state[state_key] = false;
+            }
+        }
+    }
+}
+
+restore_equipment_on_reconnect(restore_type)
+{
+    primaries = 0;
+
+    player_key = STR(self.entity_num);
+
+    // DEBUG_PRINT("restore_cached_weapons() disable_loadout_caching=" + sstr(getdvar("disable_loadout_caching")) + " cache_defined=" + sstr(isdefined(level.b2_player_eq_cache)) + " cache_defined_for=" + sstr(isdefined(level.b2_player_eq_cache[player_key])) + " (" + sstr(player_key) + ")");
+
+    if (getdvar("disable_loadout_caching") != "1" && isdefined(level.b2_player_eq_cache) && isdefined(level.b2_player_eq_cache[player_key]))
+    {
+        /* Restore perks */
+        if (is_die_rise())
+        {
+            foreach(perk_to_restore in level.b2_player_eq_cache[player_key][STR(RESTORE_PERKS)])
+            {
+                // DEBUG_PRINT("perk_to_restore: " + sstr(perk_to_restore));
+                self maps\mp\zombies\_zm_perks::give_perk(perk_to_restore);
+            }
+        }
+        /* Restore box guns */
+        else if (is_town())
+        {
+            foreach(wpn_to_restore in level.b2_player_eq_cache[player_key][STR(RESTORE_WEAPONS)])
+            {
+                if (!maps\mp\zombies\_zm_magicbox::treasure_chest_canplayerreceiveweapon(self, get_base_name(wpn_to_restore["name"])))
+                {
+                    DEBUG_PRINT("cannot receive " + sstr(wpn_to_restore["name"]));
+                    continue;
+                }
+
+                self weapondata_give(wpn_to_restore);
+                if (isweaponprimary(wpn_to_restore["name"]))
+                {
+                    primaries++;
+                }
+            }
+            // DEBUG_PRINT("restored " + sstr(level.b2_player_eq_cache[player_key][STR(RESTORE_WEAPONS)].size) + " weapons (" + sstr(primaries) + " primaries)");
+        }
+    }
+
+    if (primaries < get_player_weapon_limit(self))
+    {
+        if (primaries > 0)
+        {
+            self give_start_weapon(false);
+        }
+        else
+        {
+            self give_start_weapon(true);
+        }
+        DEBUG_PRINT("adding start weapon");
+    }
+
+    /* Original content of givecustomloadout callback */
+    if (is_mob())
+    {
+        self giveweapon("knife_zm_alcatraz");
+        self set_player_melee_weapon("knife_zm_alcatraz");
+    }
+    else
+    {
+        self giveweapon("knife_zm");
+    }
+
+    DEBUG_PRINT("Weapons after restore: " + sstr(self getweaponslistprimaries()));
+}
+
+unlock_loadout_cache()
+{
+    foreach (player in level.players)
+    {
+        if (player ishost())
+        {
+            continue;
+        }
+
+        CLEAR(player._b2_skip_loadout_cache);
+    }
+}
+#endif
 
 /*
  ************************************************************************************************************
