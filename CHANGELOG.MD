@@ -1,3 +1,17 @@
+# Version 3.6
+
+*This version is following a vote from February 2026*
+
+- Fix permaperks status prints breaking after restart
+- Fix broken textures on upgraded weapons on Town
+- Fix watermarks being able to draw on top of each other
+- Add automatic restart if Jug is in the room on Nuketown
+- Add automatic game end if dogs are enabled on Town and Farm
+- Add ability to toggle blue eyes on Nuketown with `eyes` chat message
+- Add ability to retain weapons on Town for off host players for breaks (more details in the readme)
+- Add ability to retain perks on Die Rise for off host players for breaks (more details in the readme)
+- Bump deprecated Pluto version
+
 # Version 3.5
 
 - Velocity meter is toogleable again, and can be toggled for each player individually using chat messages

@@ -3,10 +3,10 @@
 #define DEBUG 0
 #define DEBUG_HUD 0
 #define BETA 0
-#define DEPRECATION 5162
+#define DEPRECATION 5246
 
 /* Const macros */
-#define B2FR_VER 3.5
+#define B2FR_VER 3.6
 #define VER_ANCIENT 353
 #define VER_MODERN 1824
 #define VER_2905 2905
@@ -49,6 +49,8 @@
 #define STAT_RETICLE "stock"
 #define STAT_VELOCITY_METER_MAP "zm_tomb"
 #define STAT_VELOCITY_METER "lh_clip"
+#define RESTORE_WEAPONS 1
+#define RESTORE_PERKS 2
 
 /* Feature flags */
 #define FEATURE_HUD 1
@@ -57,9 +59,9 @@
 #define FEATURE_CHARACTERS 1
 #define FEATURE_CONNECTOR 0
 #define FEATURE_SEMTEX_CALC_PRENADE 1
-#define FEATURE_NUKETOWN_EYES 0
 #define FEATURE_CHALLENGES 1
 #define FEATURE_CHALLENGE_WARDEN 0
+#define FEATURE_LOADOUT_CACHE 1
 
 /* Snippet macros */
 #define LEVEL_ENDON \
@@ -101,6 +103,7 @@ main()
 
     if (is_origins())
     {
+        DEBUG_PRINT("replacing get_pack_a_punch_weapon_options");
         replacefunc(maps\mp\zombies\_zm_weapons::get_pack_a_punch_weapon_options, ::b2_get_pack_a_punch_weapon_options);
     }
 }
@@ -118,6 +121,7 @@ init()
     init_b2_io();
     b2_self_update();
 
+    thread init_b2_loadout_cache();
     init_b2_flags();
     init_b2_dvars();
     init_b2_characters();
@@ -159,6 +163,13 @@ on_player_connected()
     {
         level waittill("connected", player);
         player thread on_player_spawned();
+
+#if FEATURE_LOADOUT_CACHE == 1
+        if (player ishost() || flag("initial_blackscreen_passed"))
+        {
+            player._b2_skip_loadout_cache = true;
+        }
+#endif
     }
 }
 
@@ -169,7 +180,7 @@ on_player_spawned()
     self waittill("spawned_player");
 
     /* Notifier runs twice, 2nd one is when player actually spawns */
-    if (!did_game_just_start())
+    if (flag("initial_blackscreen_passed"))
     {
         self waittill_any_array(array("spawned_player", "start_of_round"));
     }
@@ -259,9 +270,13 @@ init_b2_dvars()
     }
 #endif
 
+    if (is_town() || is_farm())
+    {
+        level.gameplay_reminder = ::dog_maps_gameplay_reminder;
+    }
     if (is_nuketown())
     {
-        level.GAMEPLAY_REMINDER = ::nuketown_gameplay_reminder;
+        level.gameplay_reminder = ::nuketown_gameplay_reminder;
     }
 
     dvars = dvar_config();
@@ -286,6 +301,22 @@ init_b2_io()
         fs_fclose(f);
         fs_remove("b2fr/.tmp");
     }
+}
+
+init_b2_loadout_cache()
+{
+#if FEATURE_LOADOUT_CACHE == 1
+    LEVEL_ENDON
+
+    flag_wait("initial_blackscreen_passed");
+
+    if (is_town() || is_die_rise())
+    {
+        level.givecustomloadout = ::restore_equipment_on_reconnect;
+
+        thread cache_current_loadout();
+    }
+#endif
 }
 
 b2fr_main_loop()
@@ -313,6 +344,10 @@ b2fr_main_loop()
 #if FEATURE_HORDES == 1
         level thread show_hordes();
 #endif
+#endif
+
+#if FEATURE_LOADOUT_CACHE == 1
+        unlock_loadout_cache();
 #endif
 
         if (has_permaperks_system())
@@ -372,7 +407,8 @@ get_watermark_position(mode, allocate)
 {
     foreach (slot in array(0, -90, 90, -180, 180, -270, 270, -360, 360, -450, 450, -540, 540, -630, 630))
     {
-        if (!flag_exists("b2_watermark_" + mode + slot) || is_false(flag("b2_watermark_" + mode + slot)))
+        // DEBUG_PRINT("Watermark checking for allocation flag 'b2_watermark_" + sstr(mode) + sstr(slot) + "'");
+        if (!flag_exists("b2_watermark_" + mode + slot) && !flag("b2_watermark_" + mode + slot))
         {
             s = abs(slot);
             if (slot < 0)
@@ -383,7 +419,9 @@ get_watermark_position(mode, allocate)
             if (is_true(allocate))
             {
                 flag_set("b2_watermark_" + mode + s);
+                // DEBUG_PRINT("Watermark " + sstr(mode) + " allocating with flag 'b2_watermark_" + sstr(mode) + sstr(s) + "' exists=" + sstr(flag_exists("b2_watermark_" + mode + s)) + " true=" + sstr(flag("b2_watermark_" + mode + s)));
             }
+            DEBUG_PRINT("Found slot for watermark '" + sstr(mode) + "': " + sstr(slot));
             return slot;
         }
     }
@@ -407,6 +445,8 @@ generate_watermark(text, color, alpha_override)
         return;
 
     x_pos = get_watermark_position("perm", true);
+
+    DEBUG_PRINT("xpos for " + sstr(text) + ": " + sstr(x_pos));
 
     if (!isdefined(color))
         color = (1, 1, 1);
@@ -748,46 +788,64 @@ number_round(floating_point, decimal_places, format)
 
 is_town()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_transit" && tolower(getdvar("ui_zm_mapstartlocation")) == "town" && tolower(getdvar("ui_zm_gamemodegroup")) == "zsurvival";
     return level.script == "zm_transit" && level.scr_zm_map_start_location == "town" && level.scr_zm_ui_gametype_group == "zsurvival";
 }
 
 is_farm()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_transit" && tolower(getdvar("ui_zm_mapstartlocation")) == "farm" && tolower(getdvar("ui_zm_gamemodegroup")) == "zsurvival";
     return level.script == "zm_transit" && level.scr_zm_map_start_location == "farm" && level.scr_zm_ui_gametype_group == "zsurvival";
 }
 
 is_depot()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_transit" && tolower(getdvar("ui_zm_mapstartlocation")) == "transit" && tolower(getdvar("ui_zm_gamemodegroup")) == "zsurvival";
     return level.script == "zm_transit" && level.scr_zm_map_start_location == "transit" && level.scr_zm_ui_gametype_group == "zsurvival";
 }
 
 is_tranzit()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_transit" && tolower(getdvar("ui_zm_mapstartlocation")) == "transit" && tolower(getdvar("ui_zm_gamemodegroup")) == "zclassic";
     return level.script == "zm_transit" && level.scr_zm_map_start_location == "transit" && level.scr_zm_ui_gametype_group == "zclassic";
 }
 
 is_nuketown()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_nuked";
     return level.script == "zm_nuked";
 }
 
 is_die_rise()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_highrise";
     return level.script == "zm_highrise";
 }
 
 is_mob()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_prison";
     return level.script == "zm_prison";
 }
 
 is_buried()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_buried";
     return level.script == "zm_buried";
 }
 
 is_origins()
 {
+    if (!isdefined(level.script))
+        return tolower(getdvar("mapname")) == "zm_tomb";
     return level.script == "zm_tomb";
 }
 
@@ -818,7 +876,7 @@ is_victis_map()
 
 did_game_just_start()
 {
-    return !isdefined(level.start_round) || !is_round(level.start_round + 2);
+    return !isdefined(level.start_round) || level.start_round >= level.round_number;
 }
 
 is_round(rnd)
@@ -1106,6 +1164,18 @@ version_compare(compare, with, allow_equal)
     return major_greater || minor_greater || inner_greater;
 }
 
+get_player_by_ent_number(number)
+{
+    foreach (player in level.players)
+    {
+        if (isdefined(player.entity_num) && player.entity_num == number)
+        {
+            return player;
+        }
+    }
+    return undefined;
+}
+
 /*
  ************************************************************************************************************
  ****************************************** SINGLE PURPOSE FUNCTIONS ****************************************
@@ -1325,9 +1395,9 @@ welcome_prints()
     self iprintln("Source: ^1github.com/B2ORG/T6-B2FR-PATCH");
 
     wait 1;
-    if (isdefined(level.GAMEPLAY_REMINDER))
+    if (isdefined(level.gameplay_reminder))
     {
-        self thread [[level.GAMEPLAY_REMINDER]]();
+        self thread [[level.gameplay_reminder]]();
     }
     else if (level.players.size > 1 && self ishost())
     {
@@ -1411,6 +1481,7 @@ chat_config()
     chat[chat.size] = register_chat("velocity", [],                 ::velocity_meter_input,     false,      false);
 #endif
 
+    chat[chat.size] = register_chat("eyes",     array("!e"),        ::nuketown_eyes_input,      true,       false);
     chat[chat.size] = register_chat("reticle",  array("!r"),        ::reticle_input,            false,      false);
 
     return chat;
@@ -1434,6 +1505,7 @@ dvar_config(key)
     /*                                  DVAR                            VALUE                   PROTECT INIT_ONLY   EVAL                                                WATCHER_CALLBACK*/
     dvars[dvars.size] = register_dvar("sv_cheats",                      "0",                    true,   false);
     dvars[dvars.size] = register_dvar("award_perks",                    "1",                    false,  true,       ::has_permaperks_system);
+    dvars[dvars.size] = register_dvar("disable_loadout_caching",      "0",                    false,  true);
 
 #if FEATURE_HUD == 1
     dvars[dvars.size] = register_dvar("timers",                         "1",                    false,  true,       undefined,                                          ::timers_alpha);
@@ -1782,12 +1854,45 @@ load_b2_splits()
     return splits;
 }
 
+dog_maps_gameplay_reminder()
+{
+    PLAYER_ENDON
+
+    if (!self ishost())
+    {
+        return;
+    }
+
+    if (is_true(level.dog_rounds_allowed))
+    {
+        print_scheduler("Playing with dog rounds is not allowed as of March 2nd, 2026. The game won't be valid! Type 'idc' to ignore and play", self);
+        if (!does_care())
+        {
+            emulate_menu_call("endround");
+            return;
+        }
+        generate_watermark("DOGROUNDS ENABLED", (0.8, 0.8, 0), 0.66);
+    }
+    else
+    {
+        print_scheduler("^1REMINDER ^7You are a host", self);
+        wait 0.25;
+        print_scheduler("Full gameplay is required from host perspective as of April 2023", self);
+    }
+}
+
 nuketown_gameplay_reminder()
 {
+    PLAYER_ENDON
     // 804.1 -56.86
     // -455.42 617.4
     // -82.07 740.67
     // -844.93 60.8
+
+    if (!self ishost())
+    {
+        return;
+    }
 
     if (level.players.size > 1)
     {
@@ -1829,9 +1934,15 @@ nuketown_gameplay_reminder()
 
         if (jug_in_spawn)
         {
-            print_scheduler("JuggerNog in the first room! Full gameplay from all players will be required!", self);
+            print_scheduler("Jug machine is in the first room. The game won't be valid! Type 'idc' to ignore and play.", self);
+            if (!does_care())
+            {
+                b2_restart_level();
+                return;
+            }
+            generate_watermark("JUG IN THE ROOM", (0.8, 0.8, 0), 0.66);
         }
-        else if (self ishost())
+        else
         {
             print_scheduler("^1REMINDER ^7You are a host", self);
             wait 0.25;
@@ -1853,13 +1964,16 @@ origins_fix()
     }
 }
 
-#if FEATURE_NUKETOWN_EYES == 1
-nuketown_switch_eyes()
+nuketown_eyes_input()
 {
+    if (!is_nuketown())
+    {
+        return;
+    }
+    DEBUG_PRINT("setting nuektown eyes");
     level setclientfield("zombie_eye_change", 1);
     sndswitchannouncervox("richtofen");
 }
-#endif
 
 b2_self_update()
 {
@@ -1950,6 +2064,233 @@ update_3_5()
         gethostplayer() maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_VELOCITY_METER, 2, STAT_VELOCITY_METER_MAP);
     }
 }
+
+idc_listener()
+{
+    LEVEL_ENDON
+    flag_init("b2_kill_idc");
+    level endon("b2_kill_idc_listener");
+    while (true)
+    {
+        level waittill("say", message, player);
+
+        if (player ishost() && message == "idc")
+        {
+            flag_set("b2_kill_idc");
+            break;
+        }
+    }
+}
+
+does_care()
+{
+    LEVEL_ENDON
+
+    thread idc_listener();
+    wait 8;
+    level notify("b2_kill_idc_listener");
+
+    return flag("b2_kill_idc");
+}
+
+#if FEATURE_LOADOUT_CACHE == 1
+can_cache_loadout()
+{
+    if (!is_player_valid(self))
+    {
+        return false;
+    }
+
+    if (is_true(self.is_hotjoining))
+    {
+        return false;
+    }
+
+    if (get_zombies_left() > 3 || get_zombies_left() < 1)
+    {
+        return false;
+    }
+
+    if (is_special_round())
+    {
+        return false;
+    }
+
+#if DEBUG == 0
+    if (level.round_number < 11)
+    {
+        return false;
+    }
+#endif
+
+    if (getdvar("disable_loadout_caching") == "1")
+    {
+        return false;
+    }
+
+    return true;
+}
+
+cache_current_loadout()
+{
+    LEVEL_ENDON
+
+    level.b2_player_eq_cache = [];
+    can_cache_state = [];
+
+    while (true)
+    {
+        wait 0.25;
+
+        foreach (player in level.players)
+        {
+            if (is_true(player._b2_skip_loadout_cache))
+            {
+                continue;
+            }
+
+            player_key = STR(player.entity_num);
+
+            if (!isdefined(level.b2_player_eq_cache[player_key]) || !isdefined(can_cache_state[player_key]))
+            {
+                level.b2_player_eq_cache[player_key] = [];
+                can_cache_state[player_key] = false;
+                // DEBUG_PRINT("type of player_key=" + typeof(player_key));
+            }
+
+            level.b2_player_eq_cache[player_key][STR(RESTORE_WEAPONS)] = [];
+            level.b2_player_eq_cache[player_key][STR(RESTORE_PERKS)] = [];
+            // DEBUG_PRINT("empty cache arr for " + sstr(player_key));
+
+            if (player can_cache_loadout() != can_cache_state[player_key])
+            {
+                can_cache_state[player_key] = player can_cache_loadout();
+                if (can_cache_state[player_key])
+                {
+                    DEBUG_PRINT("Toggling loadout preservation state ACTIVE for " + sstr(player.name) + " (" + sstr(player_key) + ")");
+                    print_scheduler("Loadout preservation: " + COLOR_TXT("ACTIVE", COL_GREEN), player);
+                }
+                else
+                {
+                    DEBUG_PRINT("Toggling loadout preservation state DISABLED for " + sstr(player.name) + " (" + sstr(player_key) + ")");
+                    print_scheduler("Loadout preservation: " + COLOR_TXT("DISABLED", COL_RED), player);
+                }
+            }
+
+            if (!can_cache_state[player_key])
+            {
+                continue;
+            }
+
+            foreach (weapon in player getweaponslist())
+            {
+                if (!get_is_in_box(get_base_weapon_name(weapon, true)))
+                {
+                    continue;
+                }
+                level.b2_player_eq_cache[player_key][STR(RESTORE_WEAPONS)][level.b2_player_eq_cache[player_key][STR(RESTORE_WEAPONS)].size] = get_player_weapondata(player, weapon);
+            }
+
+            if (isdefined(player.perks_active))
+            {
+                level.b2_player_eq_cache[player_key][STR(RESTORE_PERKS)] = array_copy(player.perks_active);
+            }
+            // DEBUG_PRINT(sstr(level.b2_player_eq_cache[player_key]));
+        }
+
+        /* Remove state for disconnected players */
+        foreach (state_key in getarraykeys(can_cache_state))
+        {
+            // DEBUG_PRINT("cleanup check " + sstr(state_key));
+            if (!isdefined(get_player_by_ent_number(int(state_key))) && is_true(can_cache_state[state_key]))
+            {
+                // DEBUG_PRINT("clearing state: " + sstr(state_key));
+                can_cache_state[state_key] = false;
+            }
+        }
+    }
+}
+
+restore_equipment_on_reconnect(restore_type)
+{
+    primaries = 0;
+
+    player_key = STR(self.entity_num);
+
+    // DEBUG_PRINT("restore_cached_weapons() disable_loadout_caching=" + sstr(getdvar("disable_loadout_caching")) + " cache_defined=" + sstr(isdefined(level.b2_player_eq_cache)) + " cache_defined_for=" + sstr(isdefined(level.b2_player_eq_cache[player_key])) + " (" + sstr(player_key) + ")");
+
+    if (getdvar("disable_loadout_caching") != "1" && isdefined(level.b2_player_eq_cache) && isdefined(level.b2_player_eq_cache[player_key]))
+    {
+        /* Restore perks */
+        if (is_die_rise())
+        {
+            foreach(perk_to_restore in level.b2_player_eq_cache[player_key][STR(RESTORE_PERKS)])
+            {
+                // DEBUG_PRINT("perk_to_restore: " + sstr(perk_to_restore));
+                self maps\mp\zombies\_zm_perks::give_perk(perk_to_restore);
+            }
+        }
+        /* Restore box guns */
+        else if (is_town())
+        {
+            foreach(wpn_to_restore in level.b2_player_eq_cache[player_key][STR(RESTORE_WEAPONS)])
+            {
+                if (!maps\mp\zombies\_zm_magicbox::treasure_chest_canplayerreceiveweapon(self, get_base_name(wpn_to_restore["name"])))
+                {
+                    DEBUG_PRINT("cannot receive " + sstr(wpn_to_restore["name"]));
+                    continue;
+                }
+
+                self weapondata_give(wpn_to_restore);
+                if (isweaponprimary(wpn_to_restore["name"]))
+                {
+                    primaries++;
+                }
+            }
+            // DEBUG_PRINT("restored " + sstr(level.b2_player_eq_cache[player_key][STR(RESTORE_WEAPONS)].size) + " weapons (" + sstr(primaries) + " primaries)");
+        }
+    }
+
+    if (primaries < get_player_weapon_limit(self))
+    {
+        if (primaries > 0)
+        {
+            self give_start_weapon(false);
+        }
+        else
+        {
+            self give_start_weapon(true);
+        }
+        DEBUG_PRINT("adding start weapon");
+    }
+
+    /* Original content of givecustomloadout callback */
+    if (is_mob())
+    {
+        self giveweapon("knife_zm_alcatraz");
+        self set_player_melee_weapon("knife_zm_alcatraz");
+    }
+    else
+    {
+        self giveweapon("knife_zm");
+    }
+
+    DEBUG_PRINT("Weapons after restore: " + sstr(self getweaponslistprimaries()));
+}
+
+unlock_loadout_cache()
+{
+    foreach (player in level.players)
+    {
+        if (player ishost())
+        {
+            continue;
+        }
+
+        CLEAR(player._b2_skip_loadout_cache);
+    }
+}
+#endif
 
 /*
  ************************************************************************************************************
@@ -2467,15 +2808,15 @@ perma_perks_setup()
     flag_wait("initial_blackscreen_passed");
     thread watch_permaperk_award();
 
-    if (getdvar("award_perks") != "1")
+    if (getdvar("award_perks") == "1")
+    {
+        array_thread(level.players, ::award_permaperks_safe);
+        setdvar("award_perks", 0);
+    }
+    else
     {
         CLEAR(level.b2_awarding_permaperks_now)
-        return;
     }
-    setdvar("award_perks", 0);
-
-    foreach (player in level.players)
-        player thread award_permaperks_safe();
 
 #if FEATURE_HUD == 1
     array_thread(level.players, ::permaperks_watcher);
@@ -2722,6 +3063,11 @@ permaperks_watcher()
 {
     PLAYER_ENDON
 
+    while (isdefined(level.b2_awarding_permaperks_now) && did_game_just_start())
+    {
+        wait 0.1;
+    }
+
     self.last_perk_state = [];
     foreach(perk in level.pers_upgrades_keys)
     {
@@ -2736,8 +3082,7 @@ permaperks_watcher()
         {
             if (self.pers_upgrades_awarded[perk] != self.last_perk_state[perk])
             {
-                if (!is_true(self.permaperk_display_lock))
-                    self print_permaperk_state(self.pers_upgrades_awarded[perk], perk);
+                self print_permaperk_state(self.pers_upgrades_awarded[perk], perk);
                 self.last_perk_state[perk] = self.pers_upgrades_awarded[perk];
                 wait 0.1;
             }

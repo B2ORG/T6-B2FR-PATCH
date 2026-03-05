@@ -16,7 +16,7 @@ This patch is meant to be used during First Room games. Below you can see altern
 
 | Category| Patch | Creator | Link |
 | --- | --- | --- | --- |
-| Highrounds / Round speedruns | B2OP | Zi0 & Astrox | [GitHub](https://github.com/B2ORG/T6-B2OP-PATCH) |
+| Highrounds / Round speedruns | B2OP | Zi0 | [GitHub](https://github.com/B2ORG/T6-B2OP-PATCH) |
 | EE Speedrun | Easter Egg GSC Timer | HuthTV | [GitHub](https://github.com/HuthTV/BO2-Easter-Egg-GSC-timer) |
 | Song Speedruns | B2SONG | Zi0 | [GitHub](https://github.com/B2ORG/T6-B2SONG-PATCH) |
 
@@ -68,6 +68,7 @@ Download either of the scripts `b2fr-hud.gsc` or `b2fr-nohud.gsc` and put them i
 - On Nuketown, players are warned if Jugg is going to be in the first room
 - On Origins, the scope reticle can be adjusted
 - On Origins, game is always in custom game mode (zombie blood from reward box)
+- Town weapons and Die Rise perks preservation between reconnects
 
 # Patch checksum
 
@@ -256,6 +257,27 @@ List of permaperks awarded by B2FR
 
 > [!NOTE]
 > The game will restart automatically after awarding players with permaperks.
+
+# Loadout preservation
+
+Due to the decision from the vote in February 2026, it is allowed for offhost players to keep their weapons (Town) and perks (Die Rise) between reconnects. The following requirements apply:
+- The game must be past round 10
+- There must be between 1 and 3 zombies left into the round
+- Player must be alive
+- The round cannot be special (like Frogs on Die Rise)
+
+Offhost players will see a print notification, that the Loadout preservation is active, if they leave the game then, they'll receive their stuff back.
+
+> [!TIP]
+> Due to the fact this functionality does not sit well with some players, you may turn it off using `disable_loadout_caching` dvar (set it to 1). You can turn it off permanently by putting it in your config. It can be changed at any point during the game as well.
+
+## What is preserved on Town
+
+All of the weapons from the box, eg RayGun, Monkeys etc. What is not preserved are non-box weapons, so it's still possible to regenerate Mustang&Sally ammo using the reconnecting trick.
+
+## What is preserved on Die Rise
+
+All perks the player currently has
 
 # Characters
 
