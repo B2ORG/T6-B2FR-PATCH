@@ -1,3 +1,7 @@
+# Version 3.7
+
+- Fixed duplicating watermarks
+
 # Version 3.6
 
 *This version is following a vote from February 2026*
