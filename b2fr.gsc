@@ -51,6 +51,9 @@
 #define STAT_VELOCITY_METER "lh_clip"
 #define RESTORE_WEAPONS 1
 #define RESTORE_PERKS 2
+#define WATERMARK_SLOT_PERM 0
+#define WATERMARK_SLOT_TEMP 1
+#define SLOT_ARRAY array(0, -90, 90, -180, 180, -270, 270, -360, 360, -450, 450, -540, 540, -630, 630)
 
 /* Feature flags */
 #define FEATURE_HUD 1
@@ -403,56 +406,69 @@ b2fr_main_loop()
  ************************************************************************************************************
 */
 
-get_watermark_position(mode, allocate)
+get_watermark_position(mode, txt)
 {
-    foreach (slot in array(0, -90, 90, -180, 180, -270, 270, -360, 360, -450, 450, -540, 540, -630, 630))
+    if (!isdefined(level.b2_watermark_slots[mode]))
     {
-        // DEBUG_PRINT("Watermark checking for allocation flag 'b2_watermark_" + sstr(mode) + sstr(slot) + "'");
-        if (!flag_exists("b2_watermark_" + mode + slot) && !flag("b2_watermark_" + mode + slot))
-        {
-            s = abs(slot);
-            if (slot < 0)
-            {
-                s = "-" + s;
-            }
+        level.b2_watermark_slots[mode] = [];
+    }
 
-            if (is_true(allocate))
+    for (i = 0; i < SLOT_ARRAY.size; i++)
+    {
+        if (!isdefined(level.b2_watermark_slots[mode][i]))
+        {
+            if (isdefined(txt))
             {
-                flag_set("b2_watermark_" + mode + s);
-                // DEBUG_PRINT("Watermark " + sstr(mode) + " allocating with flag 'b2_watermark_" + sstr(mode) + sstr(s) + "' exists=" + sstr(flag_exists("b2_watermark_" + mode + s)) + " true=" + sstr(flag("b2_watermark_" + mode + s)));
+                level.b2_watermark_slots[mode][i] = txt;
             }
-            DEBUG_PRINT("Found slot for watermark '" + sstr(mode) + "': " + sstr(slot));
-            return slot;
+            return SLOT_ARRAY[i];
         }
     }
 
-    return 0;
+    if (isdefined(txt))
+    {
+        level.b2_watermark_slots[mode][0] = txt;
+    }
+    return SLOT_ARRAY[0];
 }
 
-deallocate_temp_watermark_slot(slot)
+deallocate_temp_watermark_slot(text)
 {
-    s = abs(slot);
-    if (slot < 0)
+    if (!isdefined(level.b2_watermark_slots[WATERMARK_SLOT_TEMP]))
     {
-        s = "-" + s;
+        return;
     }
-    flag_clear("b2_watermark_temp" + s);
+    arrayremovevalue(level.b2_watermark_slots[WATERMARK_SLOT_TEMP], text, false);
+
+    if (level.b2_watermark_slots[WATERMARK_SLOT_TEMP].size == 0)
+    {
+        CLEAR(level.b2_watermark_slots[WATERMARK_SLOT_TEMP]);
+
+        if (level.b2_watermark_slots.size == 0)
+        {
+            CLEAR(level.b2_watermark_slots);
+        }
+    }
 }
 
 generate_watermark(text, color, alpha_override)
 {
-    if (flag_exists(text) && is_true(flag(text)))
+    if (isdefined(level.b2_watermark_slots[WATERMARK_SLOT_PERM]) && isinarray(level.b2_watermark_slots[WATERMARK_SLOT_PERM], text))
+    {
         return;
+    }
 
-    x_pos = get_watermark_position("perm", true);
-
-    DEBUG_PRINT("xpos for " + sstr(text) + ": " + sstr(x_pos));
+    x_pos = get_watermark_position(WATERMARK_SLOT_PERM, text);
 
     if (!isdefined(color))
+    {
         color = (1, 1, 1);
+    }
 
     if (!isdefined(alpha_override))
+    {
         alpha_override = 0.33;
+    }
 
     watermark = createserverfontstring("objective" , 1.2);
     watermark setpoint("CENTER", "TOP", x_pos, -5);
@@ -462,30 +478,30 @@ generate_watermark(text, color, alpha_override)
     watermark.hidewheninmenu = 0;
 
     DEBUG_PRINT("Created permanent watermark: " + sstr(text));
-
-    flag_set(text);
-
-    if (!isdefined(level.num_of_watermarks))
-        level.num_of_watermarks = 0;
-    level.num_of_watermarks++;
 }
 
 generate_temp_watermark(kill_on, text, color, alpha_override)
 {
     LEVEL_ENDON
 
-    if (is_true(flag(text)))
+    if (isdefined(level.b2_watermark_slots[WATERMARK_SLOT_TEMP]) && isinarray(level.b2_watermark_slots[WATERMARK_SLOT_TEMP], text))
+    {
         return;
+    }
 
-    x_pos = get_watermark_position("temp", true);
+    x_pos = get_watermark_position(WATERMARK_SLOT_TEMP, text);
 
     if (!isdefined(color))
+    {
         color = (1, 1, 1);
+    }
 
     if (!isdefined(alpha_override))
+    {
         alpha_override = 0.33;
+    }
 
-    twatermark = createserverfontstring("hudsmall" , 1.2);
+    twatermark = createserverfontstring("objective" , 1.2);
     twatermark setpoint("CENTER", "TOP", x_pos, -17);
     twatermark.color = color;
     twatermark settext(text);
@@ -494,23 +510,23 @@ generate_temp_watermark(kill_on, text, color, alpha_override)
 
     DEBUG_PRINT("Created temp watermark: " + sstr(text));
 
-    flag_set(text);
-
     CLEAR(text)
     CLEAR(color)
     CLEAR(alpha_override)
+    CLEAR(x_pos)
 
     while (level.round_number < kill_on)
+    {
         level waittill("end_of_round");
+    }
 
     twatermark.alpha = 0;
+    twatermark fadeovertime(2);
+    wait 2;
     twatermark destroy_hud();
 
     /* Cleanup the slot */
-    deallocate_temp_watermark_slot(x_pos);
-
-    /* There should've been flag_clear here, but don't add it anymore, since it's now used
-    for appending first box info to splits */
+    deallocate_temp_watermark_slot(text);
 }
 
 print_scheduler(content, player, delay)
