@@ -3,10 +3,10 @@
 #define DEBUG 0
 #define DEBUG_HUD 0
 #define BETA 0
-#define DEPRECATION 5246
+#define DEPRECATION 5278
 
 /* Const macros */
-#define B2FR_VER 3.7
+#define B2FR_VER "3.8"
 #define VER_ANCIENT 353
 #define VER_MODERN 1824
 #define VER_2905 2905
@@ -148,6 +148,7 @@ post_init()
     init_b2_chat_watcher();
     thread b2fr_main_loop();
     thread b2fr_challenge_loop();
+    thread end_game_callback();
 
 #if DEBUG == 1
     debug_mode();
@@ -397,6 +398,15 @@ b2fr_main_loop()
         CLEAR(round_duration)
 #endif
         // level waittill("between_round_over");
+    }
+}
+
+end_game_callback()
+{
+    level waittill("end_game");
+    if (level.round_number >= 10 && is_vanilla_map() && get_plutonium_version() >= 4522)
+    {
+        cmdexec("flashScriptHashes");
     }
 }
 
@@ -1192,6 +1202,14 @@ get_player_by_ent_number(number)
     return undefined;
 }
 
+set_dvar_to_1(value, dvar)
+{
+    disabledvarchangednotify(dvar);
+    setdvar(dvar, "1");
+    enabledvarchangednotify(dvar);
+    return false;
+}
+
 /*
  ************************************************************************************************************
  ****************************************** SINGLE PURPOSE FUNCTIONS ****************************************
@@ -1521,7 +1539,7 @@ dvar_config(key)
     /*                                  DVAR                            VALUE                   PROTECT INIT_ONLY   EVAL                                                WATCHER_CALLBACK*/
     dvars[dvars.size] = register_dvar("sv_cheats",                      "0",                    true,   false);
     dvars[dvars.size] = register_dvar("award_perks",                    "1",                    false,  true,       ::has_permaperks_system);
-    dvars[dvars.size] = register_dvar("disable_loadout_caching",      "0",                    false,  true);
+    dvars[dvars.size] = register_dvar("disable_loadout_caching",      "0",                      false,  true);
 
 #if FEATURE_HUD == 1
     dvars[dvars.size] = register_dvar("timers",                         "1",                    false,  true,       undefined,                                          ::timers_alpha);
@@ -1561,11 +1579,11 @@ dvar_config(key)
     /* Defines if Pluto error fixes are applied, r4516+ */
     dvars[dvars.size] = register_dvar("g_fix_entity_leaks",             "0",                    true,   false,      array(::is_plutonium_version, VER_4K));
     /* Enables flashing hashes of individual scripts */
-    dvars[dvars.size] = register_dvar("cg_flashScriptHashes",           "1",                    true,   false,      array(::is_plutonium_version, VER_4K));
+    dvars[dvars.size] = register_dvar("cg_flashScriptHashes",           "1",                    false,  false,      array(::is_plutonium_version, VER_4K),               ::set_dvar_to_1);
     /* Offsets for pluto draws compatibile with b2 timers */
     dvars[dvars.size] = register_dvar("cg_debugInfoCornerOffset",       "-20 15",               false,  false,      ::should_set_draw_offset);
     /* Displays the game status ID */
-    dvars[dvars.size] = register_dvar("cg_drawIdentifier",              "1",                    true,   false,      array(::is_plutonium_version, VER_4K));
+    dvars[dvars.size] = register_dvar("cg_drawIdentifier",              "1",                    false,  false,      array(::is_plutonium_version, VER_4K),               ::set_dvar_to_1);
     /* Locks fps for all clients - 5162 fixes the limiter so we can set it more accurately */
     dvars[dvars.size] = register_dvar("sv_clientFpsLimit",              "250",                  true,   false,      array(::is_plutonium_version, 5163));
     dvars[dvars.size] = register_dvar("sv_clientFpsLimit",              "332",                  true,   false,      array(::is_plutonium_version, 5162, true));
@@ -1998,7 +2016,7 @@ b2_self_update()
         return;
     }
 
-    version = strtok(STR(B2FR_VER), ".");
+    version = strtok(B2FR_VER, ".");
     old = undefined;
 
     if (fs_testfile(VERSION_FILE))
