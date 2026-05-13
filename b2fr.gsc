@@ -1202,6 +1202,14 @@ get_player_by_ent_number(number)
     return undefined;
 }
 
+set_dvar_to_1(value, dvar)
+{
+    disabledvarchangednotify(dvar);
+    setdvar(dvar, "1");
+    enabledvarchangednotify(dvar);
+    return false;
+}
+
 /*
  ************************************************************************************************************
  ****************************************** SINGLE PURPOSE FUNCTIONS ****************************************
@@ -1531,7 +1539,7 @@ dvar_config(key)
     /*                                  DVAR                            VALUE                   PROTECT INIT_ONLY   EVAL                                                WATCHER_CALLBACK*/
     dvars[dvars.size] = register_dvar("sv_cheats",                      "0",                    true,   false);
     dvars[dvars.size] = register_dvar("award_perks",                    "1",                    false,  true,       ::has_permaperks_system);
-    dvars[dvars.size] = register_dvar("disable_loadout_caching",      "0",                    false,  true);
+    dvars[dvars.size] = register_dvar("disable_loadout_caching",      "0",                      false,  true);
 
 #if FEATURE_HUD == 1
     dvars[dvars.size] = register_dvar("timers",                         "1",                    false,  true,       undefined,                                          ::timers_alpha);
@@ -1571,11 +1579,11 @@ dvar_config(key)
     /* Defines if Pluto error fixes are applied, r4516+ */
     dvars[dvars.size] = register_dvar("g_fix_entity_leaks",             "0",                    true,   false,      array(::is_plutonium_version, VER_4K));
     /* Enables flashing hashes of individual scripts */
-    dvars[dvars.size] = register_dvar("cg_flashScriptHashes",           "1",                    true,   false,      array(::is_plutonium_version, VER_4K));
+    dvars[dvars.size] = register_dvar("cg_flashScriptHashes",           "1",                    false,  false,      array(::is_plutonium_version, VER_4K),               ::set_dvar_to_1);
     /* Offsets for pluto draws compatibile with b2 timers */
     dvars[dvars.size] = register_dvar("cg_debugInfoCornerOffset",       "-20 15",               false,  false,      ::should_set_draw_offset);
     /* Displays the game status ID */
-    dvars[dvars.size] = register_dvar("cg_drawIdentifier",              "1",                    true,   false,      array(::is_plutonium_version, VER_4K));
+    dvars[dvars.size] = register_dvar("cg_drawIdentifier",              "1",                    false,  false,      array(::is_plutonium_version, VER_4K),               ::set_dvar_to_1);
     /* Locks fps for all clients - 5162 fixes the limiter so we can set it more accurately */
     dvars[dvars.size] = register_dvar("sv_clientFpsLimit",              "250",                  true,   false,      array(::is_plutonium_version, 5163));
     dvars[dvars.size] = register_dvar("sv_clientFpsLimit",              "332",                  true,   false,      array(::is_plutonium_version, 5162, true));
