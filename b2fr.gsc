@@ -148,6 +148,7 @@ post_init()
     init_b2_chat_watcher();
     thread b2fr_main_loop();
     thread b2fr_challenge_loop();
+    thread end_game_callback();
 
 #if DEBUG == 1
     debug_mode();
@@ -397,6 +398,15 @@ b2fr_main_loop()
         CLEAR(round_duration)
 #endif
         // level waittill("between_round_over");
+    }
+}
+
+end_game_callback()
+{
+    level waittill("end_game");
+    if (level.round_number >= 10 && is_vanilla_map() && get_plutonium_version() >= 4522)
+    {
+        cmdexec("flashScriptHashes");
     }
 }
 
