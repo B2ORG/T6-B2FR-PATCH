@@ -1,3 +1,8 @@
+# Version 3.8
+
+- Checksums are now flashed automatically on end game event
+- Changed strategy for handling dvar change events to prevent anticheat tripping when Plutos new "FLASH SCRIPT HASHES NOW" button is used
+
 # Version 3.7
 
 - Fixed duplicating watermarks

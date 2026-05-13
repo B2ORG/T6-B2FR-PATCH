@@ -3,10 +3,10 @@
 #define DEBUG 0
 #define DEBUG_HUD 0
 #define BETA 0
-#define DEPRECATION 5246
+#define DEPRECATION 5278
 
 /* Const macros */
-#define B2FR_VER 3.7
+#define B2FR_VER "3.8"
 #define VER_ANCIENT 353
 #define VER_MODERN 1824
 #define VER_2905 2905
@@ -2016,7 +2016,7 @@ b2_self_update()
         return;
     }
 
-    version = strtok(STR(B2FR_VER), ".");
+    version = strtok(B2FR_VER, ".");
     old = undefined;
 
     if (fs_testfile(VERSION_FILE))
