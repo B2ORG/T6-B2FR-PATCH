@@ -1,3 +1,9 @@
+# Version 3.9
+
+- Fixed loadout caching working on semtex
+- Fixed flash frequency on semtex
+- Reddot is set for Origins reticle on 1st patch launch, unless player already set it to something before
+
 # Version 3.8
 
 - Checksums are now flashed automatically on end game event

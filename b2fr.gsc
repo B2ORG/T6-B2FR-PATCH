@@ -6,7 +6,7 @@
 #define DEPRECATION 5278
 
 /* Const macros */
-#define B2FR_VER "3.8"
+#define B2FR_VER "3.9"
 #define VER_ANCIENT 353
 #define VER_MODERN 1824
 #define VER_2905 2905
@@ -274,7 +274,7 @@ init_b2_dvars()
     }
 #endif
 
-    if (is_town() || is_farm())
+    if (is_full_town() || is_farm())
     {
         level.gameplay_reminder = ::dog_maps_gameplay_reminder;
     }
@@ -314,8 +314,9 @@ init_b2_loadout_cache()
 
     flag_wait("initial_blackscreen_passed");
 
-    if (is_town() || is_die_rise())
+    if (is_full_town() || is_die_rise())
     {
+        DEBUG_PRINT("init restoration system");
         level.givecustomloadout = ::restore_equipment_on_reconnect;
 
         thread cache_current_loadout();
@@ -418,6 +419,10 @@ end_game_callback()
 
 get_watermark_position(mode, txt)
 {
+    if (!isdefined(level.b2_watermark_slots))
+    {
+        level.b2_watermark_slots = [];
+    }
     if (!isdefined(level.b2_watermark_slots[mode]))
     {
         level.b2_watermark_slots[mode] = [];
@@ -463,7 +468,7 @@ deallocate_temp_watermark_slot(text)
 
 generate_watermark(text, color, alpha_override)
 {
-    if (isdefined(level.b2_watermark_slots[WATERMARK_SLOT_PERM]) && isinarray(level.b2_watermark_slots[WATERMARK_SLOT_PERM], text))
+    if (isdefined(level.b2_watermark_slots) && isdefined(level.b2_watermark_slots[WATERMARK_SLOT_PERM]) && isinarray(level.b2_watermark_slots[WATERMARK_SLOT_PERM], text))
     {
         return;
     }
@@ -875,6 +880,16 @@ is_origins()
     return level.script == "zm_tomb";
 }
 
+is_full_town()
+{
+    return is_town() && has_magic();
+}
+
+is_semtex()
+{
+    return !is_full_town();
+}
+
 is_vanilla_map()
 {
     switch (level.script)
@@ -1017,6 +1032,8 @@ is_plutonium_version(version, negate)
 
 has_magic()
 {
+    if (!isdefined(level.enable_magic))
+        return getgametypesetting("magic");
     return is_true(level.enable_magic);
 }
 
@@ -1034,7 +1051,7 @@ has_permaperks_system()
 
 is_special_round()
 {
-    return is_true(flag("dog_round")) || is_true(flag("leaper_round"));
+    return (flag_exists("dog_round") && flag("dog_round")) || (flag_exists("leaper_round") && flag("leaper_round"));
 }
 
 get_zombies_left()
@@ -1484,7 +1501,7 @@ should_print_checksum()
     /* 50, 45, 40, 35 */
     faster = 50 - (5 * level.players.size);
     /* 70, 65, 60, 55 */
-    if (is_town())
+    if (is_full_town())
         faster = 75 - (5 * level.players.size);
     if (faster < 35)
         faster = 35;
@@ -1787,7 +1804,7 @@ debug_mode()
             player weapon_give(maps\mp\zombies\_zm_weapons::get_upgrade_weapon("scar_zm"));
             player weapon_give(maps\mp\zombies\_zm_weapons::get_upgrade_weapon("galil_zm"));
         }
-        else if (is_town())
+        else if (is_full_town())
         {
             player weapon_give("cymbal_monkey_zm");
             if (player ishost())
@@ -2052,6 +2069,7 @@ b2_self_update()
     updates = [];
     /*                                      VERSION     UPDATE_CB               REQ_OLD*/
     updates[updates.size] = register_update("3.5",      ::update_3_5,           false);
+    updates[updates.size] = register_update("3.9",      ::update_3_9,           false);
 
     foreach (i, update in updates)
     {
@@ -2096,6 +2114,17 @@ update_3_5()
     if (getdvar("velocity_meter") == "0")
     {
         gethostplayer() maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_VELOCITY_METER, 2, STAT_VELOCITY_METER_MAP);
+    }
+}
+
+update_3_9()
+{
+    foreach (player in level.players)
+    {
+        if (!isdefined(player get_reticle_stat()))
+        {
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_RETICLE, 16, STAT_RETICLE_MAP);
+        }
     }
 }
 
@@ -2218,7 +2247,8 @@ cache_current_loadout()
 
             foreach (weapon in player getweaponslist())
             {
-                if (!get_is_in_box(get_base_weapon_name(weapon, true)))
+                base = get_base_weapon_name(weapon, true);
+                if (!isdefined(base) || !isdefined(level.zombie_weapons[base]) || !get_is_in_box(base))
                 {
                     continue;
                 }
@@ -2265,7 +2295,7 @@ restore_equipment_on_reconnect(restore_type)
             }
         }
         /* Restore box guns */
-        else if (is_town())
+        else if (is_full_town())
         {
             foreach(wpn_to_restore in level.b2_player_eq_cache[player_key][STR(RESTORE_WEAPONS)])
             {
@@ -3218,7 +3248,7 @@ scan_in_box()
     self endon("randomization_done");
     self endon("scan_in_box_start");
 
-    if (is_town() || is_farm() || is_depot() || is_tranzit())
+    if (is_full_town() || is_farm() || is_depot() || is_tranzit())
         should_be_in_box = 25;
     else if (is_nuketown())
         should_be_in_box = 26;
