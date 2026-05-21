@@ -2069,6 +2069,7 @@ b2_self_update()
     updates = [];
     /*                                      VERSION     UPDATE_CB               REQ_OLD*/
     updates[updates.size] = register_update("3.5",      ::update_3_5,           false);
+    updates[updates.size] = register_update("3.9",      ::update_3_9,           false);
 
     foreach (i, update in updates)
     {
@@ -2113,6 +2114,17 @@ update_3_5()
     if (getdvar("velocity_meter") == "0")
     {
         gethostplayer() maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_VELOCITY_METER, 2, STAT_VELOCITY_METER_MAP);
+    }
+}
+
+update_3_9()
+{
+    foreach (player in level.players)
+    {
+        if (!isdefined(player get_reticle_stat()))
+        {
+            player maps\mp\zombies\_zm_stats::set_map_weaponlocker_stat(STAT_RETICLE, 16, STAT_RETICLE_MAP);
+        }
     }
 }
 
