@@ -418,6 +418,10 @@ end_game_callback()
 
 get_watermark_position(mode, txt)
 {
+    if (!isdefined(level.b2_watermark_slots))
+    {
+        level.b2_watermark_slots = [];
+    }
     if (!isdefined(level.b2_watermark_slots[mode]))
     {
         level.b2_watermark_slots[mode] = [];
@@ -463,7 +467,7 @@ deallocate_temp_watermark_slot(text)
 
 generate_watermark(text, color, alpha_override)
 {
-    if (isdefined(level.b2_watermark_slots[WATERMARK_SLOT_PERM]) && isinarray(level.b2_watermark_slots[WATERMARK_SLOT_PERM], text))
+    if (isdefined(level.b2_watermark_slots) && isdefined(level.b2_watermark_slots[WATERMARK_SLOT_PERM]) && isinarray(level.b2_watermark_slots[WATERMARK_SLOT_PERM], text))
     {
         return;
     }
@@ -1017,6 +1021,8 @@ is_plutonium_version(version, negate)
 
 has_magic()
 {
+    if (!isdefined(level.enable_magic))
+        return getgametypesetting("magic");
     return is_true(level.enable_magic);
 }
 
@@ -1034,7 +1040,7 @@ has_permaperks_system()
 
 is_special_round()
 {
-    return is_true(flag("dog_round")) || is_true(flag("leaper_round"));
+    return (flag_exists("dog_round") && flag("dog_round")) || (flag_exists("leaper_round") && flag("leaper_round"));
 }
 
 get_zombies_left()
@@ -2218,7 +2224,8 @@ cache_current_loadout()
 
             foreach (weapon in player getweaponslist())
             {
-                if (!get_is_in_box(get_base_weapon_name(weapon, true)))
+                base = get_base_weapon_name(weapon, true);
+                if (!isdefined(base) || !isdefined(level.zombie_weapons[base]) || !get_is_in_box(base))
                 {
                     continue;
                 }
