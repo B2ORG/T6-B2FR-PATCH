@@ -274,7 +274,7 @@ init_b2_dvars()
     }
 #endif
 
-    if (is_town() || is_farm())
+    if (is_full_town() || is_farm())
     {
         level.gameplay_reminder = ::dog_maps_gameplay_reminder;
     }
@@ -314,8 +314,9 @@ init_b2_loadout_cache()
 
     flag_wait("initial_blackscreen_passed");
 
-    if (is_town() || is_die_rise())
+    if (is_full_town() || is_die_rise())
     {
+        DEBUG_PRINT("init restoration system");
         level.givecustomloadout = ::restore_equipment_on_reconnect;
 
         thread cache_current_loadout();
@@ -877,6 +878,16 @@ is_origins()
     if (!isdefined(level.script))
         return tolower(getdvar("mapname")) == "zm_tomb";
     return level.script == "zm_tomb";
+}
+
+is_full_town()
+{
+    return is_town() && has_magic();
+}
+
+is_semtex()
+{
+    return !is_full_town();
 }
 
 is_vanilla_map()
@@ -1490,7 +1501,7 @@ should_print_checksum()
     /* 50, 45, 40, 35 */
     faster = 50 - (5 * level.players.size);
     /* 70, 65, 60, 55 */
-    if (is_town())
+    if (is_full_town())
         faster = 75 - (5 * level.players.size);
     if (faster < 35)
         faster = 35;
@@ -1793,7 +1804,7 @@ debug_mode()
             player weapon_give(maps\mp\zombies\_zm_weapons::get_upgrade_weapon("scar_zm"));
             player weapon_give(maps\mp\zombies\_zm_weapons::get_upgrade_weapon("galil_zm"));
         }
-        else if (is_town())
+        else if (is_full_town())
         {
             player weapon_give("cymbal_monkey_zm");
             if (player ishost())
@@ -2272,7 +2283,7 @@ restore_equipment_on_reconnect(restore_type)
             }
         }
         /* Restore box guns */
-        else if (is_town())
+        else if (is_full_town())
         {
             foreach(wpn_to_restore in level.b2_player_eq_cache[player_key][STR(RESTORE_WEAPONS)])
             {
@@ -3225,7 +3236,7 @@ scan_in_box()
     self endon("randomization_done");
     self endon("scan_in_box_start");
 
-    if (is_town() || is_farm() || is_depot() || is_tranzit())
+    if (is_full_town() || is_farm() || is_depot() || is_tranzit())
         should_be_in_box = 25;
     else if (is_nuketown())
         should_be_in_box = 26;
