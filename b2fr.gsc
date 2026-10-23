@@ -906,6 +906,24 @@ get_plutonium_version()
     return detected_version;
 }
 
+get_plutonium_branch()
+{
+    dvar = getdvar("version");
+    if (dvar && isstrstart(dvar, "Plutonium"))
+    {
+        if (issubstr(dvar, "-oldstable"))
+        {
+            return "oldstable";
+        }
+        if (issubstr(dvar, "-staging"))
+        {
+            return "staging";
+        }
+    }
+
+    return "main";
+}
+
 fetch_players_info()
 {
     players = [];
@@ -1329,7 +1347,9 @@ welcome_prints()
     PLAYER_ENDON
 
     if (flag_exists("b2_bad_file") && is_true(flag("b2_bad_file")))
+    {
         return;
+    }
 
     wait 0.75;
     self iprintln("B2^1FR^7 PATCH " + COLOR_TXT("V" + B2FR_VER, COL_RED));
@@ -1338,6 +1358,14 @@ welcome_prints()
     self iprintln(compose_welcome_print());
     wait 0.75;
     self iprintln("Source: ^1github.com/B2ORG/T6-B2FR-PATCH");
+
+    switch (get_plutonium_branch())
+    {
+        case "staging":
+            wait 0.75;
+            self iprintln("^1WARNING:^7 Plutonium staging games are not allowed as of March 19th, 2026");
+            break;
+    }
 
     wait 1;
     if (isdefined(level.gameplay_reminder))
