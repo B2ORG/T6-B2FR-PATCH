@@ -3,7 +3,7 @@
 #define DEBUG 0
 #define DEBUG_HUD 0
 #define BETA 0
-#define DEPRECATION 5278
+#define PLUTO_VER_MINIMUM 5359
 
 /* Const macros */
 #define B2FR_VER "3.9"

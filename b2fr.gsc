@@ -22,6 +22,11 @@ main()
 
 init()
 {
+    if (get_plutonium_version() < PLUTO_VER_MINIMUM)
+    {
+        cmdexec("disconnect");
+    }
+
     if (!isdefined(level.b2_sniff))
     {
         level.b2_sniff = 0;
@@ -314,7 +319,7 @@ b2fr_main_loop()
 end_game_callback()
 {
     level waittill("end_game");
-    if (level.round_number >= 10 && is_vanilla_map() && get_plutonium_version() >= 4522)
+    if (level.round_number >= 10 && is_vanilla_map())
     {
         cmdexec("flashScriptHashes");
     }
@@ -952,9 +957,7 @@ is_plutonium()
 
 is_plutonium_version(version, negate)
 {
-    if (is_true(negate))
-        return get_plutonium_version() < version;
-    return get_plutonium_version() >= version;
+    return is_true(negate) ? get_plutonium_version() < version : get_plutonium_version() >= version;
 }
 
 has_magic()
@@ -1057,10 +1060,7 @@ remove_mannequin(origin, extra_delay)
 
 b2_restart_level()
 {
-    if (get_plutonium_version() > VER_MODERN || level.players.size == 1)
-        emulate_menu_call("restart_level_zm");
-    else
-        emulate_menu_call("endround");
+    emulate_menu_call("restart_level_zm");
 }
 
 decode_splits(splits_str, limit)
@@ -1378,13 +1378,6 @@ welcome_prints()
         wait 0.25;
         print_scheduler("Full gameplay is required from host perspective as of April 2023", self);
     }
-
-    if (get_plutonium_version() < DEPRECATION)
-    {
-        level waittill("end_of_round");
-        print_scheduler(COLOR_TXT("DEPRECATION NOTICE", COL_RED), self);
-        print_scheduler("Support for hosts Plutonium version is deprecated. Make sure to update urgently!", self);
-    }
 }
 
 compose_welcome_print()
@@ -1417,7 +1410,7 @@ print_checksums()
 
 should_print_checksum()
 {
-    if (get_plutonium_version() < 4522 || did_game_just_start())
+    if (did_game_just_start())
         return false;
 
     /* 50, 45, 40, 35 */
