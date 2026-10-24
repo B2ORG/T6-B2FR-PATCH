@@ -53,8 +53,8 @@ post_init()
     flag_wait("initial_blackscreen_passed");
 
     thread init_b2_hud();
-    init_b2_box();
-    init_b2_chat_watcher();
+    thread init_b2_box();
+    thread init_b2_chat_watcher();
     thread b2fr_main_loop();
     thread b2fr_challenge_loop();
     thread end_game_callback();
