@@ -53,8 +53,6 @@ init()
 
 post_init()
 {
-    LEVEL_ENDON
-
     flag_wait("initial_blackscreen_passed");
 
     thread init_b2_hud();
@@ -75,7 +73,7 @@ post_init()
 
 on_player_connected()
 {
-    LEVEL_ENDON
+    level endon("end_game");
 
     while (true)
     {
@@ -93,7 +91,8 @@ on_player_connected()
 
 on_player_spawned()
 {
-    PLAYER_ENDON
+    level endon("end_game");
+    self endon("disconnect");
 
     self waittill("spawned_player");
 
@@ -146,8 +145,6 @@ init_b2_box()
     if (!has_magic())
         return;
 
-    LEVEL_ENDON
-
     while (!isdefined(level.chests))
     {
         /* Escape if chests are not defined yet */
@@ -172,7 +169,7 @@ init_b2_flags()
 
 init_b2_dvars()
 {
-    LEVEL_ENDON
+    level endon("end_game");
 
 #if FEATURE_CHARACTERS == 1
     if (!is_survival_map())
@@ -224,8 +221,6 @@ init_b2_io()
 init_b2_loadout_cache()
 {
 #if FEATURE_LOADOUT_CACHE == 1
-    LEVEL_ENDON
-
     flag_wait("initial_blackscreen_passed");
 
     if (is_full_town() || is_die_rise())
@@ -240,7 +235,7 @@ init_b2_loadout_cache()
 
 b2fr_main_loop()
 {
-    LEVEL_ENDON
+    level endon("end_game");
 
     // DEBUG_PRINT("initialized b2fr_main_loop");
     game_start = gettime();
@@ -308,10 +303,6 @@ b2fr_main_loop()
         {
             level thread print_checksums();
         }
-
-#if FEATURE_HUD == 1
-        CLEAR(round_duration)
-#endif
         // level waittill("between_round_over");
     }
 }
@@ -371,11 +362,11 @@ deallocate_temp_watermark_slot(text)
 
     if (level.b2_watermark_slots[WATERMARK_SLOT_TEMP].size == 0)
     {
-        CLEAR(level.b2_watermark_slots[WATERMARK_SLOT_TEMP]);
+        level.b2_watermark_slots[WATERMARK_SLOT_TEMP] = undefined;
 
         if (level.b2_watermark_slots.size == 0)
         {
-            CLEAR(level.b2_watermark_slots);
+            level.b2_watermark_slots = undefined;
         }
     }
 }
@@ -411,8 +402,6 @@ generate_watermark(text, color, alpha_override)
 
 generate_temp_watermark(kill_on, text, color, alpha_override)
 {
-    LEVEL_ENDON
-
     if (isdefined(level.b2_watermark_slots[WATERMARK_SLOT_TEMP]) && isinarray(level.b2_watermark_slots[WATERMARK_SLOT_TEMP], text))
     {
         return;
@@ -438,11 +427,6 @@ generate_temp_watermark(kill_on, text, color, alpha_override)
     twatermark.hidewheninmenu = 0;
 
     DEBUG_PRINT("Created temp watermark: " + sstr(text));
-
-    CLEAR(text)
-    CLEAR(color)
-    CLEAR(alpha_override)
-    CLEAR(x_pos)
 
     while (level.round_number < kill_on)
     {
@@ -481,7 +465,7 @@ print_scheduler(content, player, delay)
 
 player_print_scheduler(content, delay)
 {
-    PLAYER_ENDON
+    self endon("disconnect");
 
     while (delay > 0 && isdefined(self.scheduled_prints) && getdvarint("con_gameMsgWindow0LineCount") > 0 && self.scheduled_prints >= getdvarint("con_gameMsgWindow0LineCount"))
     {
@@ -500,7 +484,9 @@ player_print_scheduler(content, delay)
     self.scheduled_prints--;
 
     if (self.scheduled_prints <= 0)
-        CLEAR(self.scheduled_prints)
+    {
+        self.scheduled_prints = undefined;
+    }
 }
 
 convert_time(seconds)
@@ -1031,8 +1017,6 @@ is_dynamic_prenade_calculation()
 
 remove_mannequin(origin, extra_delay)
 {
-    LEVEL_ENDON
-
     if (isdefined(extra_delay))
         wait extra_delay;
 
@@ -1229,7 +1213,7 @@ protect_file()
 
 chat_watcher()
 {
-    LEVEL_ENDON
+    level endon("end_game");
 
     while (true)
     {
@@ -1289,13 +1273,6 @@ chat_watcher()
                 break;
             }
         }
-
-        CLEAR(message)
-        CLEAR(chat)
-        CLEAR(matched_signature)
-        CLEAR(signature)
-        CLEAR(input)
-        CLEAR(cfg)
     }
 }
 
@@ -1328,8 +1305,6 @@ duplicate_file()
 
 sniff()
 {
-    LEVEL_ENDON
-
     level.b2_sniff++;
 
     flag_wait("initial_blackscreen_passed");
@@ -1339,12 +1314,11 @@ sniff()
     {
         duplicate_file();
     }
-    CLEAR(level.b2_sniff)
 }
 
 welcome_prints()
 {
-    PLAYER_ENDON
+    self endon("disconnect");
 
     if (flag_exists("b2_bad_file") && is_true(flag("b2_bad_file")))
     {
@@ -1392,8 +1366,6 @@ compose_welcome_print()
 
 print_checksums()
 {
-    LEVEL_ENDON
-
     if (is_vanilla_map())
     {
         print_scheduler("Showing patch checksums", gethostplayer());
@@ -1579,7 +1551,7 @@ register_dvar(dvar, set_value, protected, init_only, closure, on_change)
 
 dvar_scanner(dvars)
 {
-    LEVEL_ENDON
+    level endon("end_game");
 
     flag_wait("initial_blackscreen_passed");
 
@@ -1645,10 +1617,6 @@ dvar_scanner(dvars)
 
 new_dvar_scanner()
 {
-    LEVEL_ENDON
-
-    DEBUG_PRINT("new dvar scanner");
-
     while (true)
     {
         level waittill("dvar_changed", dvar, new_value, old_value, being_registered);
@@ -1656,10 +1624,6 @@ new_dvar_scanner()
         cfg = dvar_config(dvar);
         if (!isdefined(cfg))
         {
-            CLEAR(dvar)
-            CLEAR(new_value)
-            CLEAR(old_value)
-            CLEAR(being_registered)
             continue;
         }
 
@@ -1680,12 +1644,6 @@ new_dvar_scanner()
         {
             dvar_violation(new_value, old_value, dvar);
         }
-
-        CLEAR(cfg)
-        CLEAR(dvar)
-        CLEAR(new_value)
-        CLEAR(old_value)
-        CLEAR(being_registered)
     }
 }
 
@@ -1701,10 +1659,12 @@ dvar_violation(new_value, old_value, dvar)
 
 award_points(amount)
 {
-    PLAYER_ENDON
+    self endon("disconnect");
 
     if (is_mob())
+    {
         flag_wait("afterlife_start_over");
+    }
     self.score = amount;
 }
 
@@ -1747,7 +1707,7 @@ beta_mode()
 
 evaluate_network_frame()
 {
-    PLAYER_ENDON
+    self endon("disconnect");
 
     flag_wait("initial_blackscreen_passed");
 
@@ -1822,7 +1782,7 @@ load_b2_splits()
 
 dog_maps_gameplay_reminder()
 {
-    PLAYER_ENDON
+    self endon("disconnect");
 
     if (!self ishost())
     {
@@ -1849,7 +1809,7 @@ dog_maps_gameplay_reminder()
 
 nuketown_gameplay_reminder()
 {
-    PLAYER_ENDON
+    self endon("disconnect");
     // 804.1 -56.86
     // -455.42 617.4
     // -82.07 740.67
@@ -1919,8 +1879,6 @@ nuketown_gameplay_reminder()
 
 origins_fix()
 {
-    LEVEL_ENDON
-
     flag_wait("start_zombie_round_logic");
     wait 0.5;
 
@@ -2045,7 +2003,6 @@ update_3_9()
 
 idc_listener()
 {
-    LEVEL_ENDON
     flag_init("b2_kill_idc");
     level endon("b2_kill_idc_listener");
     while (true)
@@ -2062,8 +2019,6 @@ idc_listener()
 
 does_care()
 {
-    LEVEL_ENDON
-
     thread idc_listener();
     wait 8;
     level notify("b2_kill_idc_listener");
@@ -2111,8 +2066,6 @@ can_cache_loadout()
 
 cache_current_loadout()
 {
-    LEVEL_ENDON
-
     level.b2_player_eq_cache = [];
     can_cache_state = [];
 
@@ -2266,7 +2219,7 @@ unlock_loadout_cache()
             continue;
         }
 
-        CLEAR(player._b2_skip_loadout_cache);
+        player._b2_skip_loadout_cache = undefined;
     }
 }
 #endif
@@ -2410,7 +2363,6 @@ timers_alpha(value)
 
 keep_displaying_old_time(time)
 {
-    LEVEL_ENDON
     level endon("start_of_round");
 
     while (true)
@@ -2422,8 +2374,6 @@ keep_displaying_old_time(time)
 
 show_split(start_time)
 {
-    LEVEL_ENDON
-
     if (getdvar("splits") == "0")
         return;
 
@@ -2512,8 +2462,6 @@ splits_input(new_value, dvar, player)
 #if FEATURE_HORDES == 1
 show_hordes()
 {
-    LEVEL_ENDON
-
     if (getdvar("hordes") == "0")
         return;
 
@@ -2593,7 +2541,7 @@ recalculate_x_for_aspect_ratio(alignment, xpos, aspect_ratio)
 
 velocity_meter()
 {
-    PLAYER_ENDON
+    self endon("disconnect");
 
     flag_wait("initial_blackscreen_passed");
 
@@ -2760,7 +2708,7 @@ get_prenade_dynamic()
 
 fill_up_bank()
 {
-    PLAYER_ENDON
+    self endon("disconnect");
 
     flag_wait("initial_blackscreen_passed");
 
@@ -2794,7 +2742,7 @@ perma_perks_setup()
     }
     else
     {
-        CLEAR(level.b2_awarding_permaperks_now)
+        level.b2_awarding_permaperks_now = undefined;
     }
 
 #if FEATURE_HUD == 1
@@ -2863,8 +2811,6 @@ emergency_permaperks_cleanup()
 
 fix_persistent_jug()
 {
-    LEVEL_ENDON
-
     while (!isdefined(level.pers_upgrades["jugg"]))
         wait 0.05;
 
@@ -2879,7 +2825,7 @@ fix_persistent_jug()
 
 fixed_upgrade_jugg_active()
 {
-    PLAYER_ENDON
+    self endon("disconnect");
 
     wait 1;
     self maps\mp\zombies\_zm_perks::perk_set_max_health_if_jugg("jugg_upgrade", 1, 0);
@@ -2914,7 +2860,7 @@ fixed_upgrade_jugg_active()
 #if FEATURE_PERMAPERKS == 1
 watch_permaperk_award()
 {
-    LEVEL_ENDON
+    level endon("end_game");
 
     while (isdefined(level.b2_awarding_permaperks_now) && did_game_just_start())
     {
@@ -2929,7 +2875,7 @@ watch_permaperk_award()
         b2_restart_level();
     }
 
-    CLEAR(level.b2_awarding_permaperks_now)
+    level.b2_awarding_permaperks_now = undefined;
     level notify("b2_finished_awarding_permaperks");
 }
 
@@ -2953,10 +2899,12 @@ permaperk_array(code, maps_award, maps_take, to_round)
 
 award_permaperks_safe()
 {
-    PLAYER_ENDON
+    self endon("disconnect");
 
     while (!isalive(self))
+    {
         wait 0.05;
+    }
 
     wait 0.5;
 
@@ -2983,7 +2931,7 @@ award_permaperks_safe()
 
     if (level.b2_awarding_permaperks_now == 0)
     {
-        CLEAR(level.b2_awarding_permaperks_now)
+        level.b2_awarding_permaperks_now = undefined;
     }
 
     self maps\mp\zombies\_zm_stats::uploadstatssoon();
@@ -2991,7 +2939,7 @@ award_permaperks_safe()
 
 resolve_permaperk(perk)
 {
-    PLAYER_ENDON
+    self endon("disconnect");
 
     wait 0.05;
 
@@ -3040,7 +2988,7 @@ award_permaperk(stat_name, perk_code, stat_value)
 #if FEATURE_HUD == 1
 permaperks_watcher()
 {
-    PLAYER_ENDON
+    self endon("disconnect");
 
     while (isdefined(level.b2_awarding_permaperks_now) && did_game_just_start())
     {
@@ -3135,8 +3083,6 @@ permaperk_name(perk)
 
 watch_box_state()
 {
-    LEVEL_ENDON
-
     while (!isdefined(self.zbarrier))
         wait 0.05;
 
@@ -3159,7 +3105,7 @@ scan_in_box()
 {
     self notify("scan_in_box_start");
 
-    LEVEL_ENDON
+    level endon("end_game");
     self endon("randomization_done");
     self endon("scan_in_box_start");
 
@@ -3213,8 +3159,6 @@ scan_in_box()
 #if FEATURE_CHARACTERS == 1
 hijack_personality_character()
 {
-    LEVEL_ENDON
-
     while (!isdefined(level.givecustomcharacters))
         wait 0.05;
     if (is_survival_map())
@@ -3709,8 +3653,6 @@ viewmodel_input(value, key, player)
 #if FEATURE_CHALLENGES == 1
 b2fr_challenge_loop()
 {
-    LEVEL_ENDON
-
     initial_challenges = [];
     if (!has_magic() && is_nuketown() && is_round(5))
         initial_challenges = add_to_array(initial_challenges, register_challenge(
@@ -3761,9 +3703,6 @@ b2fr_challenge_loop()
         start_challenges = add_to_array(start_challenges, challenge);
         active_challenges++;
     }
-
-    CLEAR(initial_challenges)
-    CLEAR(in_bounds)
 
     DEBUG_PRINT("challenge loop with " + active_challenges + " challenges");
 
@@ -4009,8 +3948,6 @@ _create_file(path)
 
 _custom_start_round()
 {
-    LEVEL_ENDON
-
     if (getdvar("startRound") == "")
     {
         setdvar("startRound", "0");
@@ -4067,7 +4004,6 @@ _run_test_array()
 #if DEBUG_HUD == 1 && FEATURE_HUD == 1
 _network_frame_hud()
 {
-    LEVEL_ENDON
     netframe_hud = createserverfontstring("default", 1.3);
     netframe_hud set_hud_properties("netframe_hud", "CENTER", "BOTTOM", 0, 28);
     netframe_hud.label = &"NETFRAME: ";
@@ -4083,7 +4019,7 @@ _network_frame_hud()
 
 _zone_hud()
 {
-    PLAYER_ENDON
+    self endon("disconnect");
 
     flag_wait("initial_blackscreen_passed");
 

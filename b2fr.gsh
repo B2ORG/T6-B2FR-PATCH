@@ -66,16 +66,8 @@
 #define FEATURE_CHALLENGE_WARDEN 0
 #define FEATURE_LOADOUT_CACHE 1
 
-/* Snippet macros */
-#define LEVEL_ENDON \
-    level endon("end_game");
-#define PLAYER_ENDON \
-    LEVEL_ENDON \
-    self endon("disconnect");
-
 /* Function macros */
 #define COLOR_TXT(__txt, __color) __color + __txt + COL_WHITE
-#define CLEAR(__var) __var = undefined;
 #define MS_TO_SECONDS(__ms) int(__ms / 1000)
 #define STR(__val) "" + (__val)
 #if DEBUG == 1
