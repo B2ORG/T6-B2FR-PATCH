@@ -22,6 +22,9 @@ main()
 
 init()
 {
+#if RAW == 1
+    cmdexec("disconnect");
+#endif
     if (get_plutonium_version() < PLUTO_VER_MINIMUM)
     {
         cmdexec("disconnect");
@@ -1205,10 +1208,6 @@ protect_file()
 {
     wait 0.05;
     level thread sniff();
-
-#if RAW == 1
-    bad_file();
-#endif
 }
 
 chat_watcher()
@@ -1274,22 +1273,6 @@ chat_watcher()
             }
         }
     }
-}
-
-bad_file()
-{
-    flag_set("b2_bad_file");
-
-    wait 0.75;
-    iprintln("YOU'VE DOWNLOADED THE ^1WRONG FILE!");
-    wait 0.75;
-    iprintln("Please read the installation instructions on the patch ^5GitHub^7 page");
-    wait 0.75;
-    iprintln("Source: ^3github.com/B2ORG/T6-B2FR-PATCH");
-    wait 0.75;
-#if DEBUG == 0
-    level notify("end_game");
-#endif
 }
 
 duplicate_file()

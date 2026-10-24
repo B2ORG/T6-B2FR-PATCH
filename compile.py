@@ -7,6 +7,7 @@ from typing import Callable, Optional
 # Config
 CWD = os.path.dirname(os.path.abspath(__file__))
 B2FR = "b2fr.gsc"
+B2FR_HEADER = "b2fr.gsh"
 B2FR_PARSED_NOHUD = "b2fr_nohud.gsc" 
 B2FR_PARSED_HUD = "b2fr_hud.gsc"
 GAME_PARSE = "t6"
@@ -274,8 +275,9 @@ def main() -> None:
     clear_files(os.path.join(CWD, PARSED_DIR), r".*")
     clear_files(os.path.join(CWD, COMPILED_DIR), r".*")
 
+    Gsc().load_file(os.path.join(CWD, B2FR)).check_whitespace()
     gsc: Gsc = (Gsc()
-        .load_file(os.path.join(CWD, B2FR))
+        .load_file(os.path.join(CWD, B2FR_HEADER))
         .check_whitespace()
         .check_debug()
     )
@@ -283,7 +285,7 @@ def main() -> None:
     # HUD
     with Chunk("WITH HUD:"):
         gsc.save(
-            os.path.join(CWD, B2FR), {"#define FEATURE_HUD 0": "#define FEATURE_HUD 1"}
+            os.path.join(CWD, B2FR_HEADER), {"#define FEATURE_HUD 0": "#define FEATURE_HUD 1"}
         )
         wrap_subprocess_call(
             COMPILER_GSCTOOL, "-m", MODE_PARSE, "-g", GAME_PARSE, "-s", "pc", B2FR, eval_callback=check_gsc_error
@@ -303,7 +305,7 @@ def main() -> None:
     # No HUD
     with Chunk("NO HUD:"):
         gsc.save(
-            os.path.join(CWD, B2FR), {"#define FEATURE_HUD 1": "#define FEATURE_HUD 0"}
+            os.path.join(CWD, B2FR_HEADER), {"#define FEATURE_HUD 1": "#define FEATURE_HUD 0"}
         )
         wrap_subprocess_call(
             COMPILER_GSCTOOL, "-m", MODE_PARSE, "-g", GAME_PARSE, "-s", "pc", B2FR, eval_callback=check_gsc_error
@@ -324,8 +326,8 @@ def main() -> None:
     if gsc.debugger:
         print(f"WARNING!!! Debugger is enabled")
 
-    # Reset file
-    gsc.save(os.path.join(CWD, B2FR), {
+    # Reset header
+    gsc.save(os.path.join(CWD, B2FR_HEADER), {
         "#define RAW 0": "#define RAW 1",
         "#define FEATURE_HUD 0": "#define FEATURE_HUD 1",
     })
